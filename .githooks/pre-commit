@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# PitchSafe pre-commit hook — blocks secrets from being committed
+# Installed at: .git/hooks/pre-commit
+
+RED='\033[0;31m'
+NC='\033[0m'
+
+BLOCKED_FILES=(".env" ".env.local" ".env.production" ".env.staging" ".env.development")
+BLOCKED_PATTERNS=("AIzaSy" "sk-ant-" "ANTHROPIC_API_KEY\s*=\s*sk-")
+
+# 1. Block specific secret files from being committed
+for f in "${BLOCKED_FILES[@]}"; do
+  if git diff --cached --name-only | grep -qE "^${f}$"; then
+    echo -e "${RED}[PitchSafe] COMMIT BLOCKED: '${f}' contains secrets and must never be committed.${NC}"
+    echo "       Remove it from staging: git restore --staged ${f}"
+    exit 1
+  fi
+done
+
+# 2. Scan ALL staged file contents for known secret patterns
+# Exclude files that legitimately contain pattern strings (hook itself, vite config)
+SCAN_EXCLUDE="\.githooks/pre-commit|vite\.config\.js"
+
+for pattern in "${BLOCKED_PATTERNS[@]}"; do
+  MATCH=$(git diff --cached -U0 | grep -E "^\+" | grep -vE "^(\+\+\+|diff)" | \
+          grep -v "BLOCKED_PATTERNS\|SECRET_PATTERNS\|label:" | \
+          grep -E "$pattern" | head -1)
+  if [ -n "$MATCH" ]; then
+    echo -e "${RED}[PitchSafe] COMMIT BLOCKED: A secret pattern was detected in staged content.${NC}"
+    echo "       Pattern matched: ${pattern}"
+    echo "       Line: ${MATCH}"
+    echo "       Remove the secret from the file before committing."
+    exit 1
+  fi
+done
+
+exit 0

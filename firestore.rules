@@ -1,0 +1,169 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper functions ────────────────────────────────────────────────────
+    // NOTE: These functions are the Firestore equivalent of PostgreSQL RLS
+    // policy predicates. Every write goes through schema + ownership checks.
+
+    // String is non-empty and within byte limit
+    function isStr(val, maxLen) {
+      return val is string && val.size() > 0 && val.size() <= maxLen;
+    }
+
+    // Integer within inclusive [min, max]
+    function isInt(val, minVal, maxVal) {
+      return val is int && val >= minVal && val <= maxVal;
+    }
+
+    // Float within inclusive [min, max]
+    function isFloat(val, minVal, maxVal) {
+      return (val is float || val is int) && val >= minVal && val <= maxVal;
+    }
+
+    // ISO date string pattern YYYY-MM-DD (length check)
+    function isDateStr(val) {
+      return val is string && val.size() == 10;
+    }
+
+    // Allowlisted string value
+    function isOneOf(val, options) {
+      return val in options;
+    }
+
+    // Ownership check — centralised for reuse
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── User Profile (/users/{userId}) ──────────────────────────────────────
+    // RLS policy: owner-only read/write/delete. No cross-user access possible.
+    // Service-role note: Firestore Admin SDK bypasses these rules server-side,
+    // but NO Admin SDK is used in this project — all ops are client-side only.
+    match /users/{userId} {
+
+      // READ — owner only
+      allow read: if isOwner(userId);
+
+      // CREATE — owner only, field allowlist, required dataConsent
+      allow create: if isOwner(userId)
+        && isStr(request.resource.data.email, 254)
+        && isStr(request.resource.data.position, 10)
+        && request.resource.data.dataConsent == true
+        && request.resource.data.keys().hasOnly([
+          'email','position','cleatType','surfaceType','dataConsent','createdAt'
+        ]);
+
+      // UPDATE — owner only, only equipment/position fields can change
+      // email, dataConsent, createdAt are immutable after creation
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['cleatType','surfaceType','position'])
+        && (!('cleatType' in request.resource.data) ||
+            isOneOf(request.resource.data.cleatType,
+              ['FG_BLADED','FG_CONICAL','AG','SG','MG','INDOOR','']))
+        && (!('surfaceType' in request.resource.data) ||
+            isOneOf(request.resource.data.surfaceType,
+              ['NATURAL_GOOD','NATURAL_POOR','3G_TURF','2G_TURF','HARD_GROUND','INDOOR','']));
+
+      // DELETE — owner only (required for GDPR-compliant account deletion)
+      // This only deletes the profile document, NOT subcollections.
+      // Subcollection cleanup must be done server-side (Cloud Function).
+      allow delete: if isOwner(userId);
+
+      // ─── Sessions (/users/{userId}/sessions/{sessionId}) ─────────────────
+      match /sessions/{sessionId} {
+        allow read, delete: if isOwner(userId);
+
+        allow create: if isOwner(userId)
+          && isDateStr(request.resource.data.date)
+          && isOneOf(request.resource.data.type, ['training','match','gym'])
+          && isInt(request.resource.data.duration, 1, 300)
+          && isInt(request.resource.data.rpe, 1, 10)
+          && isInt(request.resource.data.load, 1, 3000)
+          && (request.resource.data.notes == '' ||
+              request.resource.data.notes is string && request.resource.data.notes.size() <= 500)
+          && request.resource.data.keys().hasOnly([
+              'date','type','duration','rpe','load','notes','createdAt'
+             ]);
+
+        // UPDATE intentionally not allowed — sessions are append-only logs.
+        // To correct an entry, delete and re-create.
+      }
+
+      // ─── Recovery Logs (/users/{userId}/recovery/{recoveryId}) ───────────
+      match /recovery/{recoveryId} {
+        allow read, delete: if isOwner(userId);
+
+        allow create: if isOwner(userId)
+          && isDateStr(request.resource.data.weekStartDate)
+          && isFloat(request.resource.data.sleep, 0, 12)
+          && isInt(request.resource.data.soreness, 1, 10)
+          && isInt(request.resource.data.stress, 1, 10)
+          && isInt(request.resource.data.nutrition, 1, 10)
+          && isInt(request.resource.data.score, 0, 100)
+          && request.resource.data.keys().hasOnly([
+              'weekStartDate','sleep','soreness','stress','nutrition','score','createdAt'
+             ]);
+
+        // UPDATE intentionally not allowed — recovery logs are append-only.
+      }
+
+      // ─── Injuries (/users/{userId}/injuries/{injuryId}) ──────────────────
+      match /injuries/{injuryId} {
+        allow read, delete: if isOwner(userId);
+
+        allow create: if isOwner(userId)
+          && isOneOf(request.resource.data.bodyPart, [
+              'Head','Neck','Shoulder (L)','Shoulder (R)','Knee (L)','Knee (R)',
+              'Ankle (L)','Ankle (R)','Hamstring (L)','Hamstring (R)',
+              'Quadriceps (L)','Quadriceps (R)','Calf (L)','Calf (R)',
+              'Groin','Hip (L)','Hip (R)','Lower Back',
+              'Wrist (L)','Wrist (R)','Foot (L)','Foot (R)'])
+          && isOneOf(request.resource.data.injuryType,
+              ['Strain','Sprain','Fracture','Tear','Contusion','Other'])
+          && isOneOf(request.resource.data.severity, ['mild','moderate','severe'])
+          && isDateStr(request.resource.data.injuryDate)
+          && (request.resource.data.returnDate == null ||
+              isDateStr(request.resource.data.returnDate))
+          && request.resource.data.keys().hasOnly([
+              'bodyPart','injuryType','severity','injuryDate','returnDate','createdAt'
+             ]);
+
+        // UPDATE: only returnDate can be set after creation (player returned from injury)
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['returnDate'])
+          && (request.resource.data.returnDate == null ||
+              isDateStr(request.resource.data.returnDate));
+      }
+
+      // ─── AI Reports (/users/{userId}/reports/{reportId}) ─────────────────
+      // Reports are generated server-side (Cloud Functions) and read client-side.
+      // Client can read and delete own reports, but NOT write them directly.
+      // Writing must go through a Cloud Function (privileged operation).
+      match /reports/{reportId} {
+        // READ — owner only
+        allow read: if isOwner(userId);
+
+        // DELETE — owner only (user can dismiss/delete their reports)
+        allow delete: if isOwner(userId);
+
+        // CREATE/UPDATE intentionally blocked from client.
+        // Reports are written exclusively by Cloud Functions using Admin SDK,
+        // which bypasses these rules server-side. This prevents users from
+        // forging AI-generated reports.
+        // allow create, update: if false; // (implicit — no rule = deny)
+      }
+    }
+
+    // ─── Catch-all: deny all other paths ─────────────────────────────────────
+    // This is the Firestore equivalent of a default-deny RLS policy.
+    // Any collection not explicitly matched above is completely blocked.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
