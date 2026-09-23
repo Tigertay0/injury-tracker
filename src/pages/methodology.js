@@ -8,7 +8,7 @@ export async function renderMethodology() {
 
   renderAppShell(`
     <h1 class="type-page-title" style="margin-bottom:var(--space-sm);">RESEARCH & METHODOLOGY</h1>
-    <p style="color:var(--on-surface-variant);margin-bottom:var(--space-xl);">PitchSafe utilizes an algorithmic approach to injury risk stratification based on current sports science literature, primarily focusing on workload ratios and recovery metrics.</p>
+    <p style="color:var(--on-surface-variant);margin-bottom:var(--space-xl);">PitchSafe uses an algorithmic approach to injury risk stratification based on current sports science literature, focusing on workload ratios and recovery metrics.</p>
 
     <!-- How We Calculate Risk -->
     <section class="dashboard-section">
@@ -79,7 +79,7 @@ export async function renderMethodology() {
         <div class="ai-analysis-icon">
           <span class="material-symbols-outlined">rocket_launch</span>
         </div>
-        <p style="font-size:14px;line-height:1.7;">The future of amateur injury prevention requires integration of wearable kinematics and objective biomechanical screening, bridging the gap between elite tech and grassroots accessibility.</p>
+        <p style="font-size:14px;line-height:1.7;">A real solution would add wearable kinematics and objective biomechanical screening, technology still out of reach for most grassroots athletes.</p>
       </div>
     </section>
 
