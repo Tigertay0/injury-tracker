@@ -6,27 +6,51 @@ export function calculateSessionLoad(duration, rpe) {
   return duration * rpe;
 }
 
-export function calculateAcuteWorkload(sessions) {
-  const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+const ACUTE_DAYS = 7;
+const CHRONIC_DAYS = 28;
+const CHRONIC_WEEKS = CHRONIC_DAYS / 7;
+
+// Stored dates are YYYY-MM-DD local calendar days. new Date('YYYY-MM-DD') would
+// parse them as UTC midnight and shift window boundaries for non-UTC users.
+function parseLocalDate(dateStr) {
+  return new Date(dateStr + 'T00:00:00');
+}
+
+// Local midnight at the start of a window covering `days` calendar days, including today
+function windowStart(days) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - (days - 1));
+  return d;
+}
+
+function sumLoadSince(sessions, days) {
+  const start = windowStart(days);
   return sessions
-    .filter(s => new Date(s.date) >= sevenDaysAgo)
+    .filter(s => parseLocalDate(s.date) >= start)
     .reduce((sum, s) => sum + (s.load || s.duration * s.rpe), 0);
 }
 
+export function calculateAcuteWorkload(sessions) {
+  return sumLoadSince(sessions, ACUTE_DAYS);
+}
+
 export function calculateChronicWorkload(sessions) {
-  const now = new Date();
-  const twentyEightDaysAgo = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000);
-  const relevantSessions = sessions.filter(s => new Date(s.date) >= twentyEightDaysAgo);
-
-  if (relevantSessions.length === 0) return 0;
-
-  const totalLoad = relevantSessions.reduce((sum, s) => sum + (s.load || s.duration * s.rpe), 0);
   // Average weekly load over 4 weeks
-  return totalLoad / 4;
+  return sumLoadSince(sessions, CHRONIC_DAYS) / CHRONIC_WEEKS;
+}
+
+// True once the session history reaches back into the 4th week of the chronic
+// window. With less history, chronic load is under-counted and ACWR is inflated.
+function hasFullChronicHistory(sessions) {
+  const fourthWeekEnd = windowStart(CHRONIC_DAYS - 7);
+  return sessions.some(s => parseLocalDate(s.date) < fourthWeekEnd);
 }
 
 export function calculateACWR(sessions) {
+  // PRD §2.1: fewer than 4 weeks of data → N/A
+  if (!hasFullChronicHistory(sessions)) return null;
+
   const acute = calculateAcuteWorkload(sessions);
   const chronic = calculateChronicWorkload(sessions);
 
@@ -100,12 +124,11 @@ export function getEquipmentRiskScore(level) {
 
 export function calculateInjuryMultiplier(injuries) {
   let multiplier = 1.0;
-  const now = new Date();
-  const sixWeeksAgo = new Date(now.getTime() - 42 * 24 * 60 * 60 * 1000);
+  const sixWeeksAgo = windowStart(42);
 
   for (const injury of injuries) {
     // Recent injury (within 6 weeks)
-    if (new Date(injury.injuryDate) >= sixWeeksAgo) {
+    if (parseLocalDate(injury.injuryDate) >= sixWeeksAgo) {
       multiplier += 0.3;
     }
     // Specific injury type multipliers

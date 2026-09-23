@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import { createUserProfile, getUserProfile } from '../lib/firestore.js';
 import { validateRegistrationInput, requireEmail, ValidationError } from '../lib/validation.js';
-import { checkRateLimit, resetRateLimit, LIMITS, RateLimitError, authKey } from '../lib/rate-limiter.js';
+import { checkRateLimit, resetRateLimit, LIMITS, authKey } from '../lib/rate-limiter.js';
 import { navigate } from '../router.js';
 
 export async function renderAuth() {

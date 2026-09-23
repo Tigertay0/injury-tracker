@@ -3,9 +3,10 @@ import { auth } from '../firebase.js';
 import { renderAppShell } from '../components/app-shell.js';
 import { addInjury, getInjuries, deleteInjury } from '../lib/firestore.js';
 import { calculateInjuryMultiplier } from '../lib/calculations.js';
-import { validateInjuryInput, requireFirestoreId, ValidationError } from '../lib/validation.js';
-import { checkRateLimit, LIMITS, RateLimitError, writeKey, deleteKey } from '../lib/rate-limiter.js';
-import { navigate } from '../router.js';
+import { validateInjuryInput, requireFirestoreId } from '../lib/validation.js';
+import { checkRateLimit, LIMITS, writeKey, deleteKey } from '../lib/rate-limiter.js';
+import { navigate, handleRoute } from '../router.js';
+import { escHtml, fmtDate, showError, hideError, LOAD_ERROR_HTML } from '../lib/dom.js';
 
 // Re-export arrays for the template (sourced from validation allowlists)
 const BODY_PARTS_LIST = [
@@ -19,7 +20,14 @@ const INJURY_TYPES_LIST = ['Strain','Sprain','Fracture','Tear','Contusion','Othe
 export async function renderInjuries() {
   const user = auth.currentUser;
   if (!user) { navigate('/auth'); return; }
-  const injuries = await getInjuries(user.uid);
+  let injuries;
+  try {
+    injuries = await getInjuries(user.uid);
+  } catch (err) {
+    console.error('[injuries] Failed to load injuries:', err);
+    renderAppShell(LOAD_ERROR_HTML);
+    return;
+  }
   const multiplier = calculateInjuryMultiplier(injuries);
   const riskIncrease = Math.round((multiplier - 1) * 100);
 
@@ -37,15 +45,15 @@ export async function renderInjuries() {
             <div class="flex-col gap-sm">
               ${injuries.map(inj => `
                 <div class="injury-entry">
-                  <div class="injury-date">${fmtDate(inj.injuryDate)}</div>
+                  <div class="injury-date">${fmtDate(inj.injuryDate, { withYear: true })}</div>
                   <div class="injury-details">
                     <div class="injury-title">${escHtml(String(inj.bodyPart))} ${escHtml(String(inj.injuryType))}</div>
                     <div class="injury-meta">
                       <span style="text-transform:capitalize;">${escHtml(String(inj.severity))}</span>
-                      ${inj.returnDate ? `<span style="color:var(--risk-green);">· Returned ${fmtDate(inj.returnDate)}</span>` : '<span style="color:var(--risk-orange);">· Still recovering</span>'}
+                      ${inj.returnDate ? `<span style="color:var(--risk-green);">· Returned ${fmtDate(inj.returnDate, { withYear: true })}</span>` : '<span style="color:var(--risk-orange);">· Still recovering</span>'}
                     </div>
                   </div>
-                  <button class="btn btn-sm btn-secondary delete-injury" data-id="${escAttr(inj.id)}" style="height:32px;font-size:14px;padding:0 8px;">
+                  <button class="btn btn-sm btn-secondary delete-injury" data-id="${escHtml(inj.id)}" style="height:32px;font-size:14px;padding:0 8px;">
                     <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
                   </button>
                 </div>
@@ -79,14 +87,14 @@ export async function renderInjuries() {
             <label class="form-label" for="inj-body">Body Part</label>
             <select class="form-input" id="inj-body" required>
               <option value="">Select body part</option>
-              ${BODY_PARTS_LIST.map(p => `<option value="${escAttr(p)}">${escHtml(p)}</option>`).join('')}
+              ${BODY_PARTS_LIST.map(p => `<option value="${escHtml(p)}">${escHtml(p)}</option>`).join('')}
             </select>
           </div>
           <div class="form-group">
             <label class="form-label" for="inj-type">Injury Type</label>
             <select class="form-input" id="inj-type" required>
               <option value="">Select type</option>
-              ${INJURY_TYPES_LIST.map(t => `<option value="${escAttr(t)}">${escHtml(t)}</option>`).join('')}
+              ${INJURY_TYPES_LIST.map(t => `<option value="${escHtml(t)}">${escHtml(t)}</option>`).join('')}
             </select>
           </div>
           <div class="form-group">
@@ -129,7 +137,8 @@ export async function renderInjuries() {
       // Rate limit: 20 writes / 1 min per user — BEFORE Firestore write
       checkRateLimit('log injury', writeKey('injury', user.uid), LIMITS.write);
       await addInjury(user.uid, validated);
-      navigate('/injuries');
+      // Same hash, so no hashchange fires — re-render directly to show the new entry
+      await handleRoute();
     } catch (err) {
       if (err.name === 'RateLimitError') showError('injury-error', err.message);
       else if (err.name === 'ValidationError') showError('injury-error', err.message);
@@ -144,17 +153,15 @@ export async function renderInjuries() {
         // Rate limit: 10 deletes / 1 min per user — BEFORE Firestore delete
         checkRateLimit('delete injury', deleteKey('injury', user.uid), LIMITS.delete);
         await deleteInjury(user.uid, id);
-        navigate('/injuries');
+        await handleRoute();
       } catch (err) {
         if (err.name === 'RateLimitError') showError('injury-error', err.message);
-        // Silently ignore tampered IDs — Firestore security rules block them anyway
+        // Tampered data-id attributes are rejected by requireFirestoreId — nothing to report
+        else if (err.name !== 'ValidationError') {
+          console.error('[injuries] Failed to delete injury:', err);
+          showError('injury-error', 'Failed to delete injury. Please try again.');
+        }
       }
     });
   });
 }
-
-function fmtDate(d) { if(!d) return ''; return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
-function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function escAttr(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function showError(id, msg) { const el = document.getElementById(id); if (el) { el.textContent = msg; el.classList.add('visible'); } }
-function hideError(id) { const el = document.getElementById(id); if (el) el.classList.remove('visible'); }

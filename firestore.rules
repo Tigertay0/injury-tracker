@@ -37,6 +37,11 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // Player position — '' is allowed for Google sign-ups, which have no position yet
+    function isPosition(val) {
+      return isOneOf(val, ['GK','DEF','MID','FWD','']);
+    }
+
     // ─── User Profile (/users/{userId}) ──────────────────────────────────────
     // RLS policy: owner-only read/write/delete. No cross-user access possible.
     // Service-role note: Firestore Admin SDK bypasses these rules server-side,
@@ -49,7 +54,7 @@ service cloud.firestore {
       // CREATE — owner only, field allowlist, required dataConsent
       allow create: if isOwner(userId)
         && isStr(request.resource.data.email, 254)
-        && isStr(request.resource.data.position, 10)
+        && isPosition(request.resource.data.position)
         && request.resource.data.dataConsent == true
         && request.resource.data.keys().hasOnly([
           'email','position','cleatType','surfaceType','dataConsent','createdAt'
@@ -60,6 +65,8 @@ service cloud.firestore {
       allow update: if isOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['cleatType','surfaceType','position'])
+        && (!('position' in request.resource.data) ||
+            isPosition(request.resource.data.position))
         && (!('cleatType' in request.resource.data) ||
             isOneOf(request.resource.data.cleatType,
               ['FG_BLADED','FG_CONICAL','AG','SG','MG','INDOOR','']))

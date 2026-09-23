@@ -3,16 +3,24 @@ import { auth } from '../firebase.js';
 import { renderAppShell } from '../components/app-shell.js';
 import { addSession, getSessions } from '../lib/firestore.js';
 import { calculateSessionLoad } from '../lib/calculations.js';
-import { validateSessionInput, ValidationError } from '../lib/validation.js';
-import { checkRateLimit, LIMITS, RateLimitError, writeKey } from '../lib/rate-limiter.js';
-import { navigate } from '../router.js';
+import { validateSessionInput } from '../lib/validation.js';
+import { checkRateLimit, LIMITS, writeKey } from '../lib/rate-limiter.js';
+import { navigate, handleRoute } from '../router.js';
+import { escHtml, fmtDate, showError, hideError, toLocalDateString, LOAD_ERROR_HTML } from '../lib/dom.js';
 
 export async function renderLogSession() {
   const user = auth.currentUser;
   if (!user) { navigate('/auth'); return; }
 
-  const sessions = await getSessions(user.uid);
-  const today = new Date().toISOString().split('T')[0];
+  let sessions;
+  try {
+    sessions = await getSessions(user.uid);
+  } catch (err) {
+    console.error('[log-session] Failed to load sessions:', err);
+    renderAppShell(LOAD_ERROR_HTML);
+    return;
+  }
+  const today = toLocalDateString(new Date());
 
   renderAppShell(`
     <div class="dashboard-header">
@@ -133,7 +141,8 @@ export async function renderLogSession() {
       // Rate limit: 20 writes / 1 min per user — BEFORE Firestore write
       checkRateLimit('log session', writeKey('session', user.uid), LIMITS.write);
       await addSession(user.uid, validated);
-      navigate('/log-session');
+      // Same hash, so no hashchange fires — re-render directly to show the new session
+      await handleRoute();
     } catch (err) {
       if (err.name === 'RateLimitError') showError('session-error', err.message);
       else if (err.name === 'ValidationError') showError('session-error', err.message);
@@ -141,8 +150,3 @@ export async function renderLogSession() {
     }
   });
 }
-
-function fmtDate(d) { return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
-function escHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function showError(id, msg) { const el = document.getElementById(id); if (el) { el.textContent = msg; el.classList.add('visible'); } }
-function hideError(id) { const el = document.getElementById(id); if (el) el.classList.remove('visible'); }
