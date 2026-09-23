@@ -26,7 +26,7 @@ export async function renderLogSession() {
     <div class="dashboard-header">
       <div>
         <h1 class="type-page-title">LOG SESSION</h1>
-        <p style="color:var(--on-surface-variant);margin-top:var(--space-xs);">Record your training data accurately to maintain optimal load management and injury prevention modeling.</p>
+        <p style="color:var(--on-surface-variant);margin-top:var(--space-xs);">Log your session accurately to keep your training load and risk score up to date.</p>
       </div>
     </div>
 

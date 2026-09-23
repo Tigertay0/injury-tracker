@@ -84,7 +84,7 @@ export async function renderRecovery() {
           </h2>
           <div class="type-risk-display" style="font-size:64px;" id="score-preview">—</div>
           <span class="risk-badge mt-sm" id="score-badge" style="display:none;"></span>
-          <p style="font-size:13px;color:var(--on-surface-variant);margin-top:var(--space-md);" id="preview-text">Your simulated recovery based on current input indicates a low risk of overload.</p>
+          <p style="font-size:13px;color:var(--on-surface-variant);margin-top:var(--space-md);" id="preview-text">Your recovery metrics indicate low risk of overload.</p>
         </div>
 
         <div class="card">

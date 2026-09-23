@@ -98,15 +98,15 @@ spacing:
 
 ## Brand & Style
 
-The design system is built on a **Corporate / Modern** foundation with a distinct **High-Contrast Athletic** edge. It balances the scientific authority of injury prevention with the raw energy of amateur soccer. The aesthetic is clean and systematic to convey trustworthiness, while utilizing bold, condensed typography and vibrant greens to maintain a sports-focused momentum.
+The design system combines a **Corporate / Modern** foundation with a **High-Contrast Athletic** edge: the scientific authority of injury prevention paired with the energy of amateur soccer. Bold, condensed typography and green accents keep the sports focus while a clean, systematic layout signals trustworthiness.
 
-The target audience—amateur athletes and coaches—requires a UI that feels professional enough to trust with health data, yet energetic enough to belong in a locker room or on the sidelines. The interface prioritizes clarity and rapid information scanning through a structured hierarchy and a focused color palette.
+The target audience is amateur athletes and coaches, so the UI needs to feel professional enough to trust with health data while still fitting on the sidelines. A structured hierarchy and a focused color palette keep the interface easy to scan quickly.
 
 ## Colors
 
-The palette is anchored by **Pitch Green** (`#005129` primary / `#1a6b3c` primary-container), a deep, authoritative grass tone that serves as the primary brand touchpoint. **Forest Green** (`#2c694e` secondary) provides depth for secondary actions and navigation elements, while **Mint Tint** (`#f7faf3` surface) offers a soft, low-contrast canvas that reduces eye strain during data entry and review.
+The palette is anchored by **Pitch Green** (`#005129` primary / `#1a6b3c` primary-container), the primary brand color. **Forest Green** (`#2c694e` secondary) handles secondary actions and navigation elements, while **Mint Tint** (`#f7faf3` surface) is a soft, low-contrast canvas that reduces eye strain during data entry and review.
 
-The **Risk System** utilizes a high-visibility semantic scale. These colors are reserved strictly for status indication and risk metrics:
+The **Risk System** uses a high-visibility semantic scale. These colors are reserved strictly for status indication and risk metrics:
 
 | Risk Level | Background (15% opacity) | Text / Icon (100%) | Usage |
 |---|---|---|---|
@@ -131,7 +131,7 @@ Used for high-impact data points, page titles, and primary calls to action. It s
 | `button-label` | 20px | 400 | — | 1px |
 
 ### Scientific Voice – Inter
-Provides the necessary legibility for body text, form labels, and secondary headings. Its neutral, geometric construction ensures that complex health data remains accessible and clear.
+Used for body text, form labels, and secondary headings. Its neutral, geometric letterforms keep complex health data readable.
 
 | Token | Size | Weight | Line Height |
 |---|---|---|---|
@@ -155,7 +155,7 @@ Internal spacing follows an **8px rhythm**:
 
 ## Elevation & Depth
 
-The design system utilizes **Ambient Shadows** to create a subtle sense of layering without the clutter of heavy skeuomorphism.
+The design system uses **Ambient Shadows** for a subtle sense of layering without heavy skeuomorphism.
 
 | Elevation | Value | Usage |
 |---|---|---|
