@@ -11,11 +11,7 @@ import {
 import { getEquipmentRisk } from '../lib/equipment-matrix.js';
 import { generateRecommendations } from '../lib/recommendations.js';
 import { navigate } from '../router.js';
-
-// Escapes any HTML in Firestore-sourced strings before injecting into innerHTML
-function escHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
+import { escHtml, LOAD_ERROR_HTML } from '../lib/dom.js';
 
 export async function renderDashboard() {
   const user = auth.currentUser;
@@ -23,12 +19,19 @@ export async function renderDashboard() {
 
   renderAppShell(`<div class="loading-state"><div class="spinner"></div><p>Loading your risk data...</p></div>`);
 
-  const [profile, sessions, latestRecovery, injuries] = await Promise.all([
-    getUserProfile(user.uid),
-    getSessions(user.uid),
-    getLatestRecovery(user.uid),
-    getInjuries(user.uid),
-  ]);
+  let profile, sessions, latestRecovery, injuries;
+  try {
+    [profile, sessions, latestRecovery, injuries] = await Promise.all([
+      getUserProfile(user.uid),
+      getSessions(user.uid),
+      getLatestRecovery(user.uid),
+      getInjuries(user.uid),
+    ]);
+  } catch (err) {
+    console.error('[dashboard] Failed to load data:', err);
+    renderAppShell(LOAD_ERROR_HTML);
+    return;
+  }
 
   const acwr = calculateACWR(sessions);
   const acwrZone = getACWRZone(acwr);
@@ -53,6 +56,9 @@ export async function renderDashboard() {
     acwr, acwrZone, recoveryScore, recoveryZone, equipmentRisk: equipmentRiskLevel,
     position: profile?.position || 'MID', injuries,
   });
+
+  const recoveryColor = recoveryZone === 'POOR' ? 'red' : recoveryZone === 'MODERATE' ? 'yellow' : 'green';
+  const equipmentColor = equipmentRiskLevel === 'LOW' ? 'green' : equipmentRiskLevel === 'MEDIUM' ? 'yellow' : 'red';
 
   const circumference = 2 * Math.PI * 80;
   const fillPct = compositeScore / 100;
@@ -125,7 +131,7 @@ export async function renderDashboard() {
           </div>
 
           <div class="metric-card">
-            <div class="metric-card-icon" style="background:${recoveryZone === 'POOR' ? 'var(--risk-red-bg)' : recoveryZone === 'MODERATE' ? 'var(--risk-yellow-bg)' : 'var(--risk-green-bg)'};color:${recoveryZone === 'POOR' ? 'var(--risk-red)' : recoveryZone === 'MODERATE' ? 'var(--risk-yellow)' : 'var(--risk-green)'};">
+            <div class="metric-card-icon" style="background:var(--risk-${recoveryColor}-bg);color:var(--risk-${recoveryColor});">
               <span class="material-symbols-outlined">hotel</span>
             </div>
             <div class="metric-card-body">
@@ -135,7 +141,7 @@ export async function renderDashboard() {
           </div>
 
           <div class="metric-card">
-            <div class="metric-card-icon" style="background:var(--risk-${equipmentRiskLevel === 'LOW' ? 'green' : equipmentRiskLevel === 'MEDIUM' ? 'yellow' : 'red'}-bg);color:var(--risk-${equipmentRiskLevel === 'LOW' ? 'green' : equipmentRiskLevel === 'MEDIUM' ? 'yellow' : 'red'});">
+            <div class="metric-card-icon" style="background:var(--risk-${equipmentColor}-bg);color:var(--risk-${equipmentColor});">
               <span class="material-symbols-outlined">fitness_center</span>
             </div>
             <div class="metric-card-body">

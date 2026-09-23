@@ -201,7 +201,7 @@ export async function renderLanding() {
   const dest = isLoggedIn ? '/dashboard' : '/auth';
   document.getElementById('hero-cta-start')?.addEventListener('click', () => navigate(dest));
   document.getElementById('bottom-cta')?.addEventListener('click', () => navigate(dest));
-  document.getElementById('hero-cta-science')?.addEventListener('click', () => navigate(isLoggedIn ? '/methodology' : '/methodology'));
+  document.getElementById('hero-cta-science')?.addEventListener('click', () => navigate('/methodology'));
 
   // --- Particle system ---
   createParticles();
@@ -231,10 +231,18 @@ export async function renderLanding() {
   if (statsBar) statsObserver.observe(statsBar);
 
   // Floating card value tick animation
-  animateFloatingCards();
+  const floatingTimer = animateFloatingCards();
 
   // Mini RPE slider animation
-  animateMiniSlider();
+  const sliderTimer = animateMiniSlider();
+
+  // Router cleanup: stop the looping animations once the user leaves the page
+  return () => {
+    clearInterval(floatingTimer);
+    clearInterval(sliderTimer);
+    observer.disconnect();
+    statsObserver.disconnect();
+  };
 }
 
 function createParticles() {
@@ -271,7 +279,7 @@ function animateFloatingCards() {
   const acwr = document.getElementById('fc-acwr');
   const rec = document.getElementById('fc-recovery');
   if (!acwr || !rec) return;
-  setInterval(() => {
+  return setInterval(() => {
     const a = (1.05 + Math.random() * 0.15).toFixed(2);
     const r = (7.5 + Math.random() * 2).toFixed(1);
     acwr.textContent = a;
@@ -285,7 +293,7 @@ function animateMiniSlider() {
   const label = document.getElementById('mini-rpe');
   if (!fill || !thumb || !label) return;
   let dir = 1, val = 60;
-  setInterval(() => {
+  return setInterval(() => {
     val += dir * (2 + Math.random() * 4);
     if (val > 85) dir = -1;
     if (val < 20) dir = 1;

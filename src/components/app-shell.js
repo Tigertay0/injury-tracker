@@ -2,6 +2,7 @@
 import { auth } from '../firebase.js';
 import { signOut } from 'firebase/auth';
 import { navigate, getCurrentPath } from '../router.js';
+import { escHtml } from '../lib/dom.js';
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -44,7 +45,7 @@ export function renderAppShell(contentHtml) {
       <div class="sidebar-footer">
         <div class="sidebar-user">
           <span class="material-symbols-outlined" style="font-size:18px;">person</span>
-          ${user?.email || 'User'}
+          ${escHtml(user?.email || 'User')}
         </div>
         <button class="sidebar-logout" id="logout-btn">
           <span class="material-symbols-outlined" style="font-size:16px;">logout</span>
@@ -78,8 +79,13 @@ export function renderAppShell(contentHtml) {
 
   // Logout
   app.querySelector('#logout-btn').addEventListener('click', async () => {
-    await signOut(auth);
-    navigate('/');
+    try {
+      await signOut(auth);
+      navigate('/');
+    } catch (err) {
+      console.error('[auth] Sign out failed:', err);
+      alert('Sign out failed. Please check your connection and try again.');
+    }
   });
 
   // Mobile hamburger

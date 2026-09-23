@@ -3,7 +3,7 @@ import './pages.css';
 import './landing-animations.css';
 import { auth } from './firebase.js';
 import { onAuthStateChanged } from 'firebase/auth';
-import { registerRoute, initRouter, navigate, getCurrentPath } from './router.js';
+import { registerRoute, initRouter, handleRoute, navigate, getCurrentPath } from './router.js';
 
 // Pages
 import { renderLanding } from './pages/landing.js';
@@ -18,8 +18,6 @@ import { renderMethodology } from './pages/methodology.js';
 // Auth-protected routes
 const protectedRoutes = ['/dashboard', '/log-session', '/recovery', '/injuries', '/equipment', '/methodology'];
 
-let currentUser = null;
-
 // Register all routes
 registerRoute('/', renderLanding);
 registerRoute('/auth', renderAuth);
@@ -30,9 +28,10 @@ registerRoute('/injuries', renderInjuries);
 registerRoute('/equipment', renderEquipment);
 registerRoute('/methodology', renderMethodology);
 
-// Auth state listener
+// Auth state listener — the router starts listening on the first auth event so
+// redirects issued below are always handled, and never registers twice
 onAuthStateChanged(auth, (user) => {
-  currentUser = user;
+  initRouter();
   const path = getCurrentPath();
 
   if (!user && protectedRoutes.includes(path)) {
@@ -41,10 +40,6 @@ onAuthStateChanged(auth, (user) => {
     navigate('/dashboard');
   } else {
     // Re-render current route with new auth state
-    initRouter();
+    handleRoute().catch(err => console.error('[router] Route failed to render:', err));
   }
 });
-
-export function getUser() {
-  return currentUser;
-}

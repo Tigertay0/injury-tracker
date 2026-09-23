@@ -3,14 +3,22 @@ import { auth } from '../firebase.js';
 import { renderAppShell } from '../components/app-shell.js';
 import { addRecoveryLog, getRecoveryLogs } from '../lib/firestore.js';
 import { calculateRecoveryScore, getRecoveryZone, getRiskBadgeClass, getZoneLabel } from '../lib/calculations.js';
-import { validateRecoveryInput, ValidationError } from '../lib/validation.js';
-import { checkRateLimit, LIMITS, RateLimitError, writeKey } from '../lib/rate-limiter.js';
-import { navigate } from '../router.js';
+import { validateRecoveryInput } from '../lib/validation.js';
+import { checkRateLimit, LIMITS, writeKey } from '../lib/rate-limiter.js';
+import { navigate, handleRoute } from '../router.js';
+import { fmtDate, showError, hideError, toLocalDateString, LOAD_ERROR_HTML } from '../lib/dom.js';
 
 export async function renderRecovery() {
   const user = auth.currentUser;
   if (!user) { navigate('/auth'); return; }
-  const logs = await getRecoveryLogs(user.uid);
+  let logs;
+  try {
+    logs = await getRecoveryLogs(user.uid);
+  } catch (err) {
+    console.error('[recovery] Failed to load recovery logs:', err);
+    renderAppShell(LOAD_ERROR_HTML);
+    return;
+  }
   const weekStart = getWeekStart();
 
   renderAppShell(`
@@ -141,7 +149,8 @@ export async function renderRecovery() {
       checkRateLimit('log recovery', writeKey('recovery', user.uid), LIMITS.write);
       const score = calculateRecoveryScore(validated.sleep, validated.soreness, validated.stress, validated.nutrition);
       await addRecoveryLog(user.uid, { ...validated, score });
-      navigate('/recovery');
+      // Same hash, so no hashchange fires — re-render directly to show the new log
+      await handleRoute();
     } catch (err) {
       if (err.name === 'RateLimitError') showError('recovery-error', err.message);
       else if (err.name === 'ValidationError') showError('recovery-error', err.message);
@@ -150,7 +159,4 @@ export async function renderRecovery() {
   });
 }
 
-function getWeekStart() { const d = new Date(); d.setDate(d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1)); return d.toISOString().split('T')[0]; }
-function fmtDate(d) { return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
-function showError(id, msg) { const el = document.getElementById(id); if (el) { el.textContent = msg; el.classList.add('visible'); } }
-function hideError(id) { const el = document.getElementById(id); if (el) el.classList.remove('visible'); }
+function getWeekStart() { const d = new Date(); d.setDate(d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1)); return toLocalDateString(d); }

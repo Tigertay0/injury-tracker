@@ -172,28 +172,6 @@ export function resetRateLimit(key) {
   } catch { /* ignore */ }
 }
 
-/**
- * Get the current state of a rate limit without recording an attempt.
- * Useful for pre-checking or showing remaining attempts in the UI.
- *
- * @param {string} key
- * @param {{ maxAttempts: number, windowMs: number }} limits
- * @returns {{ remaining: number, resetTime: number | null, isLimited: boolean }}
- */
-export function getRateLimitStatus(key, limits) {
-  const now    = Date.now();
-  const record = loadRecord(key);
-
-  if (!record || now - record.windowStart >= limits.windowMs) {
-    return { remaining: limits.maxAttempts, resetTime: null, isLimited: false };
-  }
-
-  const remaining  = Math.max(0, limits.maxAttempts - record.count);
-  const resetTime  = record.windowStart + limits.windowMs;
-  const isLimited  = record.count >= limits.maxAttempts && now < resetTime;
-  return { remaining, resetTime, isLimited };
-}
-
 // ─── Convenience builders ─────────────────────────────────────────────────────
 // Pre-built key formats for consistent naming across the app
 
