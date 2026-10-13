@@ -2,7 +2,7 @@
 // Static files (the React app) are served by Workers static assets before this runs.
 import { createClerkClient, verifyToken } from '@clerk/backend';
 import { createApp } from './app';
-import { postgresRepo } from './repo';
+import { pingDatabase, postgresRepo } from './repo';
 
 export interface Env {
   ASSETS: Fetcher;
@@ -45,6 +45,7 @@ function buildApp(env: Env) {
     async deleteClerkUser(userId) {
       await clerk.users.deleteUser(userId);
     },
+    pingDatabase: () => pingDatabase(env.HYPERDRIVE.connectionString),
   });
 }
 

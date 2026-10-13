@@ -47,8 +47,8 @@ npm run typecheck
 
 Local configuration (both files are git-ignored):
 
-- `.env`: `VITE_CLERK_PUBLISHABLE_KEY`, optional `VITE_CONTACT_EMAIL`, and `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` (a Neon dev branch) — see `.env.example`
-- `.dev.vars`: `CLERK_SECRET_KEY` and `DATABASE_URL` (Neon owner URL, for migrations) — see `.dev.vars.example`
+- `.env`: `VITE_CLERK_PUBLISHABLE_KEY`, optional `VITE_CONTACT_EMAIL`, and `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` (a Neon dev branch); see `.env.example`
+- `.dev.vars`: `CLERK_SECRET_KEY` and `DATABASE_URL` (Neon owner URL, for migrations); see `.dev.vars.example`
 
 Public Worker variables (`CLERK_PUBLISHABLE_KEY`, `ALLOWED_ORIGINS`) and the Hyperdrive id live in `wrangler.jsonc`.
 

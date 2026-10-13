@@ -130,6 +130,18 @@ export async function asPlayer<T>(connectionString: string, userId: string, fn: 
   }
 }
 
+/** Connects as the worker role and runs `select 1`; touches no tables. */
+export async function pingDatabase(connectionString: string): Promise<boolean> {
+  const client = new pg.Client({ connectionString });
+  try {
+    await client.connect();
+    const { rows } = await client.query('select 1 as ok');
+    return rows[0]?.ok === 1;
+  } finally {
+    await client.end().catch(() => undefined);
+  }
+}
+
 function profileAssignments(input: ProfileInput | EquipmentInput): { sql: string; values: unknown[] } {
   const pairs: [string, unknown][] = [];
   if ('position' in input && input.position !== undefined) pairs.push(['position', input.position]);

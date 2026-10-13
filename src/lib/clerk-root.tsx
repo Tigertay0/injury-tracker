@@ -21,6 +21,10 @@ const appearance = {
     fontFamily: 'var(--font-sans)',
     borderRadius: '10px',
   },
+  elements: {
+    // Account deletion must go through Settings so PitchSafe data is erased first
+    profileSection__danger: { display: 'none' },
+  },
 };
 
 function Bridge() {

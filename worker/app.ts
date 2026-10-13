@@ -22,6 +22,8 @@ export interface Deps {
   /** True when the caller is still under the limit for this bucket. */
   allow(bucket: 'read' | 'write', userId: string): Promise<boolean>;
   deleteClerkUser(userId: string): Promise<void>;
+  /** Cheap database round trip for monitoring; no player data involved. */
+  pingDatabase?(): Promise<boolean>;
   today?(): string;
 }
 
@@ -54,7 +56,11 @@ export function createApp(deps: Deps) {
   app.use('*', secureHeaders({ crossOriginResourcePolicy: 'same-origin' }));
   app.use('*', bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => c.json({ error: 'Request body is too large.' }, 413) }));
 
-  app.get('/health', (c) => c.json({ ok: true }));
+  app.get('/health', async (c) => {
+    if (c.req.query('db') === undefined || !deps.pingDatabase) return c.json({ ok: true });
+    const database = await deps.pingDatabase().catch(() => false);
+    return c.json({ ok: database, database }, database ? 200 : 503);
+  });
 
   // Auth, then per-user rate limit
   app.use('*', async (c, next) => {
