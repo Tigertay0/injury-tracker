@@ -45,6 +45,10 @@ export default function UseApp() {
           ))}
         </ol>
         <p className="mt-8 max-w-md text-small text-ink-2">Your full risk score appears after four weeks of sessions. Until then you will see your baseline fill up day by day.</p>
+        <Link to="/demo" className="mt-4 inline-flex items-center gap-1.5 text-small font-semibold text-accent-ink underline-offset-4 hover:underline">
+          Not sure yet? Try the sample dashboard
+          <ArrowRight aria-hidden weight="bold" className="size-4" />
+        </Link>
       </div>
 
       <div className="flex flex-col gap-6">

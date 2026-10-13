@@ -12,6 +12,12 @@ const LOG_GET = [
   { when: 'When it happens', log: 'Any injury: where, what type, how bad.', get: 'Extra weight for the injuries most likely to come back.' },
 ];
 
+const SCREENS = [
+  { src: '/screens/dashboard.webp', title: 'Your score.', text: 'One number, the reasons behind it, and what to do first.', alt: 'PitchSafe dashboard on a phone showing a risk score of 44 out of 100, moderate risk, with the advice to switch cleats' },
+  { src: '/screens/log.webp', title: 'Quick logging.', text: 'Session type, minutes and how hard it felt.', alt: 'The log session screen on a phone with session type, date, minutes and an effort slider' },
+  { src: '/screens/equipment.webp', title: 'Cleat check.', text: 'See which studs suit the pitch you play on.', alt: 'The cleats and surface screen on a phone showing a high-risk pairing and a safer option' },
+];
+
 const LIMITS = [
   'It cannot diagnose an injury or tell you that you are fit to play.',
   'It relies on how hard you say a session felt, which is subjective.',
@@ -39,7 +45,7 @@ export default function Landing() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="secondary">
-              <a href="#how">How it works</a>
+              <Link to="/demo">See a sample dashboard</Link>
             </Button>
           </div>
         </div>
@@ -77,6 +83,38 @@ export default function Landing() {
           <p className="mt-6 max-w-2xl text-body text-ink">
             Together they make a <strong className="font-semibold">0 to 100 risk score</strong> with up to five actions to take, and a one-page report you can send your coach.
           </p>
+        </div>
+      </section>
+
+      {/* The app itself: real screens from the sample dashboard */}
+      <section className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 lg:py-24">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="max-w-xl">
+            <h2 className="font-display text-[2.25rem] leading-[1.02] font-extrabold tracking-[-0.01em] text-ink sm:text-display-s">Made for the bus home.</h2>
+            <p className="mt-4 text-lead text-ink-2">Log a session in under a minute on your phone. Add PitchSafe to your home screen and it opens like any other app.</p>
+          </div>
+          <Link to="/demo" className="group inline-flex items-center gap-1.5 text-body font-semibold text-accent-ink underline-offset-4 hover:underline">
+            Open the sample dashboard
+            <ArrowRight aria-hidden weight="bold" className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+        <div className="-mx-5 mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+          {SCREENS.map((s) => (
+            <figure key={s.src} className="w-[72%] shrink-0 snap-center sm:w-auto">
+              <img
+                src={s.src}
+                alt={s.alt}
+                width={780}
+                height={1587}
+                loading="lazy"
+                decoding="async"
+                className="shadow-lift aspect-[780/1587] w-full rounded-[22px] border border-line bg-surface object-cover object-top"
+              />
+              <figcaption className="mt-4 text-body text-ink">
+                <span className="font-semibold">{s.title}</span> <span className="text-ink-2">{s.text}</span>
+              </figcaption>
+            </figure>
+          ))}
         </div>
       </section>
 

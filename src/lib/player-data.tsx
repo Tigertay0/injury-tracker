@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Injury, Profile, RecoveryLog, TrainingSession } from '@shared/types';
 import type { EquipmentInput, InjuryInput, ProfileInput, RecoveryCheckIn, SessionInput } from '@shared/validation';
+import { recoveryScore } from '@shared/calculations';
 import { useApi, errorMessage } from './api';
 
 export interface Overview {
@@ -96,6 +97,7 @@ function usePlayerDataState() {
 }
 
 type PlayerData = ReturnType<typeof usePlayerDataState>;
+export type PlayerActions = PlayerData['actions'];
 const PlayerDataContext = createContext<PlayerData | null>(null);
 
 export function PlayerDataProvider({ children }: { children: ReactNode }) {
@@ -103,9 +105,69 @@ export function PlayerDataProvider({ children }: { children: ReactNode }) {
   return <PlayerDataContext.Provider value={value}>{children}</PlayerDataContext.Provider>;
 }
 
+// Demo mode: the same actions, applied to local state only. Nothing is sent anywhere.
+function useDemoState(initial: () => Overview): PlayerData {
+  const [data, setData] = useState<Overview>(initial);
+  const update = useCallback((fn: (d: Overview) => Overview) => setData((d) => fn(d)), []);
+  const actions = useMemo<PlayerActions>(
+    () => ({
+      reload: async () => undefined,
+      async createProfile() {},
+      async updateProfile(input) {
+        update((d) => ({ ...d, profile: d.profile && { ...d.profile, ...input } }));
+      },
+      async updateEquipment(input) {
+        update((d) => ({ ...d, profile: d.profile && { ...d.profile, ...input } }));
+      },
+      async addSession(input) {
+        const session: TrainingSession = { id: crypto.randomUUID(), ...input, load: input.duration * input.rpe };
+        update((d) => ({ ...d, sessions: [session, ...d.sessions].sort(byDateDesc((s) => s.date)) }));
+        return session;
+      },
+      async deleteSession(id) {
+        update((d) => ({ ...d, sessions: d.sessions.filter((s) => s.id !== id) }));
+      },
+      async saveCheckIn(input) {
+        const log: RecoveryLog = { id: crypto.randomUUID(), ...input, score: recoveryScore(input) };
+        update((d) => ({ ...d, recovery: [log, ...d.recovery.filter((r) => r.weekStart !== log.weekStart)].sort(byDateDesc((r) => r.weekStart)) }));
+        return log;
+      },
+      async deleteCheckIn(id) {
+        update((d) => ({ ...d, recovery: d.recovery.filter((r) => r.id !== id) }));
+      },
+      async addInjury(input) {
+        update((d) => ({ ...d, injuries: [{ id: crypto.randomUUID(), ...input }, ...d.injuries].sort(byDateDesc((i) => i.injuryDate)) }));
+      },
+      async setInjuryReturn(id, returnDate) {
+        update((d) => ({ ...d, injuries: d.injuries.map((i) => (i.id === id ? { ...i, returnDate } : i)) }));
+      },
+      async deleteInjury(id) {
+        update((d) => ({ ...d, injuries: d.injuries.filter((i) => i.id !== id) }));
+      },
+      async exportData() {
+        const blob = new Blob([JSON.stringify({ sample: true, ...data }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'pitchsafe-sample-export.json';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      },
+      async deleteAccount() {},
+    }),
+    [update, data],
+  );
+  return { state: { status: 'ready', data }, actions };
+}
+
+export function DemoPlayerDataProvider({ initial, children }: { initial: () => Overview; children: ReactNode }) {
+  const value = useDemoState(initial);
+  return <PlayerDataContext.Provider value={value}>{children}</PlayerDataContext.Provider>;
+}
+
 export function usePlayerData(): PlayerData {
   const ctx = useContext(PlayerDataContext);
-  if (!ctx) throw new Error('usePlayerData must be used inside <PlayerDataProvider>');
+  if (!ctx) throw new Error('usePlayerData must be used inside a player data provider');
   return ctx;
 }
 
@@ -115,3 +177,7 @@ export function useOverview(): Overview {
   if (state.status !== 'ready') throw new Error('useOverview used before data loaded');
   return state.data;
 }
+
+/** "/app" for signed-in players, "/demo" for the public sample. */
+export const AppBaseContext = createContext<'/app' | '/demo'>('/app');
+export const useAppBase = () => useContext(AppBaseContext);
