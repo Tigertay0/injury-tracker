@@ -124,6 +124,7 @@ describe('sample player', () => {
       const model = buildRiskModel(sampleOverview(day), day);
       expect(model.movement.ready, day).toBe(true);
       expect(model.movement.types.find((t) => t.type === 'sprint')?.level, day).toBe('CAUTION');
+      expect(model.movement.worst?.type, day).toBe('sprint');
       zones.add(model.composite?.zone);
     }
     expect([...zones]).toHaveLength(1);

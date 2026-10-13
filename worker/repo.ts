@@ -3,7 +3,7 @@
 // so row-level security limits every query to that player's rows even if a query
 // below forgot its user_id filter.
 import pg from 'pg';
-import type { Injury, Profile, RecoveryLog, SessionDrill, TrainingSession } from '../shared/types';
+import type { Injury, Overview, Profile, RecoveryLog, SessionDrill, TrainingSession } from '../shared/types';
 import type { EquipmentInput, InjuryInput, ProfileInput, RecoveryCheckIn, SessionInput } from '../shared/validation';
 
 export const CONSENT_VERSION = '2026-10';
@@ -11,12 +11,7 @@ const MAX_SESSIONS = 500;
 const MAX_CHECKINS = 104;
 const MAX_INJURIES = 200;
 
-export interface Overview {
-  profile: Profile | null;
-  sessions: TrainingSession[];
-  recovery: RecoveryLog[];
-  injuries: Injury[];
-}
+export type { Overview };
 
 export interface PlayerRepo {
   overview(): Promise<Overview>;
