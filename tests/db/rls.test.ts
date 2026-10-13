@@ -89,6 +89,15 @@ run('Neon schema and row-level security', () => {
     expect(theirs).toHaveLength(0);
   });
 
+  it('removes the drills when their session is deleted', async () => {
+    const s = await a.addSession({ date: today, type: 'training', duration: 60, rpe: 5, notes: '', drills: [{ drillId: 'rondo_4v2', minutes: 10 }] });
+    const before = await asPlayer(url!, A, (q) => q('select id from public.session_drills where session_id = $1', [s.id]));
+    expect(before).toHaveLength(1);
+    expect(await a.deleteSession(s.id)).toBe(true);
+    const after = await asPlayer(url!, A, (q) => q('select id from public.session_drills where session_id = $1', [s.id]));
+    expect(after).toHaveLength(0);
+  });
+
   it("cannot attach drills to another player's session", async () => {
     await expect(
       asPlayer(url!, B, (q) => q("insert into public.session_drills (session_id, drill_id, minutes) values ($1, 'rondo_4v2', 10)", [aSessionId])),

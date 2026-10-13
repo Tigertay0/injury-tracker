@@ -2,6 +2,10 @@
 -- The composite foreign key ties every row to a session owned by the same player,
 -- so a player can never attach drills to someone else's session.
 
+-- Fail fast instead of queueing behind a long transaction while the unique constraint
+-- below takes its lock on training_sessions (the migrator runs this file in one transaction).
+set local lock_timeout = '5s';
+
 alter table public.training_sessions
   add constraint training_sessions_id_user_key unique (id, user_id);
 
