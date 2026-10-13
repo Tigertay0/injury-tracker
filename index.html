@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>PitchSafe: free injury-risk tracking for soccer players</title>
+    <meta name="description" content="Log training, recovery and cleats. PitchSafe turns them into one injury-risk score built on published sports science. Free for amateur soccer players." />
+    <meta name="theme-color" content="#f5f6f8" />
+    <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PitchSafe: know when your training turns risky" />
+    <meta property="og:description" content="Free injury-risk tracking for amateur soccer players, built on published sports science." />
+    <meta property="og:image" content="/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preload" href="/fonts/saira-semi-condensed/saira-semi-condensed-extrabold.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/public-sans/public-sans-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      // Apply the saved app theme before first paint to avoid a flash
+      try {
+        var t = localStorage.getItem('pitchsafe-theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>PitchSafe needs JavaScript to run. Please turn it on and reload.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

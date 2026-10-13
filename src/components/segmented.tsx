@@ -1,0 +1,90 @@
+// Segmented control: transitions.dev "Tabs sliding" (16) as a radio group.
+// The pill is measured from the selected option and snaps on first paint and resize.
+import { useCallback, useLayoutEffect, useRef, type KeyboardEvent } from 'react';
+import { cn } from '@/lib/utils';
+
+interface Option<T extends string> {
+  value: T;
+  label: string;
+}
+
+interface SegmentedProps<T extends string> {
+  label: string;
+  options: readonly Option<T>[];
+  value: T;
+  onChange: (value: T) => void;
+  className?: string;
+  size?: 'md' | 'lg';
+}
+
+export function Segmented<T extends string>({ label, options, value, onChange, className, size = 'md' }: SegmentedProps<T>) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const pillRef = useRef<HTMLSpanElement>(null);
+  const firstPaint = useRef(true);
+
+  const place = useCallback((animate: boolean) => {
+    const bar = barRef.current;
+    const pill = pillRef.current;
+    const tab = bar?.querySelector<HTMLButtonElement>('[aria-checked="true"]');
+    if (!bar || !pill || !tab) return;
+    if (!animate) {
+      const prev = pill.style.transition;
+      pill.style.transition = 'none';
+      pill.style.transform = `translateX(${tab.offsetLeft}px)`;
+      pill.style.width = `${tab.offsetWidth}px`;
+      void pill.offsetWidth;
+      pill.style.transition = prev;
+    } else {
+      pill.style.transform = `translateX(${tab.offsetLeft}px)`;
+      pill.style.width = `${tab.offsetWidth}px`;
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    place(!firstPaint.current);
+    firstPaint.current = false;
+  }, [value, place]);
+
+  useLayoutEffect(() => {
+    const onResize = () => place(false);
+    window.addEventListener('resize', onResize);
+    document.fonts?.ready.then(() => place(false));
+    return () => window.removeEventListener('resize', onResize);
+  }, [place]);
+
+  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    const i = options.findIndex((o) => o.value === value);
+    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    const next = options[(i + step + options.length) % options.length];
+    onChange(next.value);
+    barRef.current?.querySelector<HTMLButtonElement>(`[data-value="${next.value}"]`)?.focus();
+  }
+
+  const tabHeight = size === 'lg' ? 'h-10 px-4 text-body' : 'h-[34px] px-3.5 text-small';
+
+  return (
+    <div ref={barRef} role="radiogroup" aria-label={label} onKeyDown={onKeyDown} className={cn('t-tabs max-w-full', className)}>
+      <span ref={pillRef} aria-hidden className={cn('t-tabs-pill shadow-lift', size === 'lg' ? '!h-10' : '!h-[34px]')} />
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            aria-selected={selected}
+            data-value={o.value}
+            tabIndex={selected ? 0 : -1}
+            onClick={() => onChange(o.value)}
+            className={cn('t-tab !h-auto font-semibold whitespace-nowrap', tabHeight)}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

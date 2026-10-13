@@ -1,0 +1,312 @@
+@import "tailwindcss";
+
+/* ---------- Fonts (Fontesk, SIL OFL 1.1, self-hosted) ---------- */
+
+@font-face {
+  font-family: "Saira Semi Condensed";
+  src: url("/fonts/saira-semi-condensed/saira-semi-condensed-extrabold.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Saira Semi Condensed";
+  src: url("/fonts/saira-semi-condensed/saira-semi-condensed-semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Public Sans";
+  src: url("/fonts/public-sans/public-sans-variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+/* Metric-matched fallbacks keep layout still while the real faces load */
+@font-face {
+  font-family: "Saira Fallback";
+  src: local("Arial Narrow"), local("Arial");
+  size-adjust: 92%;
+  ascent-override: 120%;
+  descent-override: 46%;
+}
+@font-face {
+  font-family: "Public Sans Fallback";
+  src: local("Arial");
+  size-adjust: 102%;
+  ascent-override: 93%;
+  descent-override: 22%;
+}
+
+/* ---------- Tokens: light (default, and always on marketing pages) ---------- */
+
+:root {
+  --ground: oklch(0.972 0.003 250);
+  --surface: oklch(0.995 0.001 250);
+  --sunken: oklch(0.945 0.004 250);
+  --line: oklch(0.895 0.006 250);
+  --line-strong: oklch(0.63 0.01 252);
+
+  --ink: oklch(0.21 0.012 255);
+  --ink-2: oklch(0.43 0.012 255);
+  --ink-3: oklch(0.52 0.01 255);
+  --ink-inverse: oklch(0.985 0.002 250);
+
+  --accent: oklch(0.5 0.19 263);
+  --accent-hover: oklch(0.45 0.19 263);
+  --accent-ink: oklch(0.47 0.19 263);
+  --accent-soft: oklch(0.935 0.035 263);
+  --on-accent: oklch(0.99 0.004 263);
+
+  --risk-low: oklch(0.5 0.12 152);
+  --risk-low-soft: oklch(0.94 0.045 152);
+  --risk-moderate: oklch(0.5 0.105 78);
+  --risk-moderate-soft: oklch(0.95 0.06 92);
+  --risk-high: oklch(0.53 0.15 50);
+  --risk-high-soft: oklch(0.94 0.045 55);
+  --risk-very-high: oklch(0.5 0.18 27);
+  --risk-very-high-soft: oklch(0.94 0.035 27);
+
+  /* Chart: older weeks a lighter step of the accent, this week the accent (validated) */
+  --chart-past: oklch(0.7 0.1 262);
+  --chart-now: oklch(0.5 0.19 263);
+  --chart-grid: oklch(0.91 0.005 250);
+  --focus: oklch(0.55 0.2 263);
+  --shadow-color: 250 30% 20%;
+  color-scheme: light;
+}
+
+/* App screens follow the device theme unless the player picks one in Settings */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .app-scope {
+    --ground: oklch(0.175 0.008 255);
+    --surface: oklch(0.215 0.009 255);
+    --sunken: oklch(0.155 0.008 255);
+    --line: oklch(0.3 0.01 255);
+    --line-strong: oklch(0.55 0.012 255);
+    --ink: oklch(0.955 0.004 255);
+    --ink-2: oklch(0.78 0.008 255);
+    --ink-3: oklch(0.69 0.008 255);
+    --ink-inverse: oklch(0.2 0.01 255);
+    --accent: oklch(0.7 0.15 263);
+    --accent-hover: oklch(0.76 0.13 263);
+    --accent-ink: oklch(0.78 0.12 263);
+    --accent-soft: oklch(0.3 0.07 263);
+    --on-accent: oklch(0.18 0.03 263);
+    --risk-low: oklch(0.78 0.13 152);
+    --risk-low-soft: oklch(0.29 0.05 152);
+    --risk-moderate: oklch(0.84 0.12 88);
+    --risk-moderate-soft: oklch(0.3 0.05 88);
+    --risk-high: oklch(0.78 0.13 55);
+    --risk-high-soft: oklch(0.3 0.05 50);
+    --risk-very-high: oklch(0.74 0.15 27);
+    --risk-very-high-soft: oklch(0.3 0.06 27);
+    --chart-past: oklch(0.52 0.12 262);
+    --chart-now: oklch(0.665 0.17 263);
+    --chart-grid: oklch(0.28 0.01 255);
+    --focus: oklch(0.75 0.14 263);
+    --shadow-color: 255 30% 4%;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] .app-scope {
+  --ground: oklch(0.175 0.008 255);
+  --surface: oklch(0.215 0.009 255);
+  --sunken: oklch(0.155 0.008 255);
+  --line: oklch(0.3 0.01 255);
+  --line-strong: oklch(0.55 0.012 255);
+  --ink: oklch(0.955 0.004 255);
+  --ink-2: oklch(0.78 0.008 255);
+  --ink-3: oklch(0.69 0.008 255);
+  --ink-inverse: oklch(0.2 0.01 255);
+  --accent: oklch(0.7 0.15 263);
+  --accent-hover: oklch(0.76 0.13 263);
+  --accent-ink: oklch(0.78 0.12 263);
+  --accent-soft: oklch(0.3 0.07 263);
+  --on-accent: oklch(0.18 0.03 263);
+  --risk-low: oklch(0.78 0.13 152);
+  --risk-low-soft: oklch(0.29 0.05 152);
+  --risk-moderate: oklch(0.84 0.12 88);
+  --risk-moderate-soft: oklch(0.3 0.05 88);
+  --risk-high: oklch(0.78 0.13 55);
+  --risk-high-soft: oklch(0.3 0.05 50);
+  --risk-very-high: oklch(0.74 0.15 27);
+  --risk-very-high-soft: oklch(0.3 0.06 27);
+  --chart-past: oklch(0.52 0.12 262);
+  --chart-now: oklch(0.665 0.17 263);
+  --chart-grid: oklch(0.28 0.01 255);
+  --focus: oklch(0.75 0.14 263);
+  --shadow-color: 255 30% 4%;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-risk-low: var(--risk-low);
+  --color-risk-low-soft: var(--risk-low-soft);
+  --color-risk-moderate: var(--risk-moderate);
+  --color-risk-moderate-soft: var(--risk-moderate-soft);
+  --color-risk-high: var(--risk-high);
+  --color-risk-high-soft: var(--risk-high-soft);
+  --color-risk-very-high: var(--risk-very-high);
+  --color-risk-very-high-soft: var(--risk-very-high-soft);
+  --color-chart-past: var(--chart-past);
+  --color-chart-now: var(--chart-now);
+  --color-chart-grid: var(--chart-grid);
+  --color-focus: var(--focus);
+
+  /* shadcn primitive aliases, so installed components resolve to project tokens */
+  --color-background: var(--ground);
+  --color-foreground: var(--ink);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--on-accent);
+  --color-muted: var(--sunken);
+  --color-muted-foreground: var(--ink-2);
+  --color-border: var(--line);
+  --color-input: var(--line-strong);
+  --color-ring: var(--focus);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-destructive: var(--risk-very-high);
+}
+
+@theme {
+  --font-display: "Saira Semi Condensed", "Saira Fallback", "Arial Narrow", system-ui, sans-serif;
+  --font-sans: "Public Sans", "Public Sans Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Role scale: 12 / 13 / 14 / 16 / 18 / 22 / 28 / 36 / 48 / 64 / 80 / 96 */
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.4;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.35;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.55;
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.6;
+  --text-h3: 1.375rem;
+  --text-h3--line-height: 1.2;
+  --text-h2: 1.75rem;
+  --text-h2--line-height: 1.1;
+  --text-h1: 2.25rem;
+  --text-h1--line-height: 1.05;
+  --text-display-s: 3rem;
+  --text-display-s--line-height: 1;
+  --text-display-m: 4rem;
+  --text-display-m--line-height: 0.96;
+  --text-display-l: 5rem;
+  --text-display-l--line-height: 0.94;
+  --text-score: 6rem;
+  --text-score--line-height: 0.85;
+
+  /* Shape lock: 10px controls, 16px panels, 999px status chips */
+  --radius-control: 10px;
+  --radius-panel: 16px;
+  --radius-chip: 999px;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ---------- Base ---------- */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  input, textarea, select {
+    caret-color: var(--accent);
+  }
+  a {
+    text-underline-offset: 0.2em;
+  }
+}
+
+@layer utilities {
+  .tnum {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .shadow-overlay {
+    box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.08), 0 16px 40px -16px hsl(var(--shadow-color) / 0.28);
+  }
+  .shadow-lift {
+    box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 6px 18px -10px hsl(var(--shadow-color) / 0.22);
+  }
+  .press {
+    transition: transform 140ms var(--ease-out), background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+  .press:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* ---------- Drawer and dialog motion (enter slower than exit, ease-out curves) ---------- */
+@keyframes sheet-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheet-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sheet-in-right { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes sheet-out-right { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes sheet-in-bottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sheet-out-bottom { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes dialog-in { from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes dialog-out { from { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, -50%) scale(0.96); } }
+
+.sheet-overlay[data-state="open"] { animation: sheet-fade-in 240ms var(--ease-out); }
+.sheet-overlay[data-state="closed"] { animation: sheet-fade-out 160ms ease-out; }
+.sheet-panel[data-side="right"][data-state="open"] { animation: sheet-in-right 320ms var(--ease-drawer); }
+.sheet-panel[data-side="right"][data-state="closed"] { animation: sheet-out-right 200ms var(--ease-drawer); }
+.sheet-panel[data-side="bottom"][data-state="open"] { animation: sheet-in-bottom 320ms var(--ease-drawer); }
+.sheet-panel[data-side="bottom"][data-state="closed"] { animation: sheet-out-bottom 200ms var(--ease-drawer); }
+.dialog-panel[data-state="open"] { animation: dialog-in 250ms cubic-bezier(0.22, 1, 0.36, 1); }
+.dialog-panel[data-state="closed"] { animation: dialog-out 150ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-panel[data-state], .dialog-panel[data-state] { animation-name: sheet-fade-in; animation-duration: 120ms; }
+  .sheet-panel[data-state="closed"], .dialog-panel[data-state="closed"] { animation-name: sheet-fade-out; }
+}
