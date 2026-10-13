@@ -101,8 +101,8 @@ function PhoneReveal() {
           <img
             src="/screens/dashboard-mobile-full.webp"
             width={780}
-            height={5622}
-            alt="The full PitchSafe dashboard for a sample player on a phone: risk score 44 out of 100, the top action, workload ratio, recovery, cleats, injury history, the 28-day load chart, five actions and the coach report"
+            height={6868}
+            alt="The full PitchSafe dashboard for a sample player on a phone: risk score 66 out of 100, the top action, workload ratio, recovery, cleats, injury history, the 28-day load chart, movement this week with sprinting rising, five actions and the coach report"
             loading="lazy"
             decoding="async"
             className="dash-scroll block w-full"
@@ -147,7 +147,7 @@ function DesktopReveal() {
             src="/screens/dashboard-desktop-dark.webp"
             width={2880}
             height={1800}
-            alt="The PitchSafe dashboard for a sample player: risk score 44 out of 100, moderate risk, with the advice to switch cleats, plus workload ratio, recovery, cleats and injury history"
+            alt="The PitchSafe dashboard for a sample player: risk score 66 out of 100, high risk, with the advice to switch cleats, plus workload ratio, recovery, cleats and injury history"
             loading="lazy"
             decoding="async"
             className="h-full w-full object-cover [object-position:0_0]"

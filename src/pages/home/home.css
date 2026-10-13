@@ -22,7 +22,7 @@
   95%, 100% { transform: translateY(0); }
 }
 .dash-scroll {
-  animation: dash-scroll 28s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation: dash-scroll 34s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   will-change: transform;
 }
 .dash-frame:hover .dash-scroll,

@@ -49,7 +49,7 @@ const STEPS: Step[] = [
     id: 'score',
     title: 'Read your score, then act',
     text: 'Your 0 to 100 risk score, the reasons behind it and the one thing to do first. Tap any piece of advice to go straight to it.',
-    alt: 'The dashboard: injury risk score 44 out of 100, moderate risk, and the advice to switch cleats',
+    alt: 'The dashboard: injury risk score 66 out of 100, high risk, and the advice to switch cleats',
     targets: [
       { label: 'Your risk score', x: 25.5, y: 32.4 },
       { label: 'Do this first', x: 23, y: 59.6 },
