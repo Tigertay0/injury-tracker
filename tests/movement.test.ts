@@ -46,10 +46,21 @@ describe('movementLoad', () => {
     expect(m.worst).toBeNull();
   });
 
-  it('needs drills in at least 3 of the last 4 weeks', () => {
-    const m = movementLoad([session(1, SPRINTS), session(8, SPRINTS)], TODAY);
+  // 80 min of short sprints = 20 min of sprinting per session, so a 4-week average of 10 or
+  // more clears the 5-minute floor and only the weeks rule can hold the ratio back.
+  const BIG_SPRINTS: SessionDrill[] = [{ drillId: 'sprints_short', minutes: 80 }];
+
+  it('has no baseline with drills in only 2 of the last 4 weeks', () => {
+    const m = movementLoad([session(1, BIG_SPRINTS), session(8, BIG_SPRINTS)], TODAY);
     expect(m.types.find((t) => t.type === 'sprint')?.ratio).toBeNull();
+    expect(m.ready).toBe(false);
     expect(m.maxPoints).toBe(0);
+  });
+
+  it('has a baseline once drills appear in 3 of the last 4 weeks', () => {
+    const m = movementLoad([session(1, BIG_SPRINTS), session(8, BIG_SPRINTS), session(15, BIG_SPRINTS)], TODAY);
+    expect(m.types.find((t) => t.type === 'sprint')?.ratio).not.toBeNull();
+    expect(m.ready).toBe(true);
   });
 
   it('needs at least 5 minutes in an average week', () => {
