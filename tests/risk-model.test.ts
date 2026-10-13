@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { buildRiskModel } from '../shared/risk-model';
 import { addDays } from '../shared/dates';
+import { DRILL_IDS } from '../shared/drills';
+import { validateSession } from '../shared/validation';
+import { sampleOverview } from '../src/lib/sample-data';
 import type { Profile, RecoveryLog, TrainingSession } from '../shared/types';
 
 const TODAY = '2026-10-12'; // a Monday
@@ -110,5 +113,28 @@ describe('movement load in the risk model', () => {
     expect(model.acwrZone).toBe('NA');
     expect(model.movement.maxPoints).toBe(85);
     expect(model.composite).toBeNull();
+  });
+});
+
+describe('sample player', () => {
+  it('has drills with a movement baseline and rising sprinting on every weekday', () => {
+    for (let d = 0; d < 7; d++) {
+      const day = addDays(TODAY, d);
+      const model = buildRiskModel(sampleOverview(day), day);
+      expect(model.movement.ready).toBe(true);
+      expect(['CAUTION', 'DANGER']).toContain(model.movement.types.find((t) => t.type === 'sprint')?.level);
+    }
+  });
+
+  it('logs only valid sessions with known drill ids on every weekday', () => {
+    for (let d = 0; d < 7; d++) {
+      const day = addDays(TODAY, d);
+      for (const s of sampleOverview(day).sessions) {
+        const { date, type, duration, rpe, notes, drills } = s;
+        expect(drills?.length, `${s.date} has drills`).toBeGreaterThan(0);
+        expect(() => validateSession({ date, type, duration, rpe, notes, drills }, day)).not.toThrow();
+        for (const drill of drills ?? []) expect(DRILL_IDS.has(drill.drillId), drill.drillId).toBe(true);
+      }
+    }
   });
 });
