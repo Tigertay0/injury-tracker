@@ -1,17 +1,13 @@
 // The signed-in player's data, loaded once per app visit and updated in place after
 // each change, so every screen reads the same copy.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Injury, Profile, RecoveryLog, TrainingSession } from '@shared/types';
+import type { Injury, Overview, Profile, RecoveryLog, TrainingSession } from '@shared/types';
 import type { EquipmentInput, InjuryInput, ProfileInput, RecoveryCheckIn, SessionInput } from '@shared/validation';
 import { recoveryScore } from '@shared/calculations';
 import { ApiError, useApi, errorMessage } from './api';
 
-export interface Overview {
-  profile: Profile | null;
-  sessions: TrainingSession[];
-  recovery: RecoveryLog[];
-  injuries: Injury[];
-}
+// Overview lives in shared/types.ts; re-exported so screens keep importing it from here
+export type { Overview } from '@shared/types';
 
 type State = { status: 'loading' } | { status: 'error'; message: string; code: number } | { status: 'ready'; data: Overview };
 

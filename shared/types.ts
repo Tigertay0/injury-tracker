@@ -68,3 +68,11 @@ export interface SessionDrill {
   drillId: string;
   minutes: number;
 }
+
+// One player's data as the app holds it: what GET /overview returns, and what the demo builds
+export interface Overview {
+  profile: Profile | null;
+  sessions: TrainingSession[];
+  recovery: RecoveryLog[];
+  injuries: Injury[];
+}

@@ -117,13 +117,17 @@ describe('movement load in the risk model', () => {
 });
 
 describe('sample player', () => {
-  it('has drills with a movement baseline and rising sprinting on every weekday', () => {
+  it('shows the same sprint caution and risk zone on every weekday', () => {
+    const zones = new Set<string | undefined>();
     for (let d = 0; d < 7; d++) {
       const day = addDays(TODAY, d);
       const model = buildRiskModel(sampleOverview(day), day);
-      expect(model.movement.ready).toBe(true);
-      expect(['CAUTION', 'DANGER']).toContain(model.movement.types.find((t) => t.type === 'sprint')?.level);
+      expect(model.movement.ready, day).toBe(true);
+      expect(model.movement.types.find((t) => t.type === 'sprint')?.level, day).toBe('CAUTION');
+      zones.add(model.composite?.zone);
     }
+    expect([...zones]).toHaveLength(1);
+    expect(zones.has(undefined)).toBe(false);
   });
 
   it('logs only valid sessions with known drill ids on every weekday', () => {
