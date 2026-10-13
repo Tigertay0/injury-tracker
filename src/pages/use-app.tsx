@@ -26,33 +26,15 @@ export default function UseApp() {
   const [platform, setPlatform] = useState<Platform>(() => (/android/i.test(navigator.userAgent) ? 'android' : 'iphone'));
 
   return (
-    <div className="mx-auto grid max-w-[1200px] gap-12 px-5 pt-10 pb-20 sm:px-8 md:pt-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-16">
-      <div className="max-w-xl">
+    // DOM order is intro, account, steps, so phones (and keyboards) reach the main
+    // action early; on desktop the account column sits beside both
+    <div className="mx-auto grid max-w-[1200px] grid-cols-[minmax(0,1fr)] gap-10 px-5 pt-10 pb-20 sm:px-8 md:pt-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:gap-y-10">
+      <div className="max-w-xl lg:col-start-1 lg:row-start-1">
         <h1 className="font-display text-[2.75rem] leading-[0.98] font-extrabold tracking-[-0.015em] text-ink sm:text-display-m">Start tracking in two minutes.</h1>
         <p className="mt-5 text-lead text-ink-2">Free. Works in the browser on any phone or computer. Nothing to download from an app store.</p>
-
-        <ol className="mt-10 space-y-6">
-          {STEPS.map((s, i) => (
-            <li key={s.title} className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-4">
-              <span aria-hidden className="tnum grid size-10 place-items-center rounded-full bg-accent-soft font-display text-h3 font-extrabold text-accent-ink">
-                {i + 1}
-              </span>
-              <div>
-                <p className="text-lead font-semibold text-ink">{s.title}</p>
-                <p className="mt-0.5 text-body text-ink-2">{s.text}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-        <p className="mt-8 max-w-md text-small text-ink-2">Your full risk score appears after four weeks of sessions. Until then you will see your baseline fill up day by day.</p>
-        <Link to="/demo" className="mt-4 inline-flex items-center gap-1.5 text-small font-semibold text-accent-ink underline-offset-4 hover:underline">
-          Not sure yet? Try the sample dashboard
-          <ArrowRight aria-hidden weight="bold" className="size-4" />
-        </Link>
       </div>
 
-      {/* The account card leads on phones so the main action is on the first screen */}
-      <div className="order-first flex flex-col gap-6 lg:order-none">
+      <div className="flex flex-col gap-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
         <section aria-labelledby="account-title" className="shadow-lift rounded-[var(--radius-panel)] border border-line bg-surface p-6 sm:p-8">
           <h2 id="account-title" className="font-display text-h2 font-extrabold text-ink">
             {isSignedIn ? 'You are signed in' : 'Get started'}
@@ -117,6 +99,28 @@ export default function UseApp() {
           </ol>
         </section>
       </div>
+
+      <div className="max-w-xl lg:col-start-1 lg:row-start-2">
+        <ol className="space-y-6">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-4">
+              <span aria-hidden className="tnum grid size-10 place-items-center rounded-full bg-accent-soft font-display text-h3 font-extrabold text-accent-ink">
+                {i + 1}
+              </span>
+              <div>
+                <p className="text-lead font-semibold text-ink">{s.title}</p>
+                <p className="mt-0.5 text-body text-ink-2">{s.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-8 max-w-md text-small text-ink-2">Your full risk score appears after four weeks of sessions. Until then you will see your baseline fill up day by day.</p>
+        <Link to="/demo" className="mt-4 inline-flex items-center gap-1.5 text-small font-semibold text-accent-ink underline-offset-4 hover:underline">
+          Not sure yet? Try the sample dashboard
+          <ArrowRight aria-hidden weight="bold" className="size-4" />
+        </Link>
+      </div>
+
     </div>
   );
 }
