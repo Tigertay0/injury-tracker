@@ -69,3 +69,31 @@ describe('buildRiskModel', () => {
     expect(model.recommendations.length).toBeGreaterThan(0);
   });
 });
+
+describe('movement load in the risk model', () => {
+  const recovery = [checkIn('2026-10-12', 8)];
+
+  it('has no movement points when no drills are logged', () => {
+    const plain = buildRiskModel({ profile, sessions: evenWeeks(), recovery, injuries: [] }, TODAY);
+    expect(plain.movement.ready).toBe(false);
+    expect(plain.movement.maxPoints).toBe(0);
+    expect(plain.acwrZone).toBe('SWEET_SPOT');
+  });
+
+  it('raises the training input to the movement-spike points when they are higher', () => {
+    // Same sessions and total load (workload ratio 1). Only the drills differ: 60 min of
+    // long sprints this week (18 min sprinting) against 20 min of short sprints before (5 min).
+    const thisWeek = addDays(TODAY, -6);
+    const sessions = evenWeeks().map((s) => ({
+      ...s,
+      drills: s.date === thisWeek ? [{ drillId: 'sprints_long', minutes: 60 }] : [{ drillId: 'sprints_short', minutes: 20 }],
+    }));
+    const calm = buildRiskModel({ profile, sessions: evenWeeks(), recovery, injuries: [] }, TODAY);
+    const spiky = buildRiskModel({ profile, sessions, recovery, injuries: [] }, TODAY);
+    expect(spiky.acwr).toBe(1);
+    expect(spiky.movement.worst?.type).toBe('sprint');
+    expect(spiky.movement.maxPoints).toBe(85);
+    expect(spiky.composite!.score).toBeGreaterThan(calm.composite!.score);
+    expect(spiky.recommendations.some((r) => r.text.includes('hamstring'))).toBe(true);
+  });
+});

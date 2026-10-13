@@ -17,6 +17,7 @@ import {
 } from './calculations';
 import { dayNumber } from './dates';
 import { equipmentRisk } from './equipment';
+import { movementLoad, type MovementSummary } from './movement';
 import { fuelNotes, recommendations, type FuelNote, type Recommendation } from './recommendations';
 import type { AcwrZone, CompositeZone, EquipmentRisk, Injury, InjuryFactor, Profile, RecoveryLog, RecoveryZone, TrainingSession } from './types';
 
@@ -43,6 +44,7 @@ export interface RiskModel {
   acute: number;
   chronic: number;
   days: { date: string; load: number }[];
+  movement: MovementSummary;
   recovery: RecoveryLog | null;
   recoveryZone: RecoveryZone | null;
   equipmentRisk: EquipmentRisk | null;
@@ -64,6 +66,7 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
   const baseline = baselineProgress(sessions, today);
   const acwr = calculateACWR(sessions, today);
   const zone = acwrZone(acwr);
+  const movement = movementLoad(sessions, today);
 
   const recovery = latestRecentCheckIn(input.recovery, today);
   const recZone = recovery ? recoveryZone(recovery.score) : null;
@@ -80,7 +83,8 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
       ? null
       : (() => {
           const score = compositeScore({
-            acwrRisk: acwrRiskScore(zone),
+            // Training input: the worse of the workload ratio and the biggest movement spike
+            acwrRisk: Math.max(acwrRiskScore(zone), movement.maxPoints),
             recoveryRisk: recZone ? recoveryRiskScore(recZone) : MISSING_RECOVERY_RISK,
             equipmentRisk: equip ? equipmentRiskScore(equip) : MISSING_EQUIPMENT_RISK,
             multiplier: injury.value,
@@ -102,6 +106,7 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
     acute: acuteLoad(sessions, today),
     chronic: Math.round(chronicLoad(sessions, today)),
     days: dailyLoads(sessions, today, CHRONIC_DAYS),
+    movement,
     recovery,
     recoveryZone: recZone,
     equipmentRisk: equip,
@@ -114,6 +119,7 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
       equipmentRisk: equip,
       position: profile?.position ?? null,
       injuryFactors: injury.factors,
+      movementSpike: movement.worst && (movement.worst.level === 'CAUTION' || movement.worst.level === 'DANGER') ? { type: movement.worst.type, level: movement.worst.level } : null,
     }),
     fuel: fuelNotes({ acwr, recoveryScore: recovery?.score ?? null, hadHardSessionRecently }),
   };

@@ -1,6 +1,6 @@
 // Rule-based recommendations (PRD 2.6) and nutrition awareness notes (PRD 2.7).
 // No AI here: every line is a fixed rule tied to a published source.
-import type { AcwrZone, EquipmentRisk, InjuryFactor, Position, RecoveryZone } from './types';
+import type { AcwrZone, EquipmentRisk, InjuryFactor, MovementType, Position, RecoveryZone } from './types';
 
 export type RecommendationCategory = 'Equipment' | 'Training load' | 'Recovery' | 'Position' | 'Injury history';
 
@@ -18,6 +18,8 @@ export interface RecommendationInput {
   equipmentRisk: EquipmentRisk | null;
   position: Position | null;
   injuryFactors: readonly InjuryFactor[];
+  /** Highest scored movement spike this week, if any. */
+  movementSpike?: { type: MovementType; level: 'CAUTION' | 'DANGER' } | null;
 }
 
 const MAX_RECOMMENDATIONS = 5;
@@ -79,10 +81,32 @@ function historyAdvice(factors: readonly InjuryFactor[]): Recommendation | null 
   return null;
 }
 
+function movementAdvice(spike: RecommendationInput['movementSpike']): Recommendation | null {
+  if (!spike) return null;
+  const danger = spike.level === 'DANGER';
+  const priority = danger ? 1 : 2;
+  switch (spike.type) {
+    case 'sprint':
+    case 'hsr':
+      return danger
+        ? { priority, category: 'Training load', text: 'Your sprinting and high-speed running this week are well above your usual. Ease off max-speed work for a few days and keep Nordic curls in your week to protect your hamstrings.', citation: 'Duhig et al., 2016' }
+        : { priority, category: 'Training load', text: 'Your sprinting is climbing above your usual. Hold it steady this week rather than adding more max-speed work, to spare your hamstrings.', citation: 'Duhig et al., 2016' };
+    case 'cod':
+      return { priority, category: 'Training load', text: danger ? 'Much more cutting and turning than usual this week. Keep small-sided games shorter and warm up with side-to-side movement to protect your knees and ankles.' : 'More cutting and turning than usual. Warm up with side-to-side movement to protect your knees and ankles.', citation: 'Gabbett, 2016' };
+    case 'jump':
+      return { priority, category: 'Training load', text: danger ? 'A lot more jumping and landing than usual. Cut back on jump work for a few days to spare your knee tendons.' : 'More jumping and landing than usual. Land softly and keep jump work steady this week.', citation: 'Gabbett, 2016' };
+    case 'contact':
+      return { priority, category: 'Training load', text: danger ? 'Far more contact and duels than usual this week. Expect knocks, and give bruises a day or two before full-contact work.' : 'More contact than usual this week. Look after any knocks before your next full-contact session.', citation: 'Gabbett, 2016' };
+    case 'strength':
+      return null;
+  }
+}
+
 export function recommendations(input: RecommendationInput): Recommendation[] {
   const recs = [
     equipmentAdvice(input.equipmentRisk),
     loadAdvice(input.acwrZone),
+    movementAdvice(input.movementSpike ?? null),
     recoveryAdvice(input.recoveryZone),
     historyAdvice(input.injuryFactors),
     positionAdvice(input.position, input.acwrZone),

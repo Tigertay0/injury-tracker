@@ -75,3 +75,22 @@ describe('fuel notes (PRD 2.7)', () => {
     expect(notes.map((n) => n.id)).toContain('POST_SESSION');
   });
 });
+
+describe('movement spike advice', () => {
+  const base = { acwrZone: 'SWEET_SPOT' as const, recoveryZone: 'GOOD' as const, equipmentRisk: 'LOW' as const, position: null, injuryFactors: [] };
+
+  it('gives hamstring advice for a sprint spike, ranked as urgent load advice', () => {
+    const recs = recommendations({ ...base, movementSpike: { type: 'sprint', level: 'DANGER' } });
+    const advice = recs.find((r) => r.text.includes('hamstring'));
+    expect(advice).toMatchObject({ category: 'Training load', priority: 1, citation: 'Duhig et al., 2016' });
+  });
+
+  it('gives knee and ankle advice for a change-of-direction caution', () => {
+    const recs = recommendations({ ...base, movementSpike: { type: 'cod', level: 'CAUTION' } });
+    expect(recs.find((r) => r.text.includes('knees and ankles'))).toMatchObject({ priority: 2 });
+  });
+
+  it('adds nothing without a spike', () => {
+    expect(recommendations({ ...base, movementSpike: null })).toEqual(recommendations(base));
+  });
+});
