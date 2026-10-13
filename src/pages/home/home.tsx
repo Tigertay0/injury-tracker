@@ -147,7 +147,7 @@ function DesktopReveal() {
             src="/screens/dashboard-desktop-dark.webp"
             width={2880}
             height={1800}
-            alt="The PitchSafe dashboard for a sample player: risk score 66 out of 100, high risk, with the advice to switch cleats, plus workload ratio, recovery, cleats and injury history"
+            alt="The PitchSafe dashboard for a sample player: risk score 66 out of 100, high risk, with the advice to switch cleats, plus workload ratio with sprinting rising, recovery, cleats and injury history"
             loading="lazy"
             decoding="async"
             className="h-full w-full object-cover [object-position:0_0]"
