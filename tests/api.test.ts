@@ -24,6 +24,7 @@ function memoryStore() {
     const o = forUser(userId);
     return {
       overview: async () => structuredClone(o),
+      exportAll: async () => structuredClone(o),
       getProfile: async () => o.profile,
       createProfile: async (input) => {
         o.profile = { position: input.position ?? null, displayName: input.displayName ?? '', cleatType: null, surfaceType: null, createdAt: '2026-10-12T00:00:00Z' };
@@ -168,6 +169,15 @@ describe('profile', () => {
     expect(await res.json()).toMatchObject({ cleatType: 'AG', surfaceType: '3G_TURF' });
   });
 
+  it('returns 404 when updating a profile that does not exist yet', async () => {
+    expect((await call('PATCH', '/me', { body: { displayName: 'Ade' } })).status).toBe(404);
+  });
+
+  it('sends security headers on API responses', async () => {
+    const res = await call('GET', '/health', { token: null });
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+  });
+
   it('rejects an empty profile update', async () => {
     await onboard();
     expect((await call('PATCH', '/me', { body: {} })).status).toBe(400);
@@ -200,7 +210,14 @@ describe('sessions', () => {
   it('rejects malformed JSON and oversized bodies', async () => {
     await onboard();
     expect((await call('POST', '/sessions', { body: '{not json' })).status).toBe(400);
-    expect((await call('POST', '/sessions', { body: { ...valid, notes: 'x'.repeat(9000) } })).status).toBe(400);
+    expect((await call('POST', '/sessions', { body: { ...valid, notes: 'x'.repeat(9000) } })).status).toBe(413);
+  });
+
+  it('rejects control characters in notes', async () => {
+    await onboard();
+    const res = await call('POST', '/sessions', { body: { ...valid, notes: 'tight hamstring' } });
+    expect(res.status).toBe(400);
+    expect((await res.json()).field).toBe('notes');
   });
 
   it('rejects non-UUID ids and returns 404 for unknown ones', async () => {
@@ -252,7 +269,7 @@ describe('export and delete', () => {
     expect(await res.json()).toMatchObject({ profile: { position: 'MID' } });
   });
 
-  it('deletes data before deleting the Clerk account', async () => {
+  it('deletes data before deleting the Clerk account, then sweeps again', async () => {
     await onboard();
     const order: string[] = [];
     const repo = store.repoFor('user_a');
@@ -260,7 +277,7 @@ describe('export and delete', () => {
     deps.deleteClerkUser = vi.fn(async () => { order.push('clerk'); });
     app = createApp(deps);
     expect((await call('DELETE', '/me')).status).toBe(204);
-    expect(order).toEqual(['data', 'clerk']);
+    expect(order).toEqual(['data', 'clerk', 'data']);
     expect(store.data.has('user_a')).toBe(false);
   });
 

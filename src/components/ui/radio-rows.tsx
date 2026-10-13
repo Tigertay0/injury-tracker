@@ -20,15 +20,18 @@ interface RadioRowsProps<T extends string> {
   'aria-label'?: string;
   'aria-labelledby'?: string;
   disabled?: boolean;
+  /** Marks the group as saving without blocking keyboard focus. */
+  busy?: boolean;
   className?: string;
 }
 
-export function RadioRows<T extends string>({ value, onValueChange, options, disabled, className, ...aria }: RadioRowsProps<T>) {
+export function RadioRows<T extends string>({ value, onValueChange, options, disabled, busy, className, ...aria }: RadioRowsProps<T>) {
   return (
     <Primitive.Root
       value={value ?? ''}
       onValueChange={(v) => onValueChange(v as T)}
       disabled={disabled}
+      aria-busy={busy || undefined}
       className={cn('overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface', className)}
       {...aria}
     >

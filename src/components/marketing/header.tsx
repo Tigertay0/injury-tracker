@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { List } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Wordmark } from '@/components/wordmark';
 import { useAppAuth } from '@/lib/auth';
 
@@ -62,6 +62,7 @@ export function MarketingHeader() {
             <SheetTitle className="mb-6">
               <Wordmark />
             </SheetTitle>
+            <SheetDescription className="sr-only">Site menu</SheetDescription>
             <nav aria-label="Mobile" className="flex flex-col gap-1">
               {NAV.map((item) => (
                 <Link key={item.label} to={item.to} onClick={() => setOpen(false)} className="rounded-[var(--radius-control)] px-3 py-3 text-body font-medium text-ink hover:bg-sunken">

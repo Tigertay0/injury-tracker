@@ -11,7 +11,12 @@ export function TextSwap({ text, className }: { text: string; className?: string
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || text === shown) return;
+    if (!el) return;
+    if (text === shown) {
+      // A quick A -> B -> A change cancels the swap; never leave the old text hidden
+      el.classList.remove('is-exit');
+      return;
+    }
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setShown(text);
       return;
@@ -24,7 +29,10 @@ export function TextSwap({ text, className }: { text: string; className?: string
       void el.offsetHeight;
       el.classList.remove('is-enter-start');
     }, SWAP_MS);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      el.classList.remove('is-exit');
+    };
   }, [text, shown]);
 
   return (

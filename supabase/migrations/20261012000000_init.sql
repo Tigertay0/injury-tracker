@@ -47,7 +47,7 @@ create table public.training_sessions (
   id           uuid primary key default gen_random_uuid(),
   user_id      text not null default public.clerk_user_id()
                  references public.profiles (user_id) on delete cascade,
-  session_date date not null check (session_date >= date '1990-01-01'),
+  session_date date not null check (session_date between date '1990-01-01' and current_date + 2),
   session_type text not null check (session_type in ('training', 'match', 'gym')),
   duration_min smallint not null check (duration_min between 1 and 300),
   rpe          smallint not null check (rpe between 1 and 10),
@@ -57,7 +57,7 @@ create table public.training_sessions (
 );
 
 create index training_sessions_user_date_idx
-  on public.training_sessions (user_id, session_date desc);
+  on public.training_sessions (user_id, session_date desc, created_at desc);
 
 -- Weekly recovery check-ins (one per player per week) ---------------------------
 -- The score is generated from the answers so it can never disagree with them (PRD 2.2.3).
@@ -66,7 +66,7 @@ create table public.recovery_checkins (
   id          uuid primary key default gen_random_uuid(),
   user_id     text not null default public.clerk_user_id()
                 references public.profiles (user_id) on delete cascade,
-  week_start  date not null check (extract(isodow from week_start) = 1),
+  week_start  date not null check (extract(isodow from week_start) = 1 and week_start between date '1990-01-01' and current_date + 9),
   sleep_hours numeric(3, 1) not null check (sleep_hours between 0 and 12),
   soreness    smallint not null check (soreness between 1 and 10),
   stress      smallint not null check (stress between 1 and 10),
@@ -106,8 +106,8 @@ create table public.injuries (
                 'Knee (L)', 'Knee (R)', 'Calf (L)', 'Calf (R)', 'Ankle (L)', 'Ankle (R)', 'Foot (L)', 'Foot (R)')),
   injury_type text not null check (injury_type in ('Strain', 'Sprain', 'Tear', 'Fracture', 'Contusion', 'Other')),
   severity    text not null check (severity in ('mild', 'moderate', 'severe')),
-  injury_date date not null check (injury_date >= date '1990-01-01'),
-  return_date date check (return_date is null or return_date >= injury_date),
+  injury_date date not null check (injury_date between date '1990-01-01' and current_date + 2),
+  return_date date check (return_date is null or (return_date >= injury_date and return_date <= current_date + 367)),
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -122,20 +122,54 @@ create trigger injuries_set_updated_at
 
 revoke all on public.profiles, public.training_sessions, public.recovery_checkins, public.injuries from anon, authenticated;
 
-grant select, insert, delete on public.profiles to authenticated;
+-- Inserts are column-level so clients cannot set ids, timestamps or the consent time
+grant select, delete on public.profiles to authenticated;
+grant insert (position, display_name, cleat_type, surface_type, consent_version, age_confirmed) on public.profiles to authenticated;
 grant update (position, display_name, cleat_type, surface_type) on public.profiles to authenticated;
 
-grant select, insert, delete on public.training_sessions to authenticated;
+grant select, delete on public.training_sessions to authenticated;
+grant insert (session_date, session_type, duration_min, rpe, notes) on public.training_sessions to authenticated;
 
-grant select, insert, delete on public.recovery_checkins to authenticated;
+grant select, delete on public.recovery_checkins to authenticated;
+grant insert (week_start, sleep_hours, soreness, stress, nutrition) on public.recovery_checkins to authenticated;
 -- week_start is included because an upsert sets every column it inserts (the value is unchanged)
 grant update (week_start, sleep_hours, soreness, stress, nutrition) on public.recovery_checkins to authenticated;
 
-grant select, insert, delete on public.injuries to authenticated;
+grant select, delete on public.injuries to authenticated;
+grant insert (body_part, injury_type, severity, injury_date, return_date) on public.injuries to authenticated;
 grant update (return_date) on public.injuries to authenticated;
 
 revoke execute on function public.clerk_user_id() from public, anon;
 grant execute on function public.clerk_user_id() to authenticated;
+revoke execute on function public.set_updated_at() from public, anon, authenticated;
+
+-- Per-player row caps, so the public Data API cannot be used to fill the database.
+-- Far above real use: 5,000 sessions is about 13 years of daily training.
+create or replace function public.enforce_row_cap()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  cap integer := tg_argv[0]::integer;
+  n integer;
+begin
+  execute format('select count(*) from %I.%I where user_id = $1', tg_table_schema, tg_table_name) into n using new.user_id;
+  if n >= cap then
+    raise exception 'Row limit reached for this account' using errcode = '54000';
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function public.enforce_row_cap() from public, anon, authenticated;
+
+create trigger training_sessions_row_cap before insert on public.training_sessions
+  for each row execute function public.enforce_row_cap('5000');
+create trigger recovery_checkins_row_cap before insert on public.recovery_checkins
+  for each row execute function public.enforce_row_cap('1000');
+create trigger injuries_row_cap before insert on public.injuries
+  for each row execute function public.enforce_row_cap('500');
 
 alter table public.profiles enable row level security;
 alter table public.training_sessions enable row level security;

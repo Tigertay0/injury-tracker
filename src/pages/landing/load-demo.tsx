@@ -83,9 +83,9 @@ export function LoadDemo() {
 
       <div className="mt-5 border-t border-line pt-4">
         <div className="flex items-baseline justify-between gap-3">
-          <label id="demo-slider-label" className="text-small font-semibold text-ink">
+          <span id="demo-slider-label" className="text-small font-semibold text-ink">
             Drag this week's training
-          </label>
+          </span>
           <span className="tnum text-small font-semibold text-ink-2">{scale.toFixed(1)}× normal</span>
         </div>
         <Slider

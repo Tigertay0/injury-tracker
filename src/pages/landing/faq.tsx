@@ -22,24 +22,24 @@ function Chevron() {
   );
 }
 
-function Item({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
+function Item({ q, a, open, onToggle }: { q: string; a: string; open: boolean; onToggle: () => void }) {
   const id = useId();
   return (
     <div className="t-acc border-b border-line" data-open={open}>
       <h3>
         <button
+          id={`${id}-button`}
           type="button"
           aria-expanded={open}
           aria-controls={`${id}-panel`}
-          onClick={() => setOpen((o) => !o)}
+          onClick={onToggle}
           className="flex w-full items-center justify-between gap-6 py-5 text-left text-lead font-semibold text-ink hover:text-accent-ink"
         >
           {q}
           <Chevron />
         </button>
       </h3>
-      <div id={`${id}-panel`} role="region" className="t-acc-panel" inert={!open}>
+      <div id={`${id}-panel`} role="region" aria-labelledby={`${id}-button`} className="t-acc-panel" inert={!open}>
         <div className="t-acc-panel-inner">
           <p className="max-w-2xl pb-5 text-body text-ink-2">{a}</p>
         </div>
@@ -49,13 +49,15 @@ function Item({ q, a }: { q: string; a: string }) {
 }
 
 export function Faq() {
+  // One answer open at a time, like faq3
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
   return (
     <section id="faq" className="mx-auto max-w-[1200px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-24">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
         <h2 className="font-display text-[2.25rem] leading-[1.02] font-extrabold tracking-[-0.01em] text-ink sm:text-display-s">Questions players ask</h2>
         <div className="border-t border-line">
-          {QUESTIONS.map((item) => (
-            <Item key={item.q} {...item} />
+          {QUESTIONS.map((item, i) => (
+            <Item key={item.q} {...item} open={openIndex === i} onToggle={() => setOpenIndex((o) => (o === i ? null : i))} />
           ))}
         </div>
       </div>

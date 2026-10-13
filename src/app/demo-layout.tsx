@@ -4,7 +4,7 @@ import { localToday } from '@shared/dates';
 import { Button } from '@/components/ui/button';
 import { AppBaseContext, DemoPlayerDataProvider } from '@/lib/player-data';
 import { sampleOverview } from '@/lib/sample-data';
-import { Shell } from './app-layout';
+import { Shell } from './shell';
 
 function DemoBanner() {
   return (

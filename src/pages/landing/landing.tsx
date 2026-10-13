@@ -98,7 +98,12 @@ export default function Landing() {
             <ArrowRight aria-hidden weight="bold" className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
           </Link>
         </div>
-        <div className="-mx-5 mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+        <div
+          role="region"
+          aria-label="App screenshots"
+          tabIndex={0}
+          className="-mx-5 mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0"
+        >
           {SCREENS.map((s) => (
             <figure key={s.src} className="w-[72%] shrink-0 snap-center sm:w-auto">
               <img

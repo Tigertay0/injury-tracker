@@ -63,6 +63,8 @@ function date(value: unknown, field: string, label: string, today: string, { max
 function text(value: unknown, maxLength: number, field: string, label: string): string {
   if (value === undefined || value === null) return '';
   if (typeof value !== 'string') throw new ValidationError(`${label} must be text.`, field);
+  // Postgres rejects NUL, and control characters have no place in names or notes
+  if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(value)) throw new ValidationError(`${label} contains characters that are not allowed.`, field);
   const trimmed = value.trim();
   if (trimmed.length > maxLength) throw new ValidationError(`${label} must be ${maxLength} characters or fewer.`, field);
   return trimmed;

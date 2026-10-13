@@ -1,13 +1,13 @@
 // Weekly recovery check-in (PRD 2.2). One per week; saving the same week again updates it.
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { recoveryScore, recoveryZone } from '@shared/calculations';
+import type { RecoveryLog } from '@shared/types';
 import { addDays, localToday, mondayOf } from '@shared/dates';
 import { ValidationError, validateRecovery } from '@shared/validation';
 import { ConfirmDelete } from '@/components/confirm-delete';
 import { RiskChip } from '@/components/risk-chip';
 import { Segmented } from '@/components/segmented';
-import { SuccessCheck } from '@/components/success-check';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { errorMessage } from '@/lib/api';
@@ -55,32 +55,47 @@ function SliderRow({ id, label, value, onChange, min, max, step, low, high, form
   );
 }
 
+const DEFAULTS = { sleep: 7.5, soreness: 3, stress: 3, nutrition: 7 };
+
 export default function Recovery() {
   const { recovery } = useOverview();
-  const { actions } = usePlayerData();
   const today = useMemo(() => localToday(), []);
   const thisWeek = mondayOf(today);
-  const lastWeek = addDays(thisWeek, -7);
-
   const [week, setWeek] = useState(thisWeek);
-  const existing = recovery.find((r) => r.weekStart === week);
-  const [sleep, setSleep] = useState(7.5);
-  const [soreness, setSoreness] = useState(3);
-  const [stress, setStress] = useState(3);
-  const [nutrition, setNutrition] = useState(7);
+  const existing = recovery.find((r) => r.weekStart === week) ?? null;
+
+  return (
+    <>
+      <PageHeader title="Weekly check-in" description="Four questions about the past week. Your answers set your recovery score." />
+      {/* Re-mount the form per week (and per saved record) so answers never leak between weeks */}
+      <CheckInForm key={`${week}:${existing?.id ?? 'new'}`} week={week} onWeekChange={setWeek} thisWeek={thisWeek} existing={existing} today={today} />
+    </>
+  );
+}
+
+function CheckInForm({
+  week,
+  onWeekChange,
+  thisWeek,
+  existing,
+  today,
+}: {
+  week: string;
+  onWeekChange: (w: string) => void;
+  thisWeek: string;
+  existing: RecoveryLog | null;
+  today: string;
+}) {
+  const { recovery } = useOverview();
+  const { actions } = usePlayerData();
+  const lastWeek = addDays(thisWeek, -7);
+  const initial = existing ?? DEFAULTS;
+  const [sleep, setSleep] = useState(initial.sleep);
+  const [soreness, setSoreness] = useState(initial.soreness);
+  const [stress, setStress] = useState(initial.stress);
+  const [nutrition, setNutrition] = useState(initial.nutrition);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  // Load the saved answers when switching to a week that already has a check-in
-  useEffect(() => {
-    if (!existing) return;
-    setSleep(existing.sleep);
-    setSoreness(existing.soreness);
-    setStress(existing.stress);
-    setNutrition(existing.nutrition);
-  }, [existing]);
-
   const score = recoveryScore({ sleep, soreness, stress, nutrition });
   const zone = recoveryZone(score);
 
@@ -97,9 +112,7 @@ export default function Recovery() {
     setSaving(true);
     try {
       const log = await actions.saveCheckIn(input);
-      setSaved(true);
       toast.success(`Check-in saved: recovery ${log.score.toFixed(1)}`);
-      setTimeout(() => setSaved(false), 1600);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -109,8 +122,6 @@ export default function Recovery() {
 
   return (
     <>
-      <PageHeader title="Weekly check-in" description="Four questions about the past week. Your answers set your recovery score." />
-
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6 rounded-[var(--radius-panel)] border border-line bg-surface p-5 md:p-6">
           <div className="flex flex-col gap-2">
@@ -119,7 +130,7 @@ export default function Recovery() {
               label="Week"
               size="lg"
               value={week}
-              onChange={setWeek}
+              onChange={onWeekChange}
               options={[
                 { value: thisWeek, label: `This week (${fmtDate(thisWeek)})` },
                 { value: lastWeek, label: `Last week` },
@@ -149,12 +160,7 @@ export default function Recovery() {
           </p>
 
           <Button type="submit" size="lg" disabled={saving} className="w-full sm:w-auto sm:self-start">
-            {saved ? (
-              <>
-                <SuccessCheck />
-                Saved
-              </>
-            ) : saving ? (
+            {saving ? (
               'Saving…'
             ) : existing ? (
               'Update check-in'

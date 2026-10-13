@@ -26,6 +26,8 @@ const TYPES: { value: SessionType; label: string }[] = [
   { value: 'gym', label: 'Gym' },
 ];
 
+const LOG_FIELDS = new Set(['date', 'duration', 'notes']);
+
 type Errors = Partial<Record<'date' | 'duration' | 'rpe' | 'notes' | 'form', string>>;
 
 export default function LogSession() {
@@ -54,7 +56,7 @@ export default function LogSession() {
       input = validateSession({ date, type, duration, rpe, notes }, today);
     } catch (err) {
       if (err instanceof ValidationError) {
-        setErrors({ [err.field ?? 'form']: err.message });
+        setErrors({ [err.field && LOG_FIELDS.has(err.field) ? err.field : 'form']: err.message });
         setAttempt((a) => a + 1);
         return;
       }
@@ -70,7 +72,7 @@ export default function LogSession() {
       toast.success(`${SESSION_LABEL[input.type]} saved: load ${sessionLoad(input.duration, input.rpe)}`);
       setTimeout(() => setSaved(false), 1600);
     } catch (err) {
-      const field = err instanceof ApiError && err.field ? err.field : 'form';
+      const field = err instanceof ApiError && err.field && LOG_FIELDS.has(err.field) ? err.field : 'form';
       setErrors({ [field]: errorMessage(err) });
       setAttempt((a) => a + 1);
     } finally {

@@ -1,10 +1,10 @@
 // The signed-in player's data, loaded once per app visit and updated in place after
 // each change, so every screen reads the same copy.
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Injury, Profile, RecoveryLog, TrainingSession } from '@shared/types';
 import type { EquipmentInput, InjuryInput, ProfileInput, RecoveryCheckIn, SessionInput } from '@shared/validation';
 import { recoveryScore } from '@shared/calculations';
-import { useApi, errorMessage } from './api';
+import { ApiError, useApi, errorMessage } from './api';
 
 export interface Overview {
   profile: Profile | null;
@@ -13,7 +13,7 @@ export interface Overview {
   injuries: Injury[];
 }
 
-type State = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; data: Overview };
+type State = { status: 'loading' } | { status: 'error'; message: string; code: number } | { status: 'ready'; data: Overview };
 
 const byDateDesc = <T,>(key: (x: T) => string) => (a: T, b: T) => (key(a) < key(b) ? 1 : key(a) > key(b) ? -1 : 0);
 
@@ -26,7 +26,7 @@ function usePlayerDataState() {
     try {
       setState({ status: 'ready', data: await api.get<Overview>('/overview') });
     } catch (err) {
-      setState({ status: 'error', message: errorMessage(err) });
+      setState({ status: 'error', message: errorMessage(err), code: err instanceof ApiError ? err.status : 0 });
     }
   }, [api]);
 
@@ -51,8 +51,16 @@ function usePlayerDataState() {
         update((d) => ({ ...d, profile }));
       },
       async updateEquipment(input: EquipmentInput) {
-        const profile = await api.patch<Profile>('/me/equipment', input);
-        update((d) => ({ ...d, profile }));
+        const saved = await api.patch<Profile>('/me/equipment', input);
+        // Merge only the field this request changed, so overlapping saves cannot revert each other
+        update((d) => ({
+          ...d,
+          profile: d.profile && {
+            ...d.profile,
+            ...(input.cleatType !== undefined ? { cleatType: saved.cleatType } : {}),
+            ...(input.surfaceType !== undefined ? { surfaceType: saved.surfaceType } : {}),
+          },
+        }));
       },
       async addSession(input: SessionInput) {
         const session = await api.post<TrainingSession>('/sessions', input);
@@ -101,13 +109,16 @@ export type PlayerActions = PlayerData['actions'];
 const PlayerDataContext = createContext<PlayerData | null>(null);
 
 export function PlayerDataProvider({ children }: { children: ReactNode }) {
-  const value = usePlayerDataState();
+  const { state, actions } = usePlayerDataState();
+  const value = useMemo(() => ({ state, actions }), [state, actions]);
   return <PlayerDataContext.Provider value={value}>{children}</PlayerDataContext.Provider>;
 }
 
 // Demo mode: the same actions, applied to local state only. Nothing is sent anywhere.
 function useDemoState(initial: () => Overview): PlayerData {
   const [data, setData] = useState<Overview>(initial);
+  const dataRef = useRef(data);
+  dataRef.current = data;
   const update = useCallback((fn: (d: Overview) => Overview) => setData((d) => fn(d)), []);
   const actions = useMemo<PlayerActions>(
     () => ({
@@ -145,7 +156,7 @@ function useDemoState(initial: () => Overview): PlayerData {
         update((d) => ({ ...d, injuries: d.injuries.filter((i) => i.id !== id) }));
       },
       async exportData() {
-        const blob = new Blob([JSON.stringify({ sample: true, ...data }, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify({ sample: true, ...dataRef.current }, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -155,9 +166,9 @@ function useDemoState(initial: () => Overview): PlayerData {
       },
       async deleteAccount() {},
     }),
-    [update, data],
+    [update],
   );
-  return { state: { status: 'ready', data }, actions };
+  return useMemo(() => ({ state: { status: 'ready' as const, data }, actions }), [data, actions]);
 }
 
 export function DemoPlayerDataProvider({ initial, children }: { initial: () => Overview; children: ReactNode }) {

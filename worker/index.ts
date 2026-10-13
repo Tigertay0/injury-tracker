@@ -51,6 +51,8 @@ function buildApp(env: Env) {
 export default {
   async fetch(request, env, ctx) {
     const missing = missingConfig(env);
+    // An empty origin list would make Clerk skip the azp check entirely
+    if (env.ALLOWED_ORIGINS && !env.ALLOWED_ORIGINS.split(',').some((o) => o.trim())) missing.push('ALLOWED_ORIGINS');
     if (missing.length > 0) {
       console.error('[config] missing Worker variables', { missing });
       return Response.json({ error: 'The server is not configured yet.' }, { status: 503 });

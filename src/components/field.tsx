@@ -30,6 +30,7 @@ export function Field({ label, hint, error, shakeKey = 0, children, className }:
     box.classList.remove('is-shaking');
     void box.offsetWidth; // reflow so the animation replays
     box.classList.add('is-shaking');
+    box.querySelector<HTMLElement>('input, select, textarea')?.focus();
     const t = setTimeout(() => box.classList.remove('is-shaking'), SHAKE_MS);
     return () => clearTimeout(t);
   }, [error, shakeKey]);
@@ -49,7 +50,7 @@ export function Field({ label, hint, error, shakeKey = 0, children, className }:
       <div ref={boxRef} className={cn('t-input', error && 'is-error')}>
         {children({ id, 'aria-describedby': describedBy, 'aria-invalid': Boolean(error) })}
       </div>
-      <p id={errorId} role={error ? 'alert' : undefined} className="t-error-msg min-h-5 text-label font-medium text-risk-very-high">
+      <p id={errorId} role="alert" className="t-error-msg min-h-5 text-label font-medium text-risk-very-high">
         {error ?? ''}
       </p>
     </div>
@@ -68,7 +69,7 @@ export function FieldSet({ legend, hint, error, children, className }: { legend:
         </p>
       )}
       {children}
-      <p id={`${id}-error`} role={error ? 'alert' : undefined} className="t-error-msg min-h-5 text-label font-medium text-risk-very-high">
+      <p id={`${id}-error`} role="alert" className="t-error-msg min-h-5 text-label font-medium text-risk-very-high">
         {error ?? ''}
       </p>
     </fieldset>

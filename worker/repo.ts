@@ -18,6 +18,8 @@ export interface Overview {
 
 export interface PlayerRepo {
   overview(): Promise<Overview>;
+  /** Everything, without the overview's row caps (GDPR export). */
+  exportAll(): Promise<Overview>;
   getProfile(): Promise<Profile | null>;
   createProfile(input: ProfileInput): Promise<Profile>;
   updateProfile(input: ProfileInput | EquipmentInput): Promise<Profile>;
@@ -145,6 +147,26 @@ export function supabaseRepo(config: SupabaseConfig, accessToken: string, userId
         sessions: many(sessions).map(toSession),
         recovery: many(recovery).map(toCheckIn),
         injuries: many(injuries).map(toInjury),
+      };
+    },
+
+    async exportAll() {
+      const PAGE = 1000;
+      // PostgREST caps each response, so read every table in pages
+      async function all<T>(table: string, columns: string, order: string, map: (r: Row) => T): Promise<T[]> {
+        const out: T[] = [];
+        for (let from = 0; ; from += PAGE) {
+          const rows = many(await db.from(table).select(columns).order(order, { ascending: false }).range(from, from + PAGE - 1)) as unknown as Row[];
+          out.push(...rows.map(map));
+          if (rows.length < PAGE) return out;
+        }
+      }
+      const profileRow = maybe(await db.from('profiles').select(`${PROFILE_COLUMNS}, consent_version, consented_at`).maybeSingle());
+      return {
+        profile: profileRow ? { ...toProfile(profileRow), consentVersion: profileRow.consent_version, consentedAt: profileRow.consented_at } : null,
+        sessions: await all('training_sessions', SESSION_COLUMNS, 'session_date', toSession),
+        recovery: await all('recovery_checkins', CHECKIN_COLUMNS, 'week_start', toCheckIn),
+        injuries: await all('injuries', INJURY_COLUMNS, 'injury_date', toInjury),
       };
     },
 

@@ -46,18 +46,24 @@ export function Segmented<T extends string>({ label, options, value, onChange, c
   }, [value, place]);
 
   useLayoutEffect(() => {
-    const onResize = () => place(false);
-    window.addEventListener('resize', onResize);
+    const ro = new ResizeObserver(() => place(false));
+    if (barRef.current) ro.observe(barRef.current);
     document.fonts?.ready.then(() => place(false));
-    return () => window.removeEventListener('resize', onResize);
+    return () => ro.disconnect();
   }, [place]);
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     const i = options.findIndex((o) => o.value === value);
-    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
-    if (!step) return;
+    let nextIndex: number;
+    if (e.key === 'Home') nextIndex = 0;
+    else if (e.key === 'End') nextIndex = options.length - 1;
+    else {
+      const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+      if (!step) return;
+      nextIndex = (i + step + options.length) % options.length;
+    }
     e.preventDefault();
-    const next = options[(i + step + options.length) % options.length];
+    const next = options[nextIndex];
     onChange(next.value);
     barRef.current?.querySelector<HTMLButtonElement>(`[data-value="${next.value}"]`)?.focus();
   }
@@ -75,7 +81,6 @@ export function Segmented<T extends string>({ label, options, value, onChange, c
             type="button"
             role="radio"
             aria-checked={selected}
-            aria-selected={selected}
             data-value={o.value}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(o.value)}

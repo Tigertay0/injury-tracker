@@ -1,5 +1,7 @@
 // PitchSafe API. Every route except /api/health needs a valid Clerk session token.
 import { Hono, type Context } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
+import { secureHeaders } from 'hono/secure-headers';
 import { utcToday } from '../shared/dates';
 import {
   ValidationError,
@@ -29,19 +31,18 @@ type Ctx = Context<{ Variables: Vars }>;
 const MAX_BODY_BYTES = 8 * 1024;
 const PG_UNIQUE_VIOLATION = '23505';
 const PG_FOREIGN_KEY_VIOLATION = '23503';
+const PGRST_NO_ROWS = 'PGRST116';
+const PG_PROGRAM_LIMIT = '54000';
 
 function bearerToken(header: string | undefined): string | null {
   const match = header ? /^Bearer\s+(\S+)$/i.exec(header) : null;
   return match ? match[1] : null;
 }
 
+// Size is enforced by the bodyLimit middleware, which counts streamed bytes
 async function readJson(c: Ctx): Promise<unknown> {
-  const length = Number(c.req.header('content-length') ?? 0);
-  if (length > MAX_BODY_BYTES) throw new ValidationError('Request body is too large.');
-  const text = await c.req.text();
-  if (text.length > MAX_BODY_BYTES) throw new ValidationError('Request body is too large.');
   try {
-    return JSON.parse(text);
+    return JSON.parse(await c.req.text());
   } catch {
     throw new ValidationError('Request body must be valid JSON.');
   }
@@ -50,6 +51,9 @@ async function readJson(c: Ctx): Promise<unknown> {
 export function createApp(deps: Deps) {
   const today = deps.today ?? (() => utcToday());
   const app = new Hono<{ Variables: Vars }>().basePath('/api');
+
+  app.use('*', secureHeaders({ crossOriginResourcePolicy: 'same-origin' }));
+  app.use('*', bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => c.json({ error: 'Request body is too large.' }, 413) }));
 
   app.get('/health', (c) => c.json({ ok: true }));
 
@@ -92,7 +96,7 @@ export function createApp(deps: Deps) {
   });
 
   app.get('/me/export', async (c) => {
-    const data = await c.var.repo.overview();
+    const data = await c.var.repo.exportAll();
     const body = JSON.stringify({ exportedAt: new Date().toISOString(), ...data }, null, 2);
     return c.body(body, 200, {
       'Content-Type': 'application/json; charset=utf-8',
@@ -109,6 +113,11 @@ export function createApp(deps: Deps) {
       console.error('[api] data deleted but Clerk user deletion failed', { message: err instanceof Error ? err.message : 'unknown' });
       return c.json({ error: 'Your data was deleted, but we could not remove your login. Try again, or contact us.' }, 502);
     }
+    // A request from another tab may have written rows between the two deletes; the
+    // token is still valid for a minute, so sweep once more (best effort)
+    await c.var.repo.deleteAllData().catch((err: unknown) => {
+      console.error('[api] post-delete sweep failed', { message: err instanceof Error ? err.message : 'unknown' });
+    });
     return c.body(null, 204);
   });
 
@@ -163,6 +172,12 @@ export function createApp(deps: Deps) {
     if (err instanceof ValidationError) return c.json({ error: err.message, field: err.field }, 400);
     if (err instanceof RepoError && err.code === PG_FOREIGN_KEY_VIOLATION) {
       return c.json({ error: 'Finish setting up your profile first.' }, 409);
+    }
+    if (err instanceof RepoError && err.code === PG_PROGRAM_LIMIT) {
+      return c.json({ error: 'This account has reached its storage limit.' }, 409);
+    }
+    if (err instanceof RepoError && err.code === PGRST_NO_ROWS) {
+      return c.json({ error: 'Finish setting up your profile first.' }, 404);
     }
     if (err instanceof RepoError && err.code === PG_UNIQUE_VIOLATION) {
       return c.json({ error: 'That record already exists.' }, 409);

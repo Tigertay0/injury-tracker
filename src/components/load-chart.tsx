@@ -62,9 +62,13 @@ export function LoadChart({ days, highlightFrom, referenceDaily, title, classNam
       <figcaption className="sr-only">{title}</figcaption>
       <div
         className="relative rounded-[var(--radius-control)] outline-offset-4"
+        role="group"
         tabIndex={0}
         aria-label={`${title}. Use the arrow keys to read each day.`}
-        onPointerLeave={() => setActive(null)}
+        onPointerLeave={(e) => {
+          // Touch fires pointerleave on lift; keep the tapped day's value showing
+          if (e.pointerType === 'mouse') setActive(null);
+        }}
         onFocus={() => setActive((a) => a ?? days.length - 1)}
         onBlur={() => setActive(null)}
         onKeyDown={(e) => {

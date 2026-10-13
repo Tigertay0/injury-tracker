@@ -143,13 +143,15 @@ function DeleteAccount() {
               setError(null);
               try {
                 await actions.deleteAccount();
-                await clerk.signOut();
-                navigate('/', { replace: true });
-                toast.success('Your account and data were deleted');
               } catch (err) {
                 setError(errorMessage(err));
                 setBusy(false);
+                return;
               }
+              // The login no longer exists, so a sign-out error here is expected and harmless
+              await clerk.signOut().catch(() => undefined);
+              navigate('/', { replace: true });
+              toast.success('Your account and data were deleted');
             }}
           >
             {busy ? 'Deleting…' : 'Delete permanently'}

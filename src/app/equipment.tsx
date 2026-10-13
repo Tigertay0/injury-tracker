@@ -1,6 +1,6 @@
 // Cleats and surface (PRD 2.3). Choices save as soon as they are picked. Once a
 // surface is chosen, every cleat row shows its risk on that surface.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { CLEAT_TYPES, SURFACE_TYPES, cleatName, equipmentExplanation, equipmentRisk, saferCleatsFor } from '@shared/equipment';
 import type { CleatType, SurfaceType } from '@shared/types';
@@ -17,21 +17,36 @@ export default function Equipment() {
   const { profile } = useOverview();
   const { actions } = usePlayerData();
   const [pending, setPending] = useState<'cleatType' | 'surfaceType' | null>(null);
+  const [draft, setDraft] = useState<{ cleatType?: CleatType; surfaceType?: SurfaceType }>({});
+  const timers = useRef<Partial<Record<'cleatType' | 'surfaceType', ReturnType<typeof setTimeout>>>>({});
 
-  const cleat = profile?.cleatType ?? null;
-  const surface = profile?.surfaceType ?? null;
+  useEffect(() => {
+    const t = timers.current;
+    return () => Object.values(t).forEach((id) => clearTimeout(id));
+  }, []);
+
+  const cleat = draft.cleatType ?? profile?.cleatType ?? null;
+  const surface = draft.surfaceType ?? profile?.surfaceType ?? null;
   const risk = cleat && surface ? equipmentRisk(cleat, surface) : null;
   const safer = surface ? saferCleatsFor(surface).filter((c) => c !== cleat) : [];
 
-  async function save(field: 'cleatType' | 'surfaceType', value: CleatType | SurfaceType) {
-    setPending(field);
-    try {
-      await actions.updateEquipment({ [field]: value });
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setPending(null);
-    }
+  const SAVE_DELAY_MS = 450;
+
+  function choose(field: 'cleatType' | 'surfaceType', value: CleatType | SurfaceType) {
+    setDraft((d) => ({ ...d, [field]: value }));
+    clearTimeout(timers.current[field]);
+    timers.current[field] = setTimeout(async () => {
+      setPending(field);
+      try {
+        await actions.updateEquipment({ [field]: value });
+        setDraft((d) => (d[field] === value ? { ...d, [field]: undefined } : d));
+      } catch (err) {
+        setDraft((d) => ({ ...d, [field]: undefined })); // fall back to the saved value
+        toast.error(errorMessage(err));
+      } finally {
+        setPending(null);
+      }
+    }, SAVE_DELAY_MS);
   }
 
   return (
@@ -59,8 +74,8 @@ export default function Equipment() {
           <RadioRows
             aria-label="Usual surface"
             value={surface}
-            disabled={pending === 'surfaceType'}
-            onValueChange={(v) => void save('surfaceType', v)}
+            busy={pending === 'surfaceType'}
+            onValueChange={(v) => choose('surfaceType', v)}
             options={SURFACE_TYPES.map((s) => ({ value: s.id, label: s.name, description: s.description }))}
           />
         </FieldSet>
@@ -69,8 +84,8 @@ export default function Equipment() {
           <RadioRows
             aria-label="Cleat type"
             value={cleat}
-            disabled={pending === 'cleatType'}
-            onValueChange={(v) => void save('cleatType', v)}
+            busy={pending === 'cleatType'}
+            onValueChange={(v) => choose('cleatType', v)}
             options={CLEAT_TYPES.map((c) => {
               const r = surface ? equipmentRisk(c.id, surface) : null;
               return {

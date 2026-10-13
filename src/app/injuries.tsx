@@ -30,6 +30,8 @@ const GROUPS = [
   { label: 'Knee and below', parts: BODY_PARTS.slice(14) },
 ];
 
+const INJURY_FIELDS = new Set(['bodyPart', 'injuryType', 'severity', 'injuryDate', 'returnDate']);
+
 type Errors = Partial<Record<'bodyPart' | 'injuryType' | 'severity' | 'injuryDate' | 'returnDate' | 'form', string>>;
 
 function ReturnControl({ injury }: { injury: Injury }) {
@@ -131,7 +133,7 @@ export default function Injuries() {
       setReturnDate('');
       setStillOut(true);
     } catch (err) {
-      setErrors({ [err instanceof ApiError && err.field ? err.field : 'form']: errorMessage(err) });
+      setErrors({ [err instanceof ApiError && err.field && INJURY_FIELDS.has(err.field) ? err.field : 'form']: errorMessage(err) });
       setAttempt((a) => a + 1);
     } finally {
       setSaving(false);

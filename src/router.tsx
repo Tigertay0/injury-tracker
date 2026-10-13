@@ -1,12 +1,12 @@
 import { createBrowserRouter, Outlet, ScrollRestoration } from 'react-router';
 import { Toaster } from 'sonner';
-import { AuthProvider } from '@/lib/auth';
 import { MarketingLayout } from '@/pages/marketing-layout';
 import Landing from '@/pages/landing/landing';
+import { RouteError } from '@/pages/route-error';
 
 function Root() {
   return (
-    <AuthProvider>
+    <>
       <ScrollRestoration />
       <Outlet />
       <Toaster
@@ -18,10 +18,9 @@ function Root() {
           },
         }}
       />
-    </AuthProvider>
+    </>
   );
 }
-
 
 const page = (load: () => Promise<{ default: React.ComponentType }>) => async () => ({ Component: (await load()).default });
 
@@ -37,29 +36,44 @@ const appPages = [
 export const router = createBrowserRouter([
   {
     Component: Root,
+    ErrorBoundary: RouteError,
+    // Shown while a lazily loaded route's code downloads on first visit
+    HydrateFallback: () => <div className="min-h-dvh bg-ground" aria-busy="true" />,
     children: [
+      // Public pages: no Clerk SDK is loaded here
       {
         Component: MarketingLayout,
         children: [
           { index: true, Component: Landing },
-          { path: 'use', lazy: page(() => import('@/pages/use-app')) },
           { path: 'science', lazy: page(() => import('@/pages/science')) },
           { path: 'privacy', lazy: page(() => import('@/pages/privacy')) },
           { path: 'terms', lazy: page(() => import('@/pages/terms')) },
-          { path: 'sign-in/*', lazy: page(() => import('@/pages/sign-in')) },
-          { path: 'sign-up/*', lazy: page(() => import('@/pages/sign-up')) },
           { path: '*', lazy: page(() => import('@/pages/not-found')) },
         ],
-      },
-      {
-        path: 'app',
-        lazy: page(() => import('@/app/app-layout')),
-        children: appPages,
       },
       {
         path: 'demo',
         lazy: page(() => import('@/app/demo-layout')),
         children: appPages,
+      },
+      // Everything that needs sign-in state sits under ClerkRoot
+      {
+        lazy: page(() => import('@/lib/clerk-root')),
+        children: [
+          {
+            Component: MarketingLayout,
+            children: [
+              { path: 'use', lazy: page(() => import('@/pages/use-app')) },
+              { path: 'sign-in/*', lazy: page(() => import('@/pages/sign-in')) },
+              { path: 'sign-up/*', lazy: page(() => import('@/pages/sign-up')) },
+            ],
+          },
+          {
+            path: 'app',
+            lazy: page(() => import('@/app/app-layout')),
+            children: appPages,
+          },
+        ],
       },
     ],
   },
