@@ -25,6 +25,7 @@ import {
 } from '@/lib/labels';
 import { useAppBase, useOverview } from '@/lib/player-data';
 import { cn } from '@/lib/utils';
+import { MovementPanel } from './movement-panel';
 import { PageHeader } from './page-header';
 
 /** Where each kind of advice can be acted on, and what the link says. */
@@ -264,6 +265,8 @@ export default function Dashboard() {
           <p className="mt-1 text-small text-ink-2">{ACWR_MEANING[model.acwrZone]}</p>
           <LoadChart className="mt-5" days={model.days} highlightFrom={21} referenceDaily={avgWeek / 7} title="Your daily training load over the last 28 days" />
         </section>
+
+        <MovementPanel movement={model.movement} />
 
         {model.recommendations.length > 0 && (
           <section aria-labelledby="actions-title">
