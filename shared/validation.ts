@@ -1,7 +1,8 @@
 // Input validation shared by the browser forms and the Worker API.
 // Reject-on-invalid: values are coerced only where the form sends strings.
 import { addDays, isIsoDate, isMonday } from './dates';
-import type { CleatType, Position, SessionType, Severity, SurfaceType } from './types';
+import { DRILL_IDS } from './drills';
+import type { CleatType, Position, SessionDrill, SessionType, Severity, SurfaceType } from './types';
 
 export class ValidationError extends Error {
   constructor(
@@ -76,16 +77,39 @@ export interface SessionInput {
   duration: number;
   rpe: number;
   notes: string;
+  drills?: SessionDrill[];
+}
+
+export const MAX_DRILLS_PER_SESSION = 12;
+
+function drills(value: unknown, sessionMinutes: number): SessionDrill[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new ValidationError('Drills must be a list.', 'drills');
+  if (value.length > MAX_DRILLS_PER_SESSION) throw new ValidationError(`Add up to ${MAX_DRILLS_PER_SESSION} drills per session.`, 'drills');
+  const seen = new Set<string>();
+  const out = value.map((item) => {
+    const r = asObject(item);
+    const drillId = typeof r.drillId === 'string' ? r.drillId : '';
+    if (!DRILL_IDS.has(drillId)) throw new ValidationError('Choose drills from the list.', 'drills');
+    if (seen.has(drillId)) throw new ValidationError('Add each drill once, with its total minutes.', 'drills');
+    seen.add(drillId);
+    return { drillId, minutes: integer(r.minutes, 1, 300, 'drills', 'Drill minutes') };
+  });
+  const total = out.reduce((sum, d) => sum + d.minutes, 0);
+  if (total > sessionMinutes) throw new ValidationError(`Drill minutes add up to ${total}, more than the session's ${sessionMinutes}.`, 'drills');
+  return out;
 }
 
 export function validateSession(raw: unknown, today: string): SessionInput {
   const r = asObject(raw);
+  const duration = integer(r.duration, 1, 300, 'duration', 'Duration');
   return {
     date: date(r.date, 'date', 'Session date', today),
     type: oneOf(r.type, SESSION_TYPES, 'type', 'session type'),
-    duration: integer(r.duration, 1, 300, 'duration', 'Duration'),
+    duration,
     rpe: integer(r.rpe, 1, 10, 'rpe', 'Effort'),
     notes: text(r.notes, 500, 'notes', 'Notes'),
+    drills: drills(r.drills, duration),
   };
 }
 

@@ -16,7 +16,7 @@ describe('validateSession', () => {
   const ok = { date: '2026-10-11', type: 'match', duration: '90', rpe: 7, notes: ' felt fine ' };
 
   it('accepts a valid session and coerces numbers', () => {
-    expect(validateSession(ok, TODAY)).toEqual({ date: '2026-10-11', type: 'match', duration: 90, rpe: 7, notes: 'felt fine' });
+    expect(validateSession(ok, TODAY)).toEqual({ date: '2026-10-11', type: 'match', duration: 90, rpe: 7, notes: 'felt fine', drills: [] });
   });
 
   it('rejects unknown session types', () => {
@@ -51,6 +51,30 @@ describe('validateSession', () => {
 
   it('rejects non-object input', () => {
     expect(() => validateSession(null, TODAY)).toThrow(ValidationError);
+  });
+});
+
+describe('validateSession drills', () => {
+  const ok = { date: '2026-10-11', type: 'training', duration: 90, rpe: 6 };
+
+  it('accepts built-in drills and coerces minutes', () => {
+    const s = validateSession({ ...ok, drills: [{ drillId: 'rondo_4v2', minutes: '15' }, { drillId: 'ssg_5v5', minutes: 30 }] }, TODAY);
+    expect(s.drills).toEqual([{ drillId: 'rondo_4v2', minutes: 15 }, { drillId: 'ssg_5v5', minutes: 30 }]);
+  });
+
+  it('rejects unknown drills', () => {
+    expect(() => validateSession({ ...ok, drills: [{ drillId: 'made_up', minutes: 10 }] }, TODAY)).toThrow(/from the list/);
+  });
+
+  it('rejects drill minutes that add up to more than the session', () => {
+    expect(() => validateSession({ ...ok, drills: [{ drillId: 'rondo_4v2', minutes: 60 }, { drillId: 'ssg_5v5', minutes: 31 }] }, TODAY)).toThrow(/more than the session/);
+  });
+
+  it('rejects the same drill twice, too many drills, and non-lists', () => {
+    expect(() => validateSession({ ...ok, drills: [{ drillId: 'rondo_4v2', minutes: 5 }, { drillId: 'rondo_4v2', minutes: 5 }] }, TODAY)).toThrow(/once/);
+    const thirteen = Array.from({ length: 13 }, (_, i) => ({ drillId: ['rondo_4v2', 'ssg_5v5', 'passing_pairs', 'heading', 'set_pieces', 'cool_down', 'steady_run', 'core_balance', 'nordic_curls', 'first_touch', 'finishing_drill', 'warmup_dynamic', 'sprints_short'][i], minutes: 1 }));
+    expect(() => validateSession({ ...ok, drills: thirteen }, TODAY)).toThrow(/12/);
+    expect(() => validateSession({ ...ok, drills: 'rondo' }, TODAY)).toThrow(ValidationError);
   });
 });
 
