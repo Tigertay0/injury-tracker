@@ -4,7 +4,8 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { sessionLoad } from '@shared/calculations';
 import { localToday } from '@shared/dates';
-import type { SessionType } from '@shared/types';
+import { drillById } from '@shared/drills';
+import type { SessionDrill, SessionType } from '@shared/types';
 import { ValidationError, validateSession } from '@shared/validation';
 import { ConfirmDelete } from '@/components/confirm-delete';
 import { Field, inputClass } from '@/components/field';
@@ -16,6 +17,7 @@ import { ApiError, errorMessage } from '@/lib/api';
 import { SESSION_LABEL, fmtDate, fmtWeekday } from '@/lib/labels';
 import { useOverview, usePlayerData } from '@/lib/player-data';
 import { cn } from '@/lib/utils';
+import { DrillPicker } from './drill-picker';
 import { PageHeader } from './page-header';
 
 const EFFORT_LABEL = ['', 'Very easy', 'Easy', 'Moderate', 'Somewhat hard', 'Hard', 'Hard', 'Very hard', 'Very hard', 'Close to max', 'All-out'];
@@ -26,9 +28,9 @@ const TYPES: { value: SessionType; label: string }[] = [
   { value: 'gym', label: 'Gym' },
 ];
 
-const LOG_FIELDS = new Set(['date', 'duration', 'notes']);
+const LOG_FIELDS = new Set(['date', 'duration', 'notes', 'drills']);
 
-type Errors = Partial<Record<'date' | 'duration' | 'rpe' | 'notes' | 'form', string>>;
+type Errors = Partial<Record<'date' | 'duration' | 'rpe' | 'notes' | 'drills' | 'form', string>>;
 
 export default function LogSession() {
   const { sessions } = useOverview();
@@ -40,6 +42,7 @@ export default function LogSession() {
   const [duration, setDuration] = useState('');
   const [rpe, setRpe] = useState(5);
   const [notes, setNotes] = useState('');
+  const [drills, setDrills] = useState<SessionDrill[]>([]);
   const [errors, setErrors] = useState<Errors>({});
   const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -53,7 +56,7 @@ export default function LogSession() {
     e.preventDefault();
     let input;
     try {
-      input = validateSession({ date, type, duration, rpe, notes }, today);
+      input = validateSession({ date, type, duration, rpe, notes, drills }, today);
     } catch (err) {
       if (err instanceof ValidationError) {
         setErrors({ [err.field && LOG_FIELDS.has(err.field) ? err.field : 'form']: err.message });
@@ -69,6 +72,7 @@ export default function LogSession() {
       setSaved(true);
       setDuration('');
       setNotes('');
+      setDrills([]);
       toast.success(`${SESSION_LABEL[input.type]} saved: load ${sessionLoad(input.duration, input.rpe)}`);
       setTimeout(() => setSaved(false), 1600);
     } catch (err) {
@@ -155,6 +159,16 @@ export default function LogSession() {
             )}
           </Field>
 
+          <DrillPicker
+            value={drills}
+            onChange={(next) => {
+              setDrills(next);
+              if (errors.drills) setErrors((x) => ({ ...x, drills: undefined }));
+            }}
+            sessionMinutes={Number.isInteger(minutes) && minutes > 0 ? minutes : null}
+            error={errors.drills}
+          />
+
           {errors.form && (
             <p role="alert" className="rounded-[var(--radius-control)] bg-risk-very-high-soft px-4 py-3 text-small font-medium text-risk-very-high">
               {errors.form}
@@ -217,6 +231,9 @@ export default function LogSession() {
                         {s.duration} min × {s.rpe}
                         {s.notes ? `, ${s.notes}` : ''}
                       </p>
+                      {s.drills && s.drills.length > 0 && (
+                        <p className="text-label text-ink-3">{s.drills.map((d) => `${drillById(d.drillId)?.name ?? 'Removed drill'} ${d.minutes}′`).join(', ')}</p>
+                      )}
                     </div>
                     <span className="tnum text-body font-semibold text-ink">{s.load}</span>
                     <ConfirmDelete
