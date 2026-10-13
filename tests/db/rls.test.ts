@@ -105,10 +105,16 @@ run('Neon schema and row-level security', () => {
   });
 
   it('deleting the profile removes every record (cascade)', async () => {
+    // Make sure there are drills to remove, so the check below cannot pass on an empty table
+    await a.addSession({ date: today, type: 'training', duration: 60, rpe: 5, notes: '', drills: [{ drillId: 'rondo_4v2', minutes: 10 }] });
+    const before = await asPlayer(url!, A, (q) => q('select id from public.session_drills'));
+    expect(before.length).toBeGreaterThan(0);
     await a.deleteAllData();
     const o = await a.overview();
     expect(o.profile).toBeNull();
     expect(o.sessions).toHaveLength(0);
     expect(o.injuries).toHaveLength(0);
+    const after = await asPlayer(url!, A, (q) => q('select id from public.session_drills'));
+    expect(after).toHaveLength(0);
   });
 });
