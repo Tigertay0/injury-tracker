@@ -28,6 +28,8 @@ export interface TrainingSession {
   rpe: number; // 1-10
   load: number; // duration x rpe
   notes: string;
+  /** Drills done in this session (optional; older sessions have none). */
+  drills?: SessionDrill[];
 }
 
 export interface RecoveryLog {
@@ -47,4 +49,22 @@ export interface Injury {
   severity: Severity;
   injuryDate: string;
   returnDate: string | null;
+}
+
+export type MovementType = 'sprint' | 'hsr' | 'cod' | 'jump' | 'contact' | 'strength';
+
+/** How a drill loads the body: typical intensity, and the share of its time in each kind of movement. */
+export interface MovementProfile {
+  intensity: number; // 1-10
+  sprint: number; // 0-1
+  hsr: number;
+  cod: number;
+  jump: number;
+  contact: number;
+  strength: number;
+}
+
+export interface SessionDrill {
+  drillId: string;
+  minutes: number;
 }
