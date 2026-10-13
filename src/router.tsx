@@ -8,6 +8,8 @@ function Root() {
   return (
     <>
       <ScrollRestoration />
+      {/* Installed app: a night strip behind the status bar so its white text always reads */}
+      <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[env(safe-area-inset-top)] bg-[#050810]" />
       <Outlet />
       <Toaster
         position="top-center"

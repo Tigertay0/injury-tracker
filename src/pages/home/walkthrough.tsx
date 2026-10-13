@@ -1,9 +1,11 @@
 // "How to use it": an auto-playing tutorial. A phone shows the real app screens while a
 // tap marker moves to each control the player uses, with a caption. Steps advance on
-// their own (story-style progress bars), can be picked by hand, pause while off screen,
-// and sit still for reduced motion.
-import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+// their own (story-style progress bars) and can be picked by hand. Playback pauses off
+// screen, on keyboard focus and with the Pause button; reduced motion
+// shows a still, numbered version instead.
+import { useEffect, useId, useRef, useState, type CSSProperties, type FocusEvent } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
+import { Pause, Play } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
 type Target = { label: string; x: number; y: number };
@@ -60,12 +62,13 @@ const EXTRA_MS = 1200; // pause before moving to the next step
 
 const stepDuration = (s: Step) => s.targets.length * TAP_MS + EXTRA_MS;
 
+/** True while the middle half of the viewport overlaps the element. */
 function useInView<T extends Element>(ref: React.RefObject<T | null>) {
   const [inView, setInView] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.35 });
+    const io = new IntersectionObserver((entries) => setInView(entries[entries.length - 1].isIntersecting), { rootMargin: '-25% 0px -25% 0px' });
     io.observe(el);
     return () => io.disconnect();
   }, [ref]);
@@ -74,38 +77,82 @@ function useInView<T extends Element>(ref: React.RefObject<T | null>) {
 
 export function Walkthrough() {
   const reduce = useReducedMotion();
-  const sectionRef = useRef<HTMLElement>(null);
-  const inView = useInView(sectionRef);
+  const uid = useId();
+  const phoneRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(phoneRef);
   const [stepIndex, setStepIndex] = useState(0);
+  const [prevIndex, setPrevIndex] = useState(0);
   const [tapIndex, setTapIndex] = useState(0);
-  const playing = inView && !reduce;
+  // Bumped whenever a run starts over, so the progress bar restarts with the timers
+  const [runId, setRunId] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [keyboardFocus, setKeyboardFocus] = useState(false);
+  const playing = inView && !reduce && !paused && !keyboardFocus;
   const step = STEPS[stepIndex];
+
+  const goTo = (i: number) => {
+    setPrevIndex(stepIndex);
+    setStepIndex(i);
+    setTapIndex(0);
+    setRunId((r) => r + 1);
+  };
+
+  // Resuming starts the current step again, so marker, caption and bar agree
+  const wasPlaying = useRef(false);
+  useEffect(() => {
+    if (playing && !wasPlaying.current) {
+      setTapIndex(0);
+      setRunId((r) => r + 1);
+    }
+    wasPlaying.current = playing;
+  }, [playing]);
 
   // Walk the tap marker through the targets, then move to the next step
   useEffect(() => {
     if (!playing) return;
+    const last = tapIndex >= STEPS[stepIndex].targets.length - 1;
     const timer = window.setTimeout(
       () => {
-        if (tapIndex < step.targets.length - 1) setTapIndex((i) => i + 1);
-        else {
-          setTapIndex(0);
-          setStepIndex((i) => (i + 1) % STEPS.length);
+        if (!last) {
+          setTapIndex((i) => i + 1);
+          return;
         }
+        setPrevIndex(stepIndex);
+        setStepIndex((stepIndex + 1) % STEPS.length);
+        setTapIndex(0);
+        setRunId((r) => r + 1);
       },
-      tapIndex < step.targets.length - 1 ? TAP_MS : TAP_MS + EXTRA_MS,
+      last ? TAP_MS + EXTRA_MS : TAP_MS,
     );
     return () => window.clearTimeout(timer);
-  }, [playing, tapIndex, step.targets.length]);
+  }, [playing, stepIndex, tapIndex, runId]);
 
-  const choose = (i: number) => {
-    setStepIndex(i);
-    setTapIndex(0);
+  // Pause for keyboard users while they are inside the section, not after mouse clicks
+  const onFocus = (e: FocusEvent<HTMLElement>) => {
+    if (e.target instanceof HTMLElement && e.target.matches(':focus-visible')) setKeyboardFocus(true);
+  };
+  const onBlur = (e: FocusEvent<HTMLElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setKeyboardFocus(false);
   };
 
   const target = step.targets[tapIndex];
+  const progressStyle = (s: Step): CSSProperties => ({ animationDuration: `${stepDuration(s)}ms`, animationPlayState: playing ? 'running' : 'paused' });
+
+  const bar = (s: Step) =>
+    reduce ? (
+      <span className="block h-full w-full bg-[#a6d8ff]" />
+    ) : (
+      <span key={`${s.id}-${runId}`} className="walk-progress block h-full bg-[#a6d8ff]" style={progressStyle(s)} />
+    );
 
   return (
-    <section ref={sectionRef} id="walkthrough" aria-labelledby="walkthrough-title" className="scroll-mt-24 px-5 py-24 sm:px-8 lg:py-32">
+    <section
+      id="walkthrough"
+      aria-labelledby="walkthrough-title"
+      className="scroll-mt-24 px-5 py-24 sm:px-8 lg:py-32"
+      onFocus={onFocus}
+      onBlur={onBlur}
+    >
       <div className="mx-auto max-w-[1200px]">
         <h2 id="walkthrough-title" className="max-w-[16ch] font-display text-[clamp(2.25rem,5vw,4.25rem)] leading-[1] font-bold tracking-[-0.04em] text-balance text-white">
           How to use it, in four steps.
@@ -120,29 +167,30 @@ export function Walkthrough() {
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => choose(i)}
+                  onClick={() => goTo(i)}
                   aria-label={`Step ${i + 1}: ${s.title}`}
                   aria-current={i === stepIndex ? 'step' : undefined}
-                  className="py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]"
+                  className="py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]"
                 >
                   <span className="block h-0.5 bg-white/15">
                     {i < stepIndex && <span className="block h-full w-full bg-[#a6d8ff]" />}
-                    {i === stepIndex && (
-                      <span
-                        key={`${s.id}-${playing}`}
-                        className={cn('block h-full bg-[#a6d8ff]', playing ? 'walk-progress' : 'w-full')}
-                        style={playing ? { animationDuration: `${stepDuration(s)}ms` } : undefined}
-                      />
-                    )}
+                    {i === stepIndex && bar(s)}
                   </span>
                 </button>
               ))}
             </div>
-            <p className="mt-4 text-small font-semibold text-[#a6d8ff]">
+            <p className="mt-2 text-small font-semibold text-[#a6d8ff]">
               Step {stepIndex + 1} of {STEPS.length}
             </p>
-            <p className="mt-1 text-lead font-semibold text-white">{step.title}</p>
-            <p className="mt-1 min-h-[4.5rem] text-body text-white/65">{step.text}</p>
+            {/* Every caption shares one grid cell, so the block keeps the tallest height */}
+            <div className="mt-1 grid">
+              {STEPS.map((s, i) => (
+                <div key={s.id} aria-hidden={i !== stepIndex} className={cn('col-start-1 row-start-1', i === stepIndex ? 'visible' : 'invisible')}>
+                  <p className="text-lead font-semibold text-white">{s.title}</p>
+                  <p className="mt-1 text-body text-white/65">{s.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Desktop: story-style progress bars, each step a button */}
@@ -153,8 +201,10 @@ export function Walkthrough() {
                 <li key={s.id}>
                   <button
                     type="button"
-                    onClick={() => choose(i)}
+                    onClick={() => goTo(i)}
                     aria-current={active ? 'step' : undefined}
+                    aria-labelledby={`${uid}-${s.id}-title`}
+                    aria-describedby={`${uid}-${s.id}-text`}
                     className={cn(
                       'group relative w-full overflow-hidden border px-5 py-5 text-left transition-colors duration-200 ease-out sm:px-6',
                       'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]',
@@ -162,25 +212,25 @@ export function Walkthrough() {
                     )}
                   >
                     <span className="flex items-baseline gap-4">
-                      <span className={cn('tnum font-display text-h2 font-bold tracking-[-0.03em]', active ? 'text-[#a6d8ff]' : 'text-white/35')}>{i + 1}</span>
+                      <span aria-hidden className={cn('tnum font-display text-h2 font-bold tracking-[-0.03em]', active ? 'text-[#a6d8ff]' : 'text-white/35')}>
+                        {i + 1}
+                      </span>
                       <span className="min-w-0">
-                        <span className={cn('block text-lead font-semibold', active ? 'text-white' : 'text-white/70')}>{s.title}</span>
+                        <span id={`${uid}-${s.id}-title`} className={cn('block text-lead font-semibold', active ? 'text-white' : 'text-white/70')}>
+                          {s.title}
+                        </span>
                         {/* Grid-rows accordion keeps every step's text in the DOM */}
                         <span className={cn('grid transition-[grid-template-rows] duration-300 ease-out', active ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
                           <span className="overflow-hidden">
-                            <span className="block pt-2 text-body text-white/65">{s.text}</span>
+                            <span id={`${uid}-${s.id}-text`} className="block pt-2 text-body text-white/65">
+                              {s.text}
+                            </span>
                           </span>
                         </span>
                       </span>
                     </span>
                     <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-white/10">
-                      {active && (
-                        <span
-                          key={`${s.id}-${playing}`}
-                          className={cn('block h-full bg-[#a6d8ff]', playing ? 'walk-progress' : 'w-full')}
-                          style={playing ? { animationDuration: `${stepDuration(s)}ms` } : undefined}
-                        />
-                      )}
+                      {active && bar(s)}
                     </span>
                   </button>
                 </li>
@@ -190,29 +240,40 @@ export function Walkthrough() {
 
           {/* The phone */}
           <div className="order-1 mx-auto w-full max-w-[16.5rem] sm:max-w-[20rem] lg:order-2">
-            <div className="relative aspect-[390/844] w-full overflow-hidden border border-white/15 bg-[#0b1020] shadow-[0_40px_80px_-24px_rgb(29_63_214/0.55)]">
-              <AnimatePresence initial={false}>
-                <motion.img
-                  key={step.id}
-                  src={`/walkthrough/${step.id}.webp`}
-                  width={780}
-                  height={1688}
-                  alt={step.alt}
-                  loading="lazy"
-                  decoding="async"
-                  draggable={false}
-                  className="absolute inset-0 h-full w-full object-cover"
-                  initial={reduce ? false : { opacity: 0, scale: 1.03, filter: 'blur(6px)' }}
-                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                  exit={reduce ? undefined : { opacity: 0, filter: 'blur(4px)' }}
-                  transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                />
-              </AnimatePresence>
+            <div ref={phoneRef} className="relative aspect-[390/844] w-full overflow-hidden border border-white/15 bg-[#0b1020] shadow-[0_40px_80px_-24px_rgb(29_63_214/0.55)]">
+              {/* All screens stay mounted (so they load ahead of time); the new one fades in
+                  over the previous one, which stays opaque underneath to avoid a dark dip */}
+              {STEPS.map((s, i) => {
+                const state = i === stepIndex ? 'active' : i === prevIndex ? 'previous' : 'hidden';
+                return (
+                  <motion.img
+                    key={s.id}
+                    src={`/walkthrough/${s.id}.webp`}
+                    width={780}
+                    height={1688}
+                    alt={state === 'active' ? s.alt : ''}
+                    aria-hidden={state !== 'active'}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    decoding="async"
+                    draggable={false}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    style={{ zIndex: state === 'active' ? 2 : state === 'previous' ? 1 : 0 }}
+                    initial={false}
+                    animate={state === 'hidden' ? { opacity: 0, scale: 1.03, filter: 'blur(6px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                    transition={reduce ? { duration: 0 } : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                );
+              })}
 
               {/* Tap marker: glides between targets, ripples on arrival, carries a caption */}
               {reduce ? (
                 step.targets.map((t, i) => (
-                  <span key={t.label} aria-hidden className="absolute grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center border-2 border-white bg-[#2346e0] text-label font-bold text-white" style={{ left: `${t.x}%`, top: `${t.y}%` }}>
+                  <span
+                    key={t.label}
+                    aria-hidden
+                    className="absolute z-10 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center border-2 border-white bg-[#2346e0] text-label font-bold text-white"
+                    style={{ left: `${t.x}%`, top: `${t.y}%` }}
+                  >
                     {i + 1}
                   </span>
                 ))
@@ -224,10 +285,10 @@ export function Walkthrough() {
                   animate={{ left: `${target.x}%`, top: `${target.y}%` }}
                   transition={{ type: 'spring', stiffness: 170, damping: 24 }}
                 >
-                  <span key={`${step.id}-${tapIndex}`} className="walk-ripple absolute size-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#a6d8ff]" />
+                  <span key={`${step.id}-${tapIndex}-${runId}`} className="walk-ripple absolute size-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#a6d8ff]" />
                   <span className="absolute size-9 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-white/25 shadow-[0_0_24px_rgb(166_216_255/0.8)] backdrop-blur-[1px]" />
                   <span
-                    key={`label-${step.id}-${tapIndex}`}
+                    key={`label-${step.id}-${tapIndex}-${runId}`}
                     className={cn(
                       'walk-label absolute whitespace-nowrap bg-white px-2.5 py-1 text-label font-semibold text-[#060a1a] shadow-[0_6px_20px_rgb(0_0_0/0.4)]',
                       target.y > 70 ? 'bottom-7' : 'top-7',
@@ -239,6 +300,29 @@ export function Walkthrough() {
                 </motion.span>
               )}
             </div>
+
+            {reduce ? (
+              // Still version: the numbered markers explained in words
+              <ol className="mt-4 grid gap-1.5 text-small text-white/75">
+                {step.targets.map((t, i) => (
+                  <li key={t.label} className="flex gap-2">
+                    <span className="tnum font-semibold text-[#a6d8ff]">{i + 1}</span>
+                    {t.label}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <div className="mt-4 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setPaused((p) => !p)}
+                  className="inline-flex h-10 items-center gap-2 border border-white/15 px-4 text-small font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]"
+                >
+                  {paused ? <Play aria-hidden weight="fill" className="size-4" /> : <Pause aria-hidden weight="fill" className="size-4" />}
+                  {paused ? 'Play the walkthrough' : 'Pause the walkthrough'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -26,12 +26,17 @@
   will-change: transform;
 }
 .dash-frame:hover .dash-scroll,
-.dash-frame:active .dash-scroll {
+.dash-frame:focus-within .dash-scroll,
+.dash-frame.is-paused .dash-scroll {
   animation-play-state: paused;
 }
 @media (prefers-reduced-motion: reduce) {
   .dash-scroll {
     animation: none;
+  }
+  /* Still version: people scroll the capture themselves */
+  .dash-frame > div {
+    overflow-y: auto;
   }
 }
 
@@ -46,8 +51,8 @@
   animation-fill-mode: both;
 }
 @keyframes walk-ripple {
-  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.9; }
-  100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+  0% { scale: 0.5; opacity: 0.9; }
+  100% { scale: 1.6; opacity: 0; }
 }
 .walk-ripple {
   animation: walk-ripple 900ms cubic-bezier(0.22, 1, 0.36, 1) 350ms both;

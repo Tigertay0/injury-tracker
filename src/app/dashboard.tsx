@@ -33,7 +33,7 @@ const NEXT_STEP: Record<RecommendationCategory, { path: string; label: string }>
   Recovery: { path: '/recovery', label: 'Do your recovery check-in' },
   Equipment: { path: '/equipment', label: 'Check your cleats' },
   'Injury history': { path: '/injuries', label: 'Review your injuries' },
-  Position: { path: '/settings', label: 'Update your position' },
+  Position: { path: '/settings', label: 'Check your position' },
 };
 
 export const DISCLAIMER =

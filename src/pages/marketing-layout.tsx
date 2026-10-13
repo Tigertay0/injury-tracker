@@ -42,7 +42,7 @@ export function MarketingLayout() {
         Skip to content
       </a>
       <MarketingHeader />
-      <main id="main" className={isHome ? 'flex-1' : 'flex-1 pt-24 sm:pt-28'}>
+      <main id="main" className={isHome ? 'flex-1' : 'flex-1 pt-[calc(6rem+env(safe-area-inset-top))] sm:pt-[calc(7rem+env(safe-area-inset-top))]'}>
         <Outlet />
       </main>
       <MarketingFooter />

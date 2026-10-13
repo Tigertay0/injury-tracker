@@ -3,7 +3,7 @@
 // MarketingLayout.
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, Bed, FirstAidKit, Prohibit, SneakerMove, Timer, type Icon } from '@phosphor-icons/react';
+import { ArrowRight, Bed, FirstAidKit, Pause, Play, Prohibit, SneakerMove, Timer, type Icon } from '@phosphor-icons/react';
 import { GlassFold } from '@/components/fx/glass-fold';
 import { ContainerScroll } from '@/components/fx/container-scroll';
 import { cn } from '@/lib/utils';
@@ -88,18 +88,20 @@ function ProductReveal() {
  * A still frame slowly scrolls through the whole dashboard instead; touching it pauses.
  */
 function PhoneReveal() {
+  const [paused, setPaused] = useState(false);
   return (
     <section id="score" className="scroll-mt-24 px-5 pt-20 pb-16" aria-labelledby="score-title">
       <h2 id="score-title" className="mx-auto max-w-[16ch] text-center font-display text-[2.25rem] leading-[1] font-bold tracking-[-0.04em] text-balance text-white">
         {SCORE_TITLE}
       </h2>
       <p className="mx-auto mt-4 max-w-md text-center text-body text-white/65">{SCORE_LEAD}</p>
-      <div className="dash-frame mx-auto mt-10 h-[34rem] w-full max-w-[20rem] overflow-hidden border border-white/15 bg-[#0b1020] p-1.5 shadow-[0_30px_60px_-20px_rgb(29_63_214/0.5)]">
-        <div className="h-full overflow-hidden">
+      <div className={cn('dash-frame mx-auto mt-10 h-[34rem] w-full max-w-[20rem] overflow-hidden border border-white/15 bg-[#0b1020] p-1.5 shadow-[0_30px_60px_-20px_rgb(29_63_214/0.5)]', paused && 'is-paused')}>
+        {/* Scrollable by hand when reduced motion stops the drift */}
+        <div className="h-full overflow-hidden" tabIndex={-1}>
           <img
             src="/screens/dashboard-mobile-full.webp"
             width={780}
-            height={5364}
+            height={5622}
             alt="The full PitchSafe dashboard for a sample player on a phone: risk score 44 out of 100, the top action, workload ratio, recovery, cleats, injury history, the 28-day load chart, five actions and the coach report"
             loading="lazy"
             decoding="async"
@@ -108,7 +110,15 @@ function PhoneReveal() {
           />
         </div>
       </div>
-      <div className="mt-6 flex justify-center">
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+        <button
+          type="button"
+          onClick={() => setPaused((p) => !p)}
+          className="dash-toggle inline-flex h-10 items-center gap-2 border border-white/15 px-4 text-small font-semibold text-white/80 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]"
+        >
+          {paused ? <Play aria-hidden weight="fill" className="size-4" /> : <Pause aria-hidden weight="fill" className="size-4" />}
+          {paused ? 'Play' : 'Pause'}
+        </button>
         <Link to="/demo" className="group inline-flex items-center gap-1.5 text-body font-semibold text-[#a6d8ff]">
           Open the sample dashboard
           <ArrowRight aria-hidden weight="bold" className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
