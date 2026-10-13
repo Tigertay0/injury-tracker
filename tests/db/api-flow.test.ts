@@ -8,6 +8,9 @@ import { pingDatabase, postgresRepo } from '../../worker/repo';
 import { addDays, mondayOf, utcToday } from '../../shared/dates';
 
 const url = process.env.DATABASE_URL_TEST_WORKER;
+// The production Neon endpoint: this suite writes rows, so it must never run there
+const PRODUCTION_ENDPOINT = 'ep-young-pine-b7ocxaba';
+if (url?.includes(PRODUCTION_ENDPOINT)) throw new Error('DATABASE_URL_TEST_WORKER points at production. Use the dev or test branch.');
 const run = url ? describe : describe.skip;
 
 const stamp = Date.now().toString(36);

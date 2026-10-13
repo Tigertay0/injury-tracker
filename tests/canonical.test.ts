@@ -11,7 +11,7 @@ describe('canonicalRedirect', () => {
   });
 
   it('sends www to the bare domain, over https', () => {
-    expect(at('https://www.pitchsafe.us/science#how')).toBe('https://pitchsafe.us/science#how');
+    expect(at('https://www.pitchsafe.us/science?x=1')).toBe('https://pitchsafe.us/science?x=1');
     expect(at('http://www.pitchsafe.us/')).toBe('https://pitchsafe.us/');
   });
 
@@ -23,10 +23,23 @@ describe('canonicalRedirect', () => {
   it('never redirects local development', () => {
     expect(at('http://localhost:5173/app')).toBeNull();
     expect(at('http://127.0.0.1:8787/')).toBeNull();
+    expect(at('http://pitchsafe.localhost:5173/')).toBeNull();
+    expect(at('http://192.168.1.20:5173/')).toBeNull();
+  });
+
+  it('never redirects to a host it does not serve', () => {
+    expect(at('http://evil.example/')).toBeNull();
+    expect(at('http://pitchsafe.us.evil.example/')).toBeNull();
+    expect(at('https://www.evil.example/')).toBeNull();
+  });
+
+  it('keeps the target on our host whatever the path looks like', () => {
+    expect(at('http://pitchsafe.us//evil.example/x')).toBe('https://pitchsafe.us//evil.example/x');
   });
 
   it('does nothing when no site host is configured', () => {
     expect(canonicalRedirect(new URL('https://www.pitchsafe.us/'), '')).toBeNull();
-    expect(canonicalRedirect(new URL('http://pitchsafe.us/'), '')).toBe('https://pitchsafe.us/');
+    expect(canonicalRedirect(new URL('http://pitchsafe.tiger-tayo.workers.dev/'), '')).toBe('https://pitchsafe.tiger-tayo.workers.dev/');
+    expect(canonicalRedirect(new URL('http://pitchsafe.us/'), '')).toBeNull();
   });
 });

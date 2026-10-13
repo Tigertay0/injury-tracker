@@ -58,5 +58,4 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       - name: Check the live site and database
         run: |
-          sleep 5
-          curl -fsS "https://pitchsafe.us/api/health?db=1" | grep -q '"database":true'
+          curl -fsS --retry 10 --retry-delay 6 --retry-all-errors "https://pitchsafe.us/api/health?db=1" | grep -q '"database":true'
