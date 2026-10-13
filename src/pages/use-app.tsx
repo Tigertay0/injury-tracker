@@ -1,11 +1,9 @@
 // "Use our app": the gateway from the site into the app. One card with the account
 // actions (Strava's single-card pattern), the first three steps, and how to add
 // PitchSafe to a phone's home screen.
-import { useState } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, DeviceMobile } from '@phosphor-icons/react';
+import { ArrowRight } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
-import { Segmented } from '@/components/segmented';
 import { useAppAuth } from '@/lib/auth';
 
 const STEPS = [
@@ -14,16 +12,13 @@ const STEPS = [
   { title: 'Log your next session the same day', text: 'Minutes and effort. It takes under a minute.' },
 ];
 
-const INSTALL = {
-  iphone: ['Open PitchSafe in Safari.', 'Tap the Share button at the bottom of the screen.', 'Choose "Add to Home Screen", then tap Add.'],
-  android: ['Open PitchSafe in Chrome.', 'Tap the three-dot menu at the top right.', 'Choose "Add to Home screen" or "Install app", then confirm.'],
-} as const;
-
-type Platform = keyof typeof INSTALL;
+const INSTALL = [
+  { platform: 'iPhone', how: 'In Safari, tap Share, then Add to Home Screen.' },
+  { platform: 'Android', how: 'In Chrome, open the three-dot menu, then Install app.' },
+];
 
 export default function UseApp() {
   const { isSignedIn, isLoaded } = useAppAuth();
-  const [platform, setPlatform] = useState<Platform>(() => (/android/i.test(navigator.userAgent) ? 'android' : 'iphone'));
 
   return (
     // DOM order is intro, account, steps, so phones (and keyboards) reach the main
@@ -74,29 +69,20 @@ export default function UseApp() {
           </p>
         </section>
 
-        <section aria-labelledby="install-title" className="rounded-[var(--radius-panel)] border border-line bg-surface p-6 sm:p-8">
-          <div className="flex items-center gap-3">
-            <DeviceMobile aria-hidden className="size-6 text-accent-ink" />
-            <h2 id="install-title" className="text-lead font-semibold text-ink">
-              Put it on your home screen
-            </h2>
-          </div>
-          <p className="mt-2 text-body text-ink-2">It then opens full screen like any other app.</p>
-          <Segmented
-            className="mt-5"
-            label="Phone type"
-            value={platform}
-            onChange={setPlatform}
-            options={[
-              { value: 'iphone', label: 'iPhone' },
-              { value: 'android', label: 'Android' },
-            ]}
-          />
-          <ol className="mt-5 list-decimal space-y-2 pl-5 text-body text-ink marker:font-semibold marker:text-ink-2">
-            {INSTALL[platform].map((step) => (
-              <li key={step}>{step}</li>
+        {/* Quiet note, not a second card: two one-line instructions, no switcher */}
+        <section aria-labelledby="install-title" className="border-t border-line pt-6">
+          <h2 id="install-title" className="text-body font-semibold text-ink">
+            Add it to your home screen
+          </h2>
+          <p className="mt-1 text-small text-ink-2">It then opens full screen, like any other app.</p>
+          <dl className="mt-4 grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-4 gap-y-2 text-small">
+            {INSTALL.map((row) => (
+              <div key={row.platform} className="contents">
+                <dt className="font-semibold text-ink">{row.platform}</dt>
+                <dd className="text-ink-2">{row.how}</dd>
+              </div>
             ))}
-          </ol>
+          </dl>
         </section>
       </div>
 
@@ -120,7 +106,6 @@ export default function UseApp() {
           <ArrowRight aria-hidden weight="bold" className="size-4" />
         </Link>
       </div>
-
     </div>
   );
 }
