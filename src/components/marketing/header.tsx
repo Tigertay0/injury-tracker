@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 const NAV = [
   { label: 'How it works', to: '/#how' },
-  { label: 'The score', to: '/#score' },
+  { label: 'Walkthrough', to: '/#walkthrough' },
   { label: 'The science', to: '/science' },
   { label: 'FAQ', to: '/#faq' },
 ];
@@ -24,8 +24,8 @@ export function MarketingHeader() {
   const primary = isSignedIn ? { label: 'Open the app', to: '/app' } : { label: 'Use our app', to: '/use' };
 
   return (
-    <header className="fixed inset-x-0 top-3 z-30 px-3 sm:top-5">
-      <div className="mx-auto flex h-14 max-w-[960px] items-center justify-between gap-4 border border-white/10 bg-[#070b18]/60 pr-2 pl-5 shadow-[0_8px_32px_rgb(0_0_0/0.35)] backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-30 px-3 sm:top-[calc(env(safe-area-inset-top)+1.25rem)]">
+      <div className="mx-auto flex h-14 max-w-[960px] items-center justify-between gap-4 border border-white/10 bg-[#070b18]/90 pr-2 pl-5 shadow-[0_8px_32px_rgb(0_0_0/0.35)] md:bg-[#070b18]/60 md:backdrop-blur-xl">
         <Link to="/" aria-label="PitchSafe home">
           <Wordmark className="text-white" />
         </Link>

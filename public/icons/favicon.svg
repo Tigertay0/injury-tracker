@@ -1,1 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#2358cd"/><path fill="#fcfcfd" transform="translate(15.60 51.00) scale(0.05523 -0.05523)" d="M347 688Q428 688 470.0 662.5Q512 637 526.5 587.0Q541 537 541 451Q541 370 527.5 320.0Q514 270 471.5 242.0Q429 214 346 214H239V0H53V688ZM354 451Q354 496 349.5 514.5Q345 533 332.0 539.0Q319 545 286 545H239V357H285Q318 357 331.5 363.0Q345 369 349.5 387.5Q354 406 354 451Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6d93ff"/>
+      <stop offset="1" stop-color="#2346e0"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="#070b18"/>
+  <!-- Angular shield, cut by the halfway line and centre circle of a pitch -->
+  <path d="M10 7H54V29C54 41 47 50 32 58C17 50 10 41 10 29Z" fill="url(#g)"/>
+  <path d="M10 30H54" stroke="#070b18" stroke-width="3.5"/>
+  <circle cx="32" cy="30" r="8" fill="none" stroke="#070b18" stroke-width="3.5"/>
+</svg>

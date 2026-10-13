@@ -1,7 +1,7 @@
 // Home page ("Floodlit"): dark and cinematic. A WebGL glass shader behind the hero,
 // then the real dashboard tilting into view on scroll. Header and footer come from
 // MarketingLayout.
-import { useRef, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Bed, FirstAidKit, Prohibit, SneakerMove, Timer, type Icon } from '@phosphor-icons/react';
 import { GlassFold } from '@/components/fx/glass-fold';
@@ -9,6 +9,7 @@ import { ContainerScroll } from '@/components/fx/container-scroll';
 import { cn } from '@/lib/utils';
 import { ACWR, CLOSE, HERO, INPUTS, LIMITS } from './content';
 import { Faq } from './faq';
+import { Walkthrough } from './walkthrough';
 import { ZoneBar } from './zone-bar';
 import './home.css';
 
@@ -62,7 +63,62 @@ function Hero() {
   );
 }
 
+const SCORE_TITLE = 'Your whole week in one score.';
+const SCORE_LEAD = 'A number from 0 to 100, the reasons behind it, and the one thing to do before your next hard session.';
+
+/** True below the md breakpoint; read synchronously so phones never mount the 3D card. */
+function useIsPhone() {
+  const query = '(max-width: 767px)';
+  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = () => setPhone(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return phone;
+}
+
 function ProductReveal() {
+  return useIsPhone() ? <PhoneReveal /> : <DesktopReveal />;
+}
+
+/**
+ * Phones: no scroll-linked 3D (it rescaled on every touch scroll and felt jittery).
+ * A still frame slowly scrolls through the whole dashboard instead; touching it pauses.
+ */
+function PhoneReveal() {
+  return (
+    <section id="score" className="scroll-mt-24 px-5 pt-20 pb-16" aria-labelledby="score-title">
+      <h2 id="score-title" className="mx-auto max-w-[16ch] text-center font-display text-[2.25rem] leading-[1] font-bold tracking-[-0.04em] text-balance text-white">
+        {SCORE_TITLE}
+      </h2>
+      <p className="mx-auto mt-4 max-w-md text-center text-body text-white/65">{SCORE_LEAD}</p>
+      <div className="dash-frame mx-auto mt-10 h-[34rem] w-full max-w-[20rem] overflow-hidden border border-white/15 bg-[#0b1020] p-1.5 shadow-[0_30px_60px_-20px_rgb(29_63_214/0.5)]">
+        <div className="h-full overflow-hidden">
+          <img
+            src="/screens/dashboard-mobile-full.webp"
+            width={780}
+            height={5364}
+            alt="The full PitchSafe dashboard for a sample player on a phone: risk score 44 out of 100, the top action, workload ratio, recovery, cleats, injury history, the 28-day load chart, five actions and the coach report"
+            loading="lazy"
+            decoding="async"
+            className="dash-scroll block w-full"
+            draggable={false}
+          />
+        </div>
+      </div>
+      <div className="mt-6 flex justify-center">
+        <Link to="/demo" className="group inline-flex items-center gap-1.5 text-body font-semibold text-[#a6d8ff]">
+          Open the sample dashboard
+          <ArrowRight aria-hidden weight="bold" className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function DesktopReveal() {
   return (
     <section id="score" className="scroll-mt-24 overflow-hidden" aria-labelledby="score-title">
       <ContainerScroll
@@ -70,16 +126,13 @@ function ProductReveal() {
         titleComponent={
           <div className="px-4">
             <h2 id="score-title" className="mx-auto max-w-[16ch] font-display text-[clamp(2.25rem,5.4vw,4.5rem)] leading-[1] font-bold tracking-[-0.04em] text-balance text-white">
-              Your whole week in one score.
+              {SCORE_TITLE}
             </h2>
-            <p className="mx-auto mt-5 mb-16 max-w-xl text-lead text-white/65 md:mb-20">
-              A number from 0 to 100, the reasons behind it, and the one thing to do before your next hard session.
-            </p>
+            <p className="mx-auto mt-5 mb-16 max-w-xl text-lead text-white/65 md:mb-20">{SCORE_LEAD}</p>
           </div>
         }
       >
         <picture>
-          <source media="(max-width: 768px)" srcSet="/screens/dashboard-mobile-dark.webp" width={780} height={1600} />
           <img
             src="/screens/dashboard-desktop-dark.webp"
             width={2880}
@@ -263,6 +316,7 @@ export default function Home() {
       <Hero />
       <ProductReveal />
       <Inputs />
+      <Walkthrough />
       <Recipe />
       <Limits />
       <Faq />

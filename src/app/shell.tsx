@@ -144,7 +144,8 @@ function BottomBar() {
 
 function MobileTopBar({ user }: { user?: ReactNode }) {
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-ground/95 px-4 backdrop-blur-md lg:hidden">
+    // First on phones (order) and padded under the status bar when installed edge to edge
+    <header className="sticky top-0 z-10 -order-1 flex min-h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between border-b border-line bg-ground/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md lg:hidden">
       <Link to="/" aria-label="PitchSafe home">
         <Wordmark className="text-[1.25rem]" />
       </Link>
@@ -184,7 +185,7 @@ export function Shell({ banner, user, compactUser }: { banner?: ReactNode; user?
       <div className="flex min-w-0 flex-1 flex-col">
         {banner}
         <MobileTopBar user={compactUser} />
-        <main id="main" className="mx-auto w-full max-w-[1080px] flex-1 px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">
+        <main id="main" className="mx-auto w-full max-w-[1080px] flex-1 px-4 pt-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">
           <Outlet />
         </main>
       </div>
