@@ -13,19 +13,20 @@ function useHashScroll() {
   }, [hash, pathname]);
 }
 
-const NIGHT_GROUND = '#080b14';
+const NIGHT_GROUND = '#050810';
 
 /** Paints the page edges (overscroll) and the phone browser bar in the night ground. */
 function useNightChrome() {
   useEffect(() => {
     const html = document.documentElement;
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-    const previous = { background: html.style.background, theme: meta?.content };
+    // index.html has one theme-color per colour scheme; both go night here
+    const metas = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
+    const previous = { background: html.style.background, themes: metas.map((m) => m.content) };
     html.style.background = NIGHT_GROUND;
-    meta?.setAttribute('content', NIGHT_GROUND);
+    metas.forEach((m) => m.setAttribute('content', NIGHT_GROUND));
     return () => {
       html.style.background = previous.background;
-      if (meta && previous.theme) meta.setAttribute('content', previous.theme);
+      metas.forEach((m, i) => m.setAttribute('content', previous.themes[i]));
     };
   }, []);
 }
@@ -41,7 +42,7 @@ export function MarketingLayout() {
         Skip to content
       </a>
       <MarketingHeader />
-      <main id="main" className={isHome ? 'flex-1' : 'flex-1 pt-24 sm:pt-28'}>
+      <main id="main" className={isHome ? 'flex-1' : 'flex-1 pt-[calc(6rem+env(safe-area-inset-top))] sm:pt-[calc(7rem+env(safe-area-inset-top))]'}>
         <Outlet />
       </main>
       <MarketingFooter />

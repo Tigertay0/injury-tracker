@@ -1,7 +1,7 @@
 // Glass Fold by meerbahadin (GradFlow), from 21st.dev:
 // https://21st.dev/meerbahadin10/glass-fold  ·  https://gradflow.meerbahadin.dev
 // Shader kept as published. Added: pauses while off screen, and a still frame
-// for reduced motion (the original already did the latter).
+// for reduced motion (the original already did the latter), and lower resolution on phones.
 import { useEffect, useRef } from 'react';
 
 export interface GlassFoldProps {
@@ -155,8 +155,11 @@ export function GlassFold({ color1 = '#1e3cc8', color2 = '#06081e', color3 = '#9
       resolution: uniform('u_resolution'),
     };
 
+    // Phones render the shader at a lower resolution: it is soft by nature, and full
+    // retina resolution made scrolling stutter on mobile GPUs
+    const phone = window.matchMedia('(max-width: 767px)');
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, phone.matches ? 1 : 2);
       const width = Math.max(1, Math.round(canvas.clientWidth * dpr));
       const height = Math.max(1, Math.round(canvas.clientHeight * dpr));
       if (canvas.width !== width || canvas.height !== height) {

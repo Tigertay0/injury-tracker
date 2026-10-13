@@ -4,17 +4,39 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
+  // The Worker runs first for page loads and the API so it can redirect http and www
+  // before anything is served. Static files skip it (free and unmetered); browsers only
+  // request them from an https page, so they never need the redirect.
   "assets": {
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": [
+      "/*",
+      "!/assets/*",
+      "!/fonts/*",
+      "!/icons/*",
+      "!/screens/*",
+      "!/walkthrough/*",
+      "!/og.png",
+      "!/manifest.webmanifest",
+      "!/theme-init.js"
+    ]
   },
   "observability": { "enabled": true },
   // Public values only. CLERK_SECRET_KEY is a secret: `wrangler secret put CLERK_SECRET_KEY`
   // (and `.dev.vars` locally, which git ignores).
   "vars": {
     "CLERK_PUBLISHABLE_KEY": "pk_test_c3VwZXJiLXNwYW5pZWwtODEwLmNsZXJrLmFjY291bnRzLmRldiQ",
-    "ALLOWED_ORIGINS": "https://pitchsafe.tiger-tayo.workers.dev"
+    "ALLOWED_ORIGINS": "https://pitchsafe.us,https://pitchsafe.tiger-tayo.workers.dev",
+    "SITE_HOST": "pitchsafe.us"
   },
+  // Custom domains on the pitchsafe.us zone (same Cloudflare account). The workers.dev
+  // address stays on as a fallback; it must be enabled explicitly once routes exist.
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "pitchsafe.us", "custom_domain": true },
+    { "pattern": "www.pitchsafe.us", "custom_domain": true }
+  ],
   // Neon Postgres through Hyperdrive (created with caching disabled so players always
   // read their latest writes). Local dev reads the connection string from the
   // CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE variable in .env.

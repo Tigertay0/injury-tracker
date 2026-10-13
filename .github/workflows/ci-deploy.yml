@@ -43,7 +43,7 @@ jobs:
       cancel-in-progress: false
     environment:
       name: production
-      url: https://pitchsafe.tiger-tayo.workers.dev
+      url: https://pitchsafe.us
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -58,5 +58,4 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       - name: Check the live site and database
         run: |
-          sleep 5
-          curl -fsS "https://pitchsafe.tiger-tayo.workers.dev/api/health?db=1" | grep -q '"database":true'
+          curl -fsS --retry 10 --retry-delay 6 --retry-all-errors "https://pitchsafe.us/api/health?db=1" | grep -q '"database":true'

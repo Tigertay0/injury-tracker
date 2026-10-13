@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 import { ArrowRight, Bed, FilePdf, FirstAidKit, Plus, SneakerMove, Timer, WarningOctagon, type Icon } from '@phosphor-icons/react';
 import { buildRiskModel, type RiskModel } from '@shared/risk-model';
 import { localToday } from '@shared/dates';
-import { FUEL_DISCLAIMER } from '@shared/recommendations';
+import { FUEL_DISCLAIMER, type RecommendationCategory } from '@shared/recommendations';
 import { LoadChart } from '@/components/load-chart';
 import { RiskChip } from '@/components/risk-chip';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,15 @@ import {
 import { useAppBase, useOverview } from '@/lib/player-data';
 import { cn } from '@/lib/utils';
 import { PageHeader } from './page-header';
+
+/** Where each kind of advice can be acted on, and what the link says. */
+const NEXT_STEP: Record<RecommendationCategory, { path: string; label: string }> = {
+  'Training load': { path: '/log', label: 'Log a session' },
+  Recovery: { path: '/recovery', label: 'Do your recovery check-in' },
+  Equipment: { path: '/equipment', label: 'Check your cleats' },
+  'Injury history': { path: '/injuries', label: 'Review your injuries' },
+  Position: { path: '/settings', label: 'Check your position' },
+};
 
 export const DISCLAIMER =
   'PitchSafe is an educational awareness tool, not a medical device or diagnostic service. Risk scores come from self-reported data and published sports science models. They are indicators, not guarantees, and individual risk depends on things this tool cannot measure. If you feel pain or think you are injured, stop training and see a qualified medical professional or physiotherapist.';
@@ -262,19 +271,35 @@ export default function Dashboard() {
               What to do now
             </h2>
             <ol className="overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface">
-              {model.recommendations.map((r) => (
-                <li key={r.text} className={cn('flex gap-4 border-b border-line p-4 last:border-b-0 md:px-6', r.urgent && 'bg-risk-very-high-soft')}>
-                  {r.urgent && <WarningOctagon aria-hidden weight="fill" className="mt-0.5 size-5 shrink-0 text-risk-very-high" />}
-                  <div className="min-w-0">
-                    <p className={cn('text-label font-semibold', r.urgent ? 'text-risk-very-high' : 'text-ink-2')}>
-                      {r.urgent ? 'Urgent: ' : ''}
-                      {r.category}
-                    </p>
-                    <p className="mt-0.5 text-body text-ink">{r.text}</p>
-                    {r.citation && <p className="mt-1 text-label text-ink-3">Source: {r.citation}</p>}
-                  </div>
-                </li>
-              ))}
+              {model.recommendations.map((r) => {
+                const next = NEXT_STEP[r.category];
+                return (
+                  <li key={r.text} className="border-b border-line last:border-b-0">
+                    {/* The whole row opens the screen where the player can act on it */}
+                    <Link
+                      to={`${base}${next.path}`}
+                      className={cn(
+                        'group flex gap-4 p-4 transition-colors duration-150 ease-out hover:bg-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus md:px-6',
+                        r.urgent && 'bg-risk-very-high-soft hover:bg-risk-very-high-soft',
+                      )}
+                    >
+                      {r.urgent && <WarningOctagon aria-hidden weight="fill" className="mt-0.5 size-5 shrink-0 text-risk-very-high" />}
+                      <div className="min-w-0 flex-1">
+                        <p className={cn('text-label font-semibold', r.urgent ? 'text-risk-very-high' : 'text-ink-2')}>
+                          {r.urgent ? 'Urgent: ' : ''}
+                          {r.category}
+                        </p>
+                        <p className="mt-0.5 text-body text-ink">{r.text}</p>
+                        {r.citation && <p className="mt-1 text-label text-ink-3">Source: {r.citation}</p>}
+                        <p className="mt-2 inline-flex items-center gap-1 text-small font-semibold text-accent-ink">
+                          {next.label}
+                          <ArrowRight aria-hidden weight="bold" className="size-3.5 transition-transform duration-150 ease-out group-hover:translate-x-0.5" />
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
             </ol>
           </section>
         )}

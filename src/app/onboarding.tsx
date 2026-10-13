@@ -55,7 +55,7 @@ export function Onboarding() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-lg flex-col px-5 pt-8 pb-12">
+    <div className="mx-auto flex min-h-dvh max-w-lg flex-col px-5 pt-[calc(2rem+env(safe-area-inset-top))] pb-12">
       <Link to="/" aria-label="PitchSafe home">
         <Wordmark />
       </Link>

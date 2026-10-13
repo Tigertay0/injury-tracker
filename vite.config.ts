@@ -40,6 +40,7 @@ function securityHeaders(publishableKey: string | undefined): Plugin {
       const source = [
         '/*',
         `  Content-Security-Policy: ${csp}`,
+        '  Strict-Transport-Security: max-age=86400',
         '  X-Content-Type-Options: nosniff',
         '  Referrer-Policy: strict-origin-when-cross-origin',
         '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()',

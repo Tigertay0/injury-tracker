@@ -1,7 +1,9 @@
-// Cloudflare Worker entry: wires the API to Clerk, Neon (via Hyperdrive) and the rate limiters.
-// Static files (the React app) are served by Workers static assets before this runs.
+// Cloudflare Worker entry: runs first on every request to enforce https and the bare
+// domain, serves the React app from static assets, and wires the API to Clerk, Neon (via
+// Hyperdrive) and the rate limiters.
 import { createClerkClient, verifyToken } from '@clerk/backend';
 import { createApp } from './app';
+import { canonicalRedirect } from './canonical';
 import { pingDatabase, postgresRepo } from './repo';
 
 export interface Env {
@@ -12,6 +14,8 @@ export interface Env {
   CLERK_SECRET_KEY: string;
   /** Comma-separated origins allowed as the token's `azp` claim. */
   ALLOWED_ORIGINS: string;
+  /** Public domain; www.<SITE_HOST> redirects to it. Empty means only enforce https. */
+  SITE_HOST?: string;
   READ_LIMITER: RateLimit;
   WRITE_LIMITER: RateLimit;
 }
@@ -51,6 +55,12 @@ function buildApp(env: Env) {
 
 export default {
   async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const target = canonicalRedirect(url, env.SITE_HOST ?? '');
+    // 308 keeps the method and body, so a stray http API call is redirected intact
+    if (target) return Response.redirect(target, 308);
+    if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
+
     const missing = missingConfig(env);
     // An empty origin list would make Clerk skip the azp check entirely
     if (env.ALLOWED_ORIGINS && !env.ALLOWED_ORIGINS.split(',').some((o) => o.trim())) missing.push('ALLOWED_ORIGINS');

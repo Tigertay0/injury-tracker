@@ -13,3 +13,61 @@
     animation: none;
   }
 }
+
+/* Phone dashboard preview: drift down the full capture, pause, drift back. The frame is
+   34rem tall; translateY(%) is relative to the image, so calc() stops at its bottom. */
+@keyframes dash-scroll {
+  0%, 10% { transform: translateY(0); }
+  45%, 60% { transform: translateY(calc(-100% + 33.25rem)); }
+  95%, 100% { transform: translateY(0); }
+}
+.dash-scroll {
+  animation: dash-scroll 28s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform;
+}
+.dash-frame:hover .dash-scroll,
+.dash-frame:focus-within .dash-scroll,
+.dash-frame.is-paused .dash-scroll {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-scroll {
+    animation: none;
+  }
+  /* Still version: people scroll the capture themselves */
+  .dash-frame > div {
+    overflow-y: auto;
+  }
+}
+
+/* Walkthrough: story-style progress, tap ripple, caption pop */
+@keyframes walk-progress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+.walk-progress {
+  animation-name: walk-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+@keyframes walk-ripple {
+  0% { scale: 0.5; opacity: 0.9; }
+  100% { scale: 1.6; opacity: 0; }
+}
+.walk-ripple {
+  animation: walk-ripple 900ms cubic-bezier(0.22, 1, 0.36, 1) 350ms both;
+}
+@keyframes walk-label {
+  from { opacity: 0; filter: blur(3px); margin-top: 4px; }
+  to { opacity: 1; filter: none; margin-top: 0; }
+}
+.walk-label {
+  animation: walk-label 250ms cubic-bezier(0.22, 1, 0.36, 1) 300ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .walk-progress,
+  .walk-ripple,
+  .walk-label {
+    animation: none;
+  }
+}
