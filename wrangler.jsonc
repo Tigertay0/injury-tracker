@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pitchsafe",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": { "enabled": true },
+  // Public values only. CLERK_SECRET_KEY is a secret: `wrangler secret put CLERK_SECRET_KEY`
+  // (and `.dev.vars` locally, which git ignores).
+  "vars": {
+    "SUPABASE_URL": "",
+    "SUPABASE_PUBLISHABLE_KEY": "",
+    "CLERK_PUBLISHABLE_KEY": "",
+    "ALLOWED_ORIGINS": "http://localhost:5173"
+  },
+  "ratelimits": [
+    { "name": "READ_LIMITER", "namespace_id": "4101", "simple": { "limit": 120, "period": 60 } },
+    { "name": "WRITE_LIMITER", "namespace_id": "4102", "simple": { "limit": 30, "period": 60 } }
+  ]
+}

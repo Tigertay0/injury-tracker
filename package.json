@@ -1,23 +1,41 @@
 {
   "name": "pitchsafe",
   "private": true,
-  "version": "1.0.0",
-  "description": "PitchSafe - Soccer Injury Risk Management Platform",
+  "version": "2.0.0",
+  "description": "PitchSafe: free injury-risk tracking for amateur soccer players",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "build": "tsc -b && vite build",
+    "preview": "npm run build && vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -b",
+    "db:push": "supabase db push",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
     "prepare": "git config core.hooksPath .githooks"
   },
-
   "dependencies": {
-    "chart.js": "^4.5.1",
-    "firebase": "^12.13.0",
-    "jspdf": "^4.2.1",
-    "vite": "^8.0.11"
+    "@clerk/backend": "^3.23.2",
+    "@clerk/react": "^6.17.8",
+    "@supabase/supabase-js": "^2.117.3",
+    "hono": "^4.13.13",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0"
   },
   "devDependencies": {
-    "terser": "^5.47.1"
+    "@cloudflare/vite-plugin": "^1.63.1",
+    "@cloudflare/workers-types": "^5.20261012.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4",
+    "wrangler": "^4.149.0"
   }
 }

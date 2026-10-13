@@ -5,8 +5,8 @@
 RED='\033[0;31m'
 NC='\033[0m'
 
-BLOCKED_FILES=(".env" ".env.local" ".env.production" ".env.staging" ".env.development")
-BLOCKED_PATTERNS=("AIzaSy" "sk-ant-" "ANTHROPIC_API_KEY\s*=\s*sk-")
+BLOCKED_FILES=(".env" ".env.local" ".env.production" ".env.staging" ".env.development" ".dev.vars")
+BLOCKED_PATTERNS=("sk-ant-[A-Za-z0-9_-]{10,}" "sk_(live|test)_[A-Za-z0-9]{20,}" "sb_secret_[A-Za-z0-9_-]{10,}" "eyJhbGciOi[A-Za-z0-9_-]{30,}\.[A-Za-z0-9_-]{30,}")
 
 # 1. Block specific secret files from being committed
 for f in "${BLOCKED_FILES[@]}"; do
@@ -19,7 +19,7 @@ done
 
 # 2. Scan ALL staged file contents for known secret patterns
 # Exclude files that legitimately contain pattern strings (hook itself, vite config)
-SCAN_EXCLUDE="\.githooks/pre-commit|vite\.config\.js"
+SCAN_EXCLUDE="\.githooks/pre-commit"
 
 for pattern in "${BLOCKED_PATTERNS[@]}"; do
   MATCH=$(git diff --cached -U0 | grep -E "^\+" | grep -vE "^(\+\+\+|diff)" | \

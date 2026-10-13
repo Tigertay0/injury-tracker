@@ -1,0 +1,50 @@
+// Domain types shared by the browser app and the Worker API
+
+export type Position = 'GK' | 'DEF' | 'MID' | 'FWD';
+export type SessionType = 'training' | 'match' | 'gym';
+export type Severity = 'mild' | 'moderate' | 'severe';
+export type CleatType = 'FG_BLADED' | 'FG_CONICAL' | 'AG' | 'SG' | 'MG' | 'INDOOR';
+export type SurfaceType = 'NATURAL_GOOD' | 'NATURAL_POOR' | '3G_TURF' | '2G_TURF' | 'HARD_GROUND' | 'INDOOR';
+
+export type EquipmentRisk = 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
+export type AcwrZone = 'NA' | 'UNDERTRAINING' | 'SWEET_SPOT' | 'CAUTION' | 'DANGER';
+export type RecoveryZone = 'GOOD' | 'MODERATE' | 'POOR';
+export type CompositeZone = 'LOW' | 'MODERATE' | 'HIGH' | 'VERY_HIGH';
+export type InjuryFactor = 'ACL_HISTORY' | 'ANKLE_SPRAIN_HISTORY' | 'HAMSTRING_HISTORY' | 'RECENT_INJURY';
+
+export interface Profile {
+  position: Position | null;
+  displayName: string;
+  cleatType: CleatType | null;
+  surfaceType: SurfaceType | null;
+  createdAt: string;
+}
+
+export interface TrainingSession {
+  id: string;
+  date: string; // YYYY-MM-DD, player's local calendar day
+  type: SessionType;
+  duration: number; // minutes
+  rpe: number; // 1-10
+  load: number; // duration x rpe
+  notes: string;
+}
+
+export interface RecoveryLog {
+  id: string;
+  weekStart: string; // Monday, YYYY-MM-DD
+  sleep: number;
+  soreness: number;
+  stress: number;
+  nutrition: number;
+  score: number; // 0-10, one decimal
+}
+
+export interface Injury {
+  id: string;
+  bodyPart: string;
+  injuryType: string;
+  severity: Severity;
+  injuryDate: string;
+  returnDate: string | null;
+}
