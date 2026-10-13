@@ -174,7 +174,9 @@ export function LoadChart({ days, highlightFrom, referenceDaily, title, classNam
         )}
       </div>
 
-      <table className="sr-only">
+      {/* Tables ignore width:1px, so the visually hidden wrapper is a div */}
+      <div className="sr-only">
+      <table>
         <caption>{title}</caption>
         <thead>
           <tr>
@@ -191,6 +193,7 @@ export function LoadChart({ days, highlightFrom, referenceDaily, title, classNam
           ))}
         </tbody>
       </table>
+      </div>
     </figure>
   );
 }

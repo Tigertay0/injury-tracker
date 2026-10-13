@@ -76,7 +76,7 @@ export default function Science() {
         Every number in the app comes from the rules on this page. Nothing is guessed by AI. The formulas come from published sports science; the weighting that combines them is PitchSafe's own and has not been clinically validated.
       </p>
 
-      <div className="mt-12 grid gap-10 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-16">
+      <div className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-16">
         <nav aria-label="On this page" className="hidden lg:block">
           <ul className="sticky top-24 space-y-1 border-l border-line">
             {SECTIONS.map((s) => (

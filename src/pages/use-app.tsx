@@ -51,7 +51,8 @@ export default function UseApp() {
         </Link>
       </div>
 
-      <div className="flex flex-col gap-6">
+      {/* The account card leads on phones so the main action is on the first screen */}
+      <div className="order-first flex flex-col gap-6 lg:order-none">
         <section aria-labelledby="account-title" className="shadow-lift rounded-[var(--radius-panel)] border border-line bg-surface p-6 sm:p-8">
           <h2 id="account-title" className="font-display text-h2 font-extrabold text-ink">
             {isSignedIn ? 'You are signed in' : 'Get started'}

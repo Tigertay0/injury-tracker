@@ -130,7 +130,7 @@ export default function Landing() {
         </h2>
         <p className="mt-4 max-w-xl text-lead text-ink-2">The same formulas pro clubs use for load monitoring, from peer-reviewed research. Every number on your dashboard can be traced back.</p>
 
-        <div className="mt-10 grid gap-4 lg:grid-cols-6">
+        <div className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-6">
           <article className="rounded-[var(--radius-panel)] border border-line bg-surface p-6 lg:col-span-4">
             <h3 className="text-h3 font-display font-extrabold text-ink">Training load</h3>
             <p className="mt-2 max-w-lg text-body text-ink-2">Each session's load is minutes times effort. Your ratio compares the last 7 days with your average week over the last 28.</p>
