@@ -22,7 +22,7 @@ export interface Deps {
   /** True when the caller is still under the limit for this bucket. */
   allow(bucket: 'read' | 'write', userId: string): Promise<boolean>;
   deleteClerkUser(userId: string): Promise<void>;
-  /** Cheap database round trip for monitoring; no player data involved. */
+  /** Cheap database round trip for monitoring, which also confirms the schema is migrated; no player data involved. */
   pingDatabase?(): Promise<boolean>;
   today?(): string;
 }

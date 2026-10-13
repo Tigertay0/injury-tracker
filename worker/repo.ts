@@ -126,13 +126,17 @@ export async function asPlayer<T>(connectionString: string, userId: string, fn: 
   }
 }
 
-/** Connects as the worker role and runs `select 1`; touches no tables. */
+/**
+ * Connects as the worker role and checks that the schema this release needs is there. It only
+ * looks the table up in the catalog, so it reads no player data. `session_drills` comes from
+ * migration 0002: if that has not run, the health check fails instead of the drills feature.
+ */
 export async function pingDatabase(connectionString: string): Promise<boolean> {
   const client = new pg.Client({ connectionString });
   try {
     await client.connect();
-    const { rows } = await client.query('select 1 as ok');
-    return rows[0]?.ok === 1;
+    const { rows } = await client.query("select to_regclass('public.session_drills') is not null as ok");
+    return rows[0]?.ok === true;
   } finally {
     await client.end().catch(() => undefined);
   }
@@ -165,7 +169,7 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
     );
     const sessionIds = sessions.map((r) => r.id as string);
     const drillRows = sessionIds.length
-      ? await q('select session_id, drill_id, minutes from public.session_drills where user_id = $1 and session_id = any($2::uuid[]) order by created_at', [userId, sessionIds])
+      ? await q('select session_id, drill_id, minutes from public.session_drills where user_id = $1 and session_id = any($2::uuid[]) order by created_at, drill_id', [userId, sessionIds])
       : [];
     const drillsBySession = new Map<string, SessionDrill[]>();
     for (const d of drillRows) {
