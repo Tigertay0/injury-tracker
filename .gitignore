@@ -39,3 +39,17 @@ npm-debug.log*
 
 # Debug
 debug/
+
+# Cloudflare
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+
+# Design working files (references and font candidates are local only)
+.design/fonts-candidates/
+.design/references/
+
+# Local credentials (never commit)
+.secrets/

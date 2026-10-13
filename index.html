@@ -1,17 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="PitchSafe — Free, evidence-based soccer injury risk management for amateur athletes. Monitor training load, recovery, and equipment risk." />
-  <title>PitchSafe — Soccer Injury Risk Management</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
-</head>
-<body>
-  <div id="app"></div>
-  <script type="module" src="/src/main.js"></script>
-</body>
+<!doctype html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>PitchSafe: free injury-risk tracking for soccer players</title>
+    <meta name="description" content="Log training, recovery and cleats. PitchSafe turns them into one injury-risk score built on published sports science. Free for amateur soccer players." />
+    <meta name="theme-color" content="#f5f6f8" />
+    <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PitchSafe: know when your training turns risky" />
+    <meta property="og:description" content="Free injury-risk tracking for amateur soccer players, built on published sports science." />
+    <meta property="og:image" content="%VITE_SITE_URL%/og.png" />
+    <meta property="og:url" content="%VITE_SITE_URL%/" />
+    <link rel="canonical" href="%VITE_SITE_URL%/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preload" href="/fonts/host-grotesk/host-grotesk-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <script src="/theme-init.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>PitchSafe needs JavaScript to run. Please turn it on and reload.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

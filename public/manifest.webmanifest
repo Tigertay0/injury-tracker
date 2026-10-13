@@ -1,0 +1,28 @@
+{
+  "name": "PitchSafe",
+  "short_name": "PitchSafe",
+  "description": "Free injury-risk tracking for amateur soccer players.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#f5f6f8",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
