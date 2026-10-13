@@ -26,7 +26,7 @@ function securityHeaders(publishableKey: string | undefined): Plugin {
         "default-src 'self'",
         `script-src 'self'${clerkSrc} https://challenges.cloudflare.com https://*.protect.clerk.com`,
         `connect-src 'self'${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com https://*.clerk-telemetry.com https://challenges.cloudflare.com`,
-        "img-src 'self' data: https://img.clerk.com",
+        "img-src 'self' data: blob: https://img.clerk.com",
         "style-src 'self' 'unsafe-inline'", // Clerk injects component styles at runtime
         "font-src 'self' data:",
         "frame-src 'self' https://challenges.cloudflare.com https://*.protect.clerk.com",

@@ -110,7 +110,8 @@
     color-scheme: dark;
   }
 }
-:root[data-theme="dark"] .app-scope {
+:root[data-theme="dark"] .app-scope,
+.theme-night {
   --ground: oklch(0.175 0.008 255);
   --surface: oklch(0.215 0.009 255);
   --sunken: oklch(0.155 0.008 255);

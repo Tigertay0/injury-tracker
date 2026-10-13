@@ -51,6 +51,11 @@ export const router = createBrowserRouter([
           { path: '*', lazy: page(() => import('@/pages/not-found')) },
         ],
       },
+      // Home page variants for the owner to compare (noindex, not linked from the site)
+      { path: 'preview', lazy: page(() => import('@/pages/variants/chooser')) },
+      { path: 'preview/floodlit', lazy: page(() => import('@/pages/variants/floodlit')) },
+      { path: 'preview/horizon', lazy: page(() => import('@/pages/variants/horizon')) },
+      { path: 'preview/liquid', lazy: page(() => import('@/pages/variants/liquid')) },
       {
         path: 'demo',
         lazy: page(() => import('@/app/demo-layout')),
