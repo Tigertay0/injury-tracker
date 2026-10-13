@@ -154,7 +154,7 @@ function CheckInForm({
           <p className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] bg-sunken px-4 py-3 lg:hidden" aria-hidden>
             <span className="text-small font-semibold text-ink-2">Recovery score</span>
             <span className="flex items-center gap-2">
-              <span className="tnum font-display text-h2 font-extrabold text-ink">{score.toFixed(1)}</span>
+              <span className="tnum font-display text-h2 font-bold text-ink">{score.toFixed(1)}</span>
               <RiskChip tone={RECOVERY_TONE[zone]}>{RECOVERY_LABEL[zone]}</RiskChip>
             </span>
           </p>
@@ -174,7 +174,7 @@ function CheckInForm({
           <section aria-label="Score preview" className="rounded-[var(--radius-panel)] border border-line bg-surface p-5 md:p-6">
             <p className="text-label font-semibold text-ink-2">Recovery score</p>
             <p className="mt-1 flex items-baseline gap-2" aria-live="polite">
-              <span className={cn('tnum font-display text-display-s font-extrabold', TONE_TEXT[RECOVERY_TONE[zone]])}>{score.toFixed(1)}</span>
+              <span className={cn('tnum font-display text-display-s font-bold', TONE_TEXT[RECOVERY_TONE[zone]])}>{score.toFixed(1)}</span>
               <span className="text-lead font-semibold text-ink-3">/ 10</span>
             </p>
             <RiskChip tone={RECOVERY_TONE[zone]} className="mt-2">

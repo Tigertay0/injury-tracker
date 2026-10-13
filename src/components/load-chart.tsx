@@ -1,5 +1,5 @@
 // 28-day training-load columns. Mechanisms adapted from 21st.dev bklitai/bar-chart
-// (https://21st.dev/@bklitai/components/bar-chart): rounded data-ends, faded
+// (https://21st.dev/@bklitai/components/bar-chart):  data-ends, faded
 // neighbours on hover, a value-first tooltip. Rebuilt as plain SVG (no visx/Motion)
 // so it can render in the landing hero, and to the dataviz mark specs.
 import { useId, useMemo, useState } from 'react';
@@ -25,7 +25,7 @@ interface LoadChartProps {
 const VIEW_W = 560;
 const BAR_MAX = 24;
 const GAP = 2;
-const RADIUS = 4;
+const RADIUS = 0;
 
 function niceMax(value: number): number {
   if (value <= 0) return 100;
@@ -34,7 +34,7 @@ function niceMax(value: number): number {
   return (steps.find((s) => s * pow >= value) ?? 10) * pow;
 }
 
-/** Column path with a 4px rounded top and a square base. */
+/** Column path with a square top and base. */
 function columnPath(x: number, y: number, w: number, h: number): string {
   const r = Math.min(RADIUS, w / 2, h);
   return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;
@@ -159,11 +159,11 @@ export function LoadChart({ days, highlightFrom, referenceDaily, title, classNam
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-label text-ink-2">
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-2.5 w-3 rounded-[2px] bg-chart-past" />
+          <span aria-hidden className="h-2.5 w-3 bg-chart-past" />
           Earlier weeks
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-2.5 w-3 rounded-[2px] bg-chart-now" />
+          <span aria-hidden className="h-2.5 w-3 bg-chart-now" />
           Last 7 days
         </span>
         {referenceDaily !== undefined && referenceDaily > 0 && (

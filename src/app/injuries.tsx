@@ -149,7 +149,7 @@ export default function Injuries() {
           <h2 id="impact-title" className="text-lead font-semibold text-ink">
             Effect on your score
           </h2>
-          <span className="tnum font-display text-h1 font-extrabold text-ink">×{multiplier.value.toFixed(2)}</span>
+          <span className="tnum font-display text-h1 font-bold text-ink">×{multiplier.value.toFixed(2)}</span>
         </div>
         {multiplier.factors.length === 0 ? (
           <p className="mt-2 text-body text-ink-2">Nothing in your history raises your score right now.</p>

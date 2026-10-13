@@ -42,7 +42,7 @@ function Verdict({ model, hasSessions }: { model: RiskModel; hasSessions: boolea
             Injury risk score
           </h2>
           <p className="mt-1 flex items-baseline gap-2">
-            <span className={cn('tnum font-display text-score font-extrabold', TONE_TEXT[COMPOSITE_TONE[zone]])}>{score}</span>
+            <span className={cn('tnum font-display text-score font-bold', TONE_TEXT[COMPOSITE_TONE[zone]])}>{score}</span>
             <span className="tnum text-lead font-semibold text-ink-3">/ 100</span>
           </p>
           <RiskChip tone={COMPOSITE_TONE[zone]} className="mt-3">
@@ -87,7 +87,7 @@ function Verdict({ model, hasSessions }: { model: RiskModel; hasSessions: boolea
   if (!hasSessions) {
     return (
       <section className="rounded-[var(--radius-panel)] border border-line bg-surface p-6 md:p-8">
-        <h2 className="font-display text-h2 font-extrabold text-ink">Log your first session</h2>
+        <h2 className="font-display text-h2 font-bold text-ink">Log your first session</h2>
         <p className="mt-2 max-w-lg text-body text-ink-2">
           Every session counts, easy ones included. After four weeks of logging you get your full risk score. Your cleat and recovery checks work today.
         </p>
@@ -109,18 +109,18 @@ function Verdict({ model, hasSessions }: { model: RiskModel; hasSessions: boolea
         Building your baseline
       </h2>
       <p className="mt-1 flex items-baseline gap-2">
-        <span className="tnum font-display text-display-m font-extrabold text-ink">Day {daysCovered}</span>
+        <span className="tnum font-display text-display-m font-bold text-ink">Day {daysCovered}</span>
         <span className="tnum text-lead font-semibold text-ink-3">of 28</span>
       </p>
       <div
-        className="mt-4 h-2.5 max-w-md overflow-hidden rounded-full bg-accent-soft"
+        className="mt-4 h-2.5 max-w-md overflow-hidden bg-accent-soft"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={28}
         aria-valuenow={daysCovered}
         aria-label="Days of training history"
       >
-        <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+        <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
       </div>
       <p className="mt-4 max-w-xl text-body text-ink-2">
         Your risk score needs four weeks of history to know what normal looks like for you. Keep logging every session. Your cleat and recovery checks below already count.
@@ -145,7 +145,7 @@ function Tile({ to, icon: Icon, label, value, tone, status }: TileProps) {
         <Icon aria-hidden className="size-4" />
         {label}
       </span>
-      <span className="tnum truncate font-display text-h2 font-extrabold text-ink">{value}</span>
+      <span className="tnum truncate font-display text-h2 font-bold text-ink">{value}</span>
       <RiskChip tone={tone} className="self-start">
         {status}
       </RiskChip>

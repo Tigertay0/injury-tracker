@@ -71,7 +71,7 @@ export function Onboarding() {
             next();
           }}
         >
-          <h1 className="font-display text-h1 font-extrabold text-ink">Where do you play?</h1>
+          <h1 className="font-display text-h1 font-bold text-ink">Where do you play?</h1>
           <p className="mt-2 text-body text-ink-2">Each position strains the body differently, so your advice changes with it.</p>
           <FieldSet legend="Position" error={error?.field === 'position' ? error.message : null} className="mt-6">
             <RadioRows
@@ -102,7 +102,7 @@ export function Onboarding() {
             void finish();
           }}
         >
-          <h1 className="font-display text-h1 font-extrabold text-ink">Your data, your call</h1>
+          <h1 className="font-display text-h1 font-bold text-ink">Your data, your call</h1>
           <p className="mt-2 text-body text-ink-2">
             PitchSafe stores your sessions, recovery check-ins, cleats and injuries so it can work out your risk. Only you can see them. You can download or delete everything in Settings.
           </p>

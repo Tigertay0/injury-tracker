@@ -1,45 +1,24 @@
 @import "tailwindcss";
 
-/* ---------- Fonts (Fontesk, SIL OFL 1.1, self-hosted) ---------- */
+/* ---------- Font (Host Grotesk by Element Type, via Fontesk, SIL OFL 1.1, self-hosted) ---------- */
 
 @font-face {
-  font-family: "Saira Semi Condensed";
-  src: url("/fonts/saira-semi-condensed/saira-semi-condensed-extrabold.woff2") format("woff2");
-  font-weight: 800;
+  font-family: "Host Grotesk";
+  src: url("/fonts/host-grotesk/host-grotesk-variable.woff2") format("woff2");
+  font-weight: 300 800;
   font-style: normal;
   font-display: swap;
 }
+/* Metric-matched fallback keeps layout still while the real face loads */
 @font-face {
-  font-family: "Saira Semi Condensed";
-  src: url("/fonts/saira-semi-condensed/saira-semi-condensed-semibold.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Public Sans";
-  src: url("/fonts/public-sans/public-sans-variable.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-/* Metric-matched fallbacks keep layout still while the real faces load */
-@font-face {
-  font-family: "Saira Fallback";
-  src: local("Arial Narrow"), local("Arial");
-  size-adjust: 92%;
-  ascent-override: 120%;
-  descent-override: 46%;
-}
-@font-face {
-  font-family: "Public Sans Fallback";
+  font-family: "Host Grotesk Fallback";
   src: local("Arial");
-  size-adjust: 102%;
+  size-adjust: 106%;
   ascent-override: 93%;
-  descent-override: 22%;
+  descent-override: 27%;
 }
 
-/* ---------- Tokens: light (default, and always on marketing pages) ---------- */
+/* ---------- Tokens: light (default for the app; marketing pages use .site-night) ---------- */
 
 :root {
   --ground: oklch(0.972 0.003 250);
@@ -111,7 +90,8 @@
   }
 }
 :root[data-theme="dark"] .app-scope,
-.theme-night {
+.theme-night,
+.site-night {
   --ground: oklch(0.175 0.008 255);
   --surface: oklch(0.215 0.009 255);
   --sunken: oklch(0.155 0.008 255);
@@ -188,8 +168,9 @@
 }
 
 @theme {
-  --font-display: "Saira Semi Condensed", "Saira Fallback", "Arial Narrow", system-ui, sans-serif;
-  --font-sans: "Public Sans", "Public Sans Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* One family for every role; hierarchy comes from size, weight and tracking */
+  --font-display: "Host Grotesk", "Host Grotesk Fallback", system-ui, sans-serif;
+  --font-sans: "Host Grotesk", "Host Grotesk Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /* Role scale: 12 / 13 / 14 / 16 / 18 / 22 / 28 / 36 / 48 / 64 / 80 / 96 */
   --text-caption: 0.75rem;
@@ -204,23 +185,30 @@
   --text-lead--line-height: 1.6;
   --text-h3: 1.375rem;
   --text-h3--line-height: 1.2;
+  --text-h3--letter-spacing: -0.015em;
   --text-h2: 1.75rem;
   --text-h2--line-height: 1.1;
+  --text-h2--letter-spacing: -0.025em;
   --text-h1: 2.25rem;
   --text-h1--line-height: 1.05;
+  --text-h1--letter-spacing: -0.03em;
   --text-display-s: 3rem;
   --text-display-s--line-height: 1;
+  --text-display-s--letter-spacing: -0.035em;
   --text-display-m: 4rem;
   --text-display-m--line-height: 0.96;
+  --text-display-m--letter-spacing: -0.04em;
   --text-display-l: 5rem;
   --text-display-l--line-height: 0.94;
+  --text-display-l--letter-spacing: -0.04em;
   --text-score: 6rem;
   --text-score--line-height: 0.85;
+  --text-score--letter-spacing: -0.05em;
 
-  /* Shape lock: 10px controls, 16px panels, 999px status chips */
-  --radius-control: 10px;
-  --radius-panel: 16px;
-  --radius-chip: 999px;
+  /* Shape lock: square corners everywhere. Only radio buttons stay round. */
+  --radius-control: 0px;
+  --radius-panel: 0px;
+  --radius-chip: 0px;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -310,4 +298,13 @@
 @media (prefers-reduced-motion: reduce) {
   .sheet-panel[data-state], .dialog-panel[data-state] { animation-name: sheet-fade-in; animation-duration: 120ms; }
   .sheet-panel[data-state="closed"], .dialog-panel[data-state="closed"] { animation-name: sheet-fade-out; }
+}
+
+/* Marketing pages sit on a deeper, bluer night than the app's dark mode */
+.site-night {
+  --ground: oklch(0.135 0.02 268);
+  --surface: oklch(0.18 0.022 268);
+  --sunken: oklch(0.115 0.02 268);
+  --line: oklch(0.29 0.02 268);
+  --accent-soft: oklch(0.27 0.07 263);
 }

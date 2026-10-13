@@ -1,7 +1,7 @@
 import { createBrowserRouter, Outlet, ScrollRestoration } from 'react-router';
 import { Toaster } from 'sonner';
 import { MarketingLayout } from '@/pages/marketing-layout';
-import Landing from '@/pages/landing/landing';
+import Home from '@/pages/home/home';
 import { RouteError } from '@/pages/route-error';
 
 function Root() {
@@ -44,18 +44,13 @@ export const router = createBrowserRouter([
       {
         Component: MarketingLayout,
         children: [
-          { index: true, Component: Landing },
+          { index: true, Component: Home },
           { path: 'science', lazy: page(() => import('@/pages/science')) },
           { path: 'privacy', lazy: page(() => import('@/pages/privacy')) },
           { path: 'terms', lazy: page(() => import('@/pages/terms')) },
           { path: '*', lazy: page(() => import('@/pages/not-found')) },
         ],
       },
-      // Home page variants for the owner to compare (noindex, not linked from the site)
-      { path: 'preview', lazy: page(() => import('@/pages/variants/chooser')) },
-      { path: 'preview/floodlit', lazy: page(() => import('@/pages/variants/floodlit')) },
-      { path: 'preview/horizon', lazy: page(() => import('@/pages/variants/horizon')) },
-      { path: 'preview/liquid', lazy: page(() => import('@/pages/variants/liquid')) },
       {
         path: 'demo',
         lazy: page(() => import('@/app/demo-layout')),

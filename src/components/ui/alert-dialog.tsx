@@ -26,7 +26,7 @@ function AlertDialogContent({ className, children, ...props }: React.ComponentPr
 }
 
 function AlertDialogTitle({ className, ...props }: React.ComponentProps<typeof Primitive.Title>) {
-  return <Primitive.Title className={cn('font-display text-h3 font-extrabold text-ink', className)} {...props} />;
+  return <Primitive.Title className={cn('font-display text-h3 font-bold text-ink', className)} {...props} />;
 }
 
 function AlertDialogDescription({ className, ...props }: React.ComponentProps<typeof Primitive.Description>) {

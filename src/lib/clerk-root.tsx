@@ -19,7 +19,7 @@ const appearance = {
     colorDanger: 'var(--risk-very-high)',
     colorSuccess: 'var(--risk-low)',
     fontFamily: 'var(--font-sans)',
-    borderRadius: '10px',
+    borderRadius: '0px',
   },
   elements: {
     // Account deletion must go through Settings so PitchSafe data is erased first

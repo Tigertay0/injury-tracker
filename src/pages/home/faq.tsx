@@ -54,7 +54,7 @@ export function Faq() {
   return (
     <section id="faq" className="mx-auto max-w-[1200px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-24">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
-        <h2 className="font-display text-[2.25rem] leading-[1.02] font-extrabold tracking-[-0.01em] text-ink sm:text-display-s">Questions players ask</h2>
+        <h2 className="font-display text-[2.25rem] leading-[1] font-bold tracking-[-0.04em] text-ink sm:text-display-s">Questions players ask</h2>
         <div className="border-t border-line">
           {QUESTIONS.map((item, i) => (
             <Item key={item.q} {...item} open={openIndex === i} onToggle={() => setOpenIndex((o) => (o === i ? null : i))} />

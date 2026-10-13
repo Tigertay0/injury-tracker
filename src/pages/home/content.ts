@@ -1,5 +1,4 @@
-// Shared copy for the three home page variants. Every claim here also appears on the
-// current landing page or the science page; nothing is invented.
+// Copy for the home page. Every claim is backed by the science page; nothing is invented.
 
 export const HERO = {
   title: 'Know when training turns risky.',
@@ -55,12 +54,6 @@ export const ACWR = {
   source: 'Hulin et al., 2016; Gabbett, 2016',
 } as const;
 
-export const SCREENS = [
-  { src: '/screens/dashboard.webp', title: 'Your score.', text: 'One number, the reasons behind it, and what to do first.', alt: 'PitchSafe dashboard on a phone showing a risk score of 44 out of 100, moderate risk, with the advice to switch cleats' },
-  { src: '/screens/log.webp', title: 'Quick logging.', text: 'Session type, minutes and how hard it felt.', alt: 'The log session screen on a phone with session type, date, minutes and an effort slider' },
-  { src: '/screens/equipment.webp', title: 'Cleat check.', text: 'See which studs suit the pitch you play on.', alt: 'The cleats and surface screen on a phone showing a high-risk pairing and a safer option' },
-] as const;
-
 export const LIMITS = [
   'It cannot diagnose an injury or tell you that you are fit to play.',
   'It relies on how hard you say a session felt, which is subjective.',
@@ -72,12 +65,3 @@ export const CLOSE = {
   title: 'Your next session is day one.',
   lead: 'Start now and your first full risk score is four weeks away.',
 } as const;
-
-export const FOOT_LINKS = [
-  { label: 'The science', to: '/science' },
-  { label: 'Sample dashboard', to: '/demo' },
-  { label: 'Privacy', to: '/privacy' },
-  { label: 'Terms', to: '/terms' },
-] as const;
-
-export const DISCLAIMER = 'PitchSafe is an early-warning tool, not a doctor. If something hurts, stop and see a physio or doctor.';

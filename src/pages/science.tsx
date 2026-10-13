@@ -1,6 +1,6 @@
 // Public methodology page (PRD 7 and 8): every formula, threshold, weight and source.
 import { Link } from 'react-router';
-import { EquipmentMatrix } from './landing/equipment-matrix';
+import { EquipmentMatrix } from '@/components/equipment-matrix';
 
 const SECTIONS = [
   { id: 'load', title: 'Training load' },
@@ -60,7 +60,7 @@ function Formula({ children }: { children: React.ReactNode }) {
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-24 border-t border-line pt-10 pb-12 first:border-t-0 first:pt-0">
-      <h2 id={`${id}-h`} className="font-display text-h2 font-extrabold text-ink">
+      <h2 id={`${id}-h`} className="font-display text-h2 font-bold text-ink">
         {title}
       </h2>
       <div className="mt-3 space-y-4 text-body text-ink-2 [&_strong]:font-semibold [&_strong]:text-ink">{children}</div>
@@ -71,7 +71,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 export default function Science() {
   return (
     <div className="mx-auto max-w-[1200px] px-5 pt-10 pb-20 sm:px-8 md:pt-16">
-      <h1 className="max-w-3xl font-display text-[2.75rem] leading-[0.98] font-extrabold tracking-[-0.015em] text-ink sm:text-display-m">How PitchSafe works out your risk</h1>
+      <h1 className="max-w-3xl font-display text-[2.75rem] leading-[0.98] font-bold tracking-[-0.035em] text-ink sm:text-display-m">How PitchSafe works out your risk</h1>
       <p className="mt-5 max-w-2xl text-lead text-ink-2">
         Every number in the app comes from the rules on this page. Nothing is guessed by AI. The formulas come from published sports science; the weighting that combines them is PitchSafe's own and has not been clinically validated.
       </p>
@@ -164,7 +164,7 @@ export default function Science() {
 
           <Section id="score" title="The risk score">
             <Formula>Score = (load points × 0.45 + recovery points × 0.30 + equipment points × 0.25) × injury factor</Formula>
-            <p>The result is rounded and capped at 100.</p>
+            <p>The result is  and capped at 100.</p>
             <Table
               caption="Risk score bands"
               head={['Score', 'Band']}

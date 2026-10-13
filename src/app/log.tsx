@@ -163,7 +163,7 @@ export default function LogSession() {
 
           <p className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] bg-sunken px-4 py-3 lg:hidden" aria-hidden>
             <span className="text-small font-semibold text-ink-2">Session load</span>
-            <span className="tnum font-display text-h2 font-extrabold text-ink">{load ?? 0}</span>
+            <span className="tnum font-display text-h2 font-bold text-ink">{load ?? 0}</span>
           </p>
 
           <Button type="submit" size="lg" disabled={saving} className="w-full sm:w-auto sm:self-start">
@@ -183,7 +183,7 @@ export default function LogSession() {
         <div className="flex flex-col gap-6">
           <section aria-label="Load preview" className="rounded-[var(--radius-panel)] border border-line bg-surface p-5 md:p-6">
             <p className="text-label font-semibold text-ink-2">This session's load</p>
-            <p className="tnum mt-1 font-display text-display-s font-extrabold text-ink" aria-live="polite">
+            <p className="tnum mt-1 font-display text-display-s font-bold text-ink" aria-live="polite">
               {load ?? <span className="text-ink-3">0</span>}
             </p>
             <p className="tnum mt-1 text-small text-ink-2">{load ? `${minutes} min × effort ${rpe}` : 'Minutes × effort'}</p>

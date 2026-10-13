@@ -17,7 +17,7 @@ function Slider({
       className={cn('relative flex h-11 w-full touch-none items-center select-none data-[disabled]:opacity-50', className)}
       {...props}
     >
-      <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-sunken ring-1 ring-line ring-inset">
+      <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden bg-sunken ring-1 ring-line ring-inset">
         <SliderPrimitive.Range className="absolute h-full bg-accent" />
       </SliderPrimitive.Track>
       {(props.value ?? props.defaultValue ?? [0]).map((_, i) => (
@@ -26,7 +26,7 @@ function Slider({
           aria-label={ariaLabel}
           aria-labelledby={ariaLabelledBy}
           aria-valuetext={ariaValueText}
-          className="block size-6 rounded-full border-2 border-accent bg-surface shadow-lift outline-none transition-[transform,box-shadow] duration-150 ease-out hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-95"
+          className="block size-6 border-2 border-accent bg-surface shadow-lift outline-none transition-[transform,box-shadow] duration-150 ease-out hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-95"
         />
       ))}
     </SliderPrimitive.Root>

@@ -89,7 +89,7 @@ function BottomBar() {
             to === `${base}/log` ? (
               <NavLink key={to} to={to} className="grid place-items-center" aria-label="Log a session">
                 {({ isActive }) => (
-                  <span className={cn('press grid size-12 place-items-center rounded-full bg-accent text-on-accent shadow-lift', isActive && 'ring-4 ring-accent-soft')}>
+                  <span className={cn('press grid size-12 place-items-center bg-accent text-on-accent shadow-lift', isActive && 'ring-4 ring-accent-soft')}>
                     <Icon aria-hidden weight="bold" className="size-6" />
                   </span>
                 )}
@@ -161,7 +161,7 @@ export function Shell({ banner, user, compactUser }: { banner?: ReactNode; user?
     return (
       <div className="grid min-h-dvh place-items-center px-5">
         <div className="max-w-sm text-center">
-          <p className="font-display text-h2 font-extrabold text-ink">Could not load your data</p>
+          <p className="font-display text-h2 font-bold text-ink">Could not load your data</p>
           <p className="mt-2 text-body text-ink-2">{state.message}</p>
           {state.code === 401 ? (
             <Button asChild className="mt-6">

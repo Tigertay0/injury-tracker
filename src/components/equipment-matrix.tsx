@@ -30,7 +30,7 @@ export function EquipmentMatrix({ className }: { className?: string }) {
               {SURFACE_TYPES.map((s) => {
                 const risk = equipmentRisk(c.id, s.id);
                 return (
-                  <td key={s.id} className={cn('rounded-[6px] px-1 py-2 text-center font-semibold', TONE_CHIP[EQUIPMENT_TONE[risk]])}>
+                  <td key={s.id} className={cn('px-1 py-2 text-center font-semibold', TONE_CHIP[EQUIPMENT_TONE[risk]])}>
                     {EQUIPMENT_SHORT[risk]}
                   </td>
                 );

@@ -1,15 +1,14 @@
 # Design System: PitchSafe
 
-Tokens live in `src/styles.css` (`:root`, dark overrides scoped to `.app-scope`, Tailwind `@theme`). Motion snippets live in `src/motion.css`. Components consume tokens only.
+Tokens live in `src/styles.css` (`:root`, dark overrides scoped to `.app-scope`, `.theme-night` and `.site-night`, Tailwind `@theme`). Motion snippets live in `src/motion.css`. Components consume tokens only.
 
 ## Read
 
-Free injury-risk tracker for amateur soccer players (13-25) and coaches. Landing and science pages are **Persuade/Read** (light theme locked); the app is **Operate**, mobile-first (players log on the bus home), light and dark via tokens.
+Free injury-risk tracker for amateur soccer players (13-25) and coaches. Marketing pages (home, science, use, legal, sign-in) are **Persuade/Read** on a dark "floodlit" night ground (`.site-night`); the app is **Operate**, mobile-first, light and dark via tokens.
 
-- Mode: redesign, overhaul (old Firebase app's green-pitch/Bebas look was evidence, not authority).
-- Dials: landing VARIANCE 7, MOTION 5, DENSITY 4. App VARIANCE 3, MOTION 3, DENSITY 7.
-- Thesis: the load chart is the product. The hero is a working ACWR demo on labelled sample data, running the same `shared/` math as the app. Refused default: green pitch + condensed caps + shield + glassy floating stat cards.
-- Signature moment: dragging "this week's training" moves the ratio marker through the zones and swaps the zone word (transitions.dev text swap).
+- 2026-10-13 direction change, chosen by the owner from three previews: **Floodlit** home (Glass Fold WebGL shader hero, Aceternity Container Scroll tilting the real dashboard, spotlight cards). The owner's taste for rich shaders and scroll motion overrides the default "no glow/glass" bans on the marketing pages.
+- Owner feedback: small rounded corners read as AI-made. Shape is now **square everywhere**.
+- Removed AI tells: kicker pill above the hero headline, eyebrow labels above headings, gradient text on numbers, decorative status dots.
 
 ## References
 
@@ -45,14 +44,11 @@ Verified: every text pair ≥ 4.5:1 in both themes, borders/bars/focus ≥ 3:1 (
 
 | Role | Family | Fontesk | License | Web embed |
 |---|---|---|---|---|
-| Display, big numbers | Saira Semi Condensed 600/800 | fontesk.com/saira-typeface/ | SIL OFL 1.1 | Yes (OFL.txt shipped in `public/fonts/saira-semi-condensed/`) |
-| Text, UI, data | Public Sans variable 100-900 | fontesk.com/public-sans-typeface/ | SIL OFL 1.1 | Yes (OFL.txt in `public/fonts/public-sans/`) |
+| Every role (display, text, UI, data) | Host Grotesk variable 300-800, by Element Type | fontesk.com/host-grotesk-typeface/ | SIL OFL 1.1 | Yes (OFL.txt in `public/fonts/host-grotesk/`) |
 
-Self-hosted WOFF2, subset to Latin + French, `font-display: swap`, both preloaded, metric-adjusted fallbacks. Tabular figures (`.tnum`) on every number.
+Chosen by the owner on 2026-10-13 over Mona Sans and Schibsted Grotesk (all three OFL from Fontesk). One family; hierarchy comes from size, weight (700 headings, 600/500 UI, 400 body) and size-specific tracking set on the text tokens (h3 -0.015em up to score -0.05em; big marketing headings -0.04em to -0.045em). Self-hosted variable WOFF2 subset to Latin, `font-display: swap`, preloaded, metric-adjusted Arial fallback. Tabular figures (`.tnum`) on every number.
 
 Scale (role tokens): caption 12, label 13, small 14, body 16, lead 18, h3 22, h2 28, h1 36, display-s 48, display-m 64, display-l 80, score 96. Sentence case headings; balance on headings, pretty on paragraphs.
-
-Deviation: dataviz guidance puts hero numbers in the sans face; the owner chose Saira for big numbers in the selected direction.
 
 ## Space and layout
 
@@ -60,7 +56,7 @@ Deviation: dataviz guidance puts hero numbers in the sans face; the owner chose 
 
 ## Shape and depth
 
-Shape lock: 10px controls (`--radius-control`), 16px panels (`--radius-panel`), pills only for status chips and the segmented control. Hairline borders instead of shadows; `shadow-lift` for the demo card and selected pills, `shadow-overlay` for dialogs, both tinted to the ground hue.
+Shape lock: square corners everywhere (`--radius-control`, `--radius-panel` and `--radius-chip` are all 0, Clerk `borderRadius` 0, square chart columns). Only radio buttons stay round, because that is what people expect a radio to look like. Hairline borders instead of shadows; `shadow-lift` for the demo card and selected pills, `shadow-overlay` for dialogs, both tinted to the ground hue.
 
 ## Motion
 
@@ -70,9 +66,11 @@ Easing tokens `--ease-out`, `--ease-in-out`, `--ease-drawer`. Press scale 0.97 (
 
 | Component | 21st.dev source | What changed |
 |---|---|---|
-| Marketing header | [ln-dev7/header-17](https://21st.dev/@ln-dev7/components/header-17) | Tokens, Phosphor icons, router links, auth-aware actions, our sheet |
+| Marketing header | [ln-dev7/header-17](https://21st.dev/@ln-dev7/components/header-17) | Floating square glass bar over the hero, auth-aware actions, our sheet on phones |
+| Home hero background | [meerbahadin10/glass-fold](https://21st.dev/meerbahadin10/glass-fold) (GradFlow) | Shader kept; PitchSafe blues; pauses off screen; still frame for reduced motion |
+| Dashboard reveal | [aceternity/container-scroll-animation](https://21st.dev/aceternity/container-scroll-animation) | motion/react, typed, square frame, flat card for reduced motion; shows a real dark dashboard screenshot |
 | Radio rows | [sean0205/c-radio-group-8](https://21st.dev/@sean0205/components/c-radio-group-8) | Added explainer line and trailing slot (risk chip), selected tint, 56px rows |
-| Load chart | [bklitai/bar-chart](https://21st.dev/@bklitai/components/bar-chart) | Mechanisms only (rounded data-ends, faded neighbours, value-first tooltip); rebuilt as plain SVG without visx/Motion for hero performance; keyboard navigation and table view added |
+| Load chart | [bklitai/bar-chart](https://21st.dev/@bklitai/components/bar-chart) | Mechanisms only (faded neighbours, value-first tooltip; data-ends now square); rebuilt as plain SVG without visx/Motion for hero performance; keyboard navigation and table view added |
 | FAQ | [shadcnblockscom/faq3](https://21st.dev/@shadcnblockscom/components/faq3) | Single-column stacked questions; transitions.dev accordion motion |
 | Button, sheet, slider, alert dialog | shadcn/ui (Radix) | Rewritten to tokens, 44px targets, exact transition properties |
 

@@ -14,7 +14,7 @@ function SignInUnavailable() {
   return (
     <div className="grid min-h-dvh place-items-center px-5">
       <div className="max-w-sm text-center">
-        <p className="font-display text-h2 font-extrabold text-ink">Can't reach sign-in</p>
+        <p className="font-display text-h2 font-bold text-ink">Can't reach sign-in</p>
         <p className="mt-2 text-body text-ink-2">Check your connection. A content blocker can also stop the sign-in service from loading.</p>
         <div className="mt-6 flex justify-center gap-3">
           <Button onClick={() => window.location.reload()}>Try again</Button>

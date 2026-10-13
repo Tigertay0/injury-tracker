@@ -5,6 +5,7 @@ import { CONTACT_EMAIL } from '@/config';
 const LINKS = [
   { label: 'How it works', to: '/#how' },
   { label: 'The science', to: '/science' },
+  { label: 'Sample dashboard', to: '/demo' },
   { label: 'Use our app', to: '/use' },
   { label: 'Privacy', to: '/privacy' },
   { label: 'Terms', to: '/terms' },
@@ -12,8 +13,8 @@ const LINKS = [
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-line bg-ground">
-      <div className="mx-auto grid max-w-[1200px] gap-8 px-5 py-12 sm:px-8 md:grid-cols-[minmax(0,1fr)_auto]">
+    <footer className="border-t border-line">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-[minmax(0,1fr)] gap-8 px-5 py-12 sm:px-8 md:grid-cols-[minmax(0,1fr)_auto]">
         <div className="max-w-md">
           <Wordmark />
           <p className="mt-3 text-small text-ink-2">Free injury-risk tracking for amateur soccer players.</p>
@@ -21,7 +22,7 @@ export function MarketingFooter() {
             PitchSafe is an educational tool, not a medical device. If something hurts, stop training and see a physio or doctor.
           </p>
         </div>
-        <nav aria-label="Footer" className="flex flex-wrap content-start gap-x-6 gap-y-3 md:justify-end">
+        <nav aria-label="Footer" className="flex flex-wrap content-start gap-x-6 gap-y-3 md:max-w-md md:justify-end">
           {LINKS.map((l) => (
             <Link key={l.label} to={l.to} className="text-small text-ink-2 underline-offset-4 hover:text-ink hover:underline">
               {l.label}

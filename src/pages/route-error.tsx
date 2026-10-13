@@ -32,7 +32,7 @@ export function RouteError() {
   return (
     <div className="grid min-h-dvh place-items-center bg-ground px-5">
       <div className="max-w-md">
-        <p className="font-display text-h1 font-extrabold text-ink">{notFound ? 'Page not found' : 'Something broke on this page'}</p>
+        <p className="font-display text-h1 font-bold text-ink">{notFound ? 'Page not found' : 'Something broke on this page'}</p>
         <p className="mt-3 text-body text-ink-2">
           {stale ? 'PitchSafe was just updated. Reload to get the new version.' : 'Your data is safe. Reload the page, and if it keeps happening, go back to the home page.'}
         </p>
