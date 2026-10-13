@@ -182,7 +182,7 @@ export default function Science() {
 
           <Section id="score" title="The risk score">
             <Formula>Score = (load points × 0.45 + recovery points × 0.30 + equipment points × 0.25) × injury factor</Formula>
-            <p>The result is  and capped at 100.</p>
+            <p>Load points are the higher of your workload-ratio points and your biggest movement spike. The result is rounded to a whole number and capped at 100.</p>
             <Table
               caption="Risk score bands"
               head={['Score', 'Band']}
