@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Plus, X } from '@phosphor-icons/react';
 import { DRILL_CATEGORIES, DRILL_CATEGORY_LABEL, DRILLS, drillById } from '@shared/drills';
-import { MAX_DRILLS_PER_SESSION } from '@shared/validation';
+import { MAX_DRILLS_PER_SESSION, MAX_DRILL_MINUTES } from '@shared/validation';
 import type { SessionDrill } from '@shared/types';
 import { Button } from '@/components/ui/button';
 import { inputClass } from '@/components/field';
@@ -29,8 +29,13 @@ export function DrillPicker({ value, onChange, sessionMinutes, error }: Props) {
   const [minutes, setMinutes] = useState('15');
   const used = value.reduce((n, d) => n + d.minutes, 0);
   const over = sessionMinutes !== null && used > sessionMinutes;
+  // Spoken as well as shown: the over state is text, not only colour.
+  const totalText =
+    value.length === 0
+      ? ''
+      : `${used}${sessionMinutes !== null ? ` of ${sessionMinutes}` : ''} minutes in drills${over ? `, ${used - sessionMinutes} over` : ''}`;
   const available = DRILLS.filter((d) => !value.some((v) => v.drillId === d.id));
-  const canAdd = drillId !== '' && Number.isInteger(Number(minutes)) && Number(minutes) >= 1 && Number(minutes) <= 300 && value.length < MAX_DRILLS_PER_SESSION;
+  const canAdd = drillId !== '' && Number.isInteger(Number(minutes)) && Number(minutes) >= 1 && Number(minutes) <= MAX_DRILL_MINUTES && value.length < MAX_DRILLS_PER_SESSION;
 
   // Add disables itself once the drill resets, and Remove unmounts the focused button, so the
   // next focus stop is chosen here and applied after the new list has rendered.
@@ -65,16 +70,21 @@ export function DrillPicker({ value, onChange, sessionMinutes, error }: Props) {
   };
 
   return (
-    <fieldset className="flex flex-col gap-3 border-t border-line pt-5" aria-describedby={error ? `${id}-error` : `${id}-hint`}>
+    <fieldset
+      className={cn('t-input-wrap flex min-w-0 flex-col gap-3 border-t border-line pt-5', error && 'is-error')}
+      aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
+    >
       <legend className="text-small font-semibold text-ink">What did you do? (optional)</legend>
       <p id={`${id}-hint`} className="-mt-1 text-label text-ink-2">
         Add the drills from this session. They make your movement load more accurate. Profiles are estimates.
       </p>
 
       <div className="flex flex-wrap items-end gap-2">
-        <label className="flex min-w-0 flex-[1_1_14rem] flex-col gap-1.5">
-          <span className="text-label font-semibold text-ink-2">Drill</span>
-          <select ref={selectRef} value={drillId} onChange={(e) => setDrillId(e.target.value)} onKeyDown={addOnEnter} className={cn(inputClass, 'h-11')}>
+        <div className="flex min-w-0 flex-[1_1_14rem] flex-col gap-1.5">
+          <label htmlFor={`${id}-drill`} className="text-label font-semibold text-ink-2">
+            Drill
+          </label>
+          <select id={`${id}-drill`} ref={selectRef} value={drillId} onChange={(e) => setDrillId(e.target.value)} onKeyDown={addOnEnter} className={cn(inputClass, 'h-11')}>
             <option value="">Choose a drill</option>
             {DRILL_CATEGORIES.map((c) => {
               const options = available.filter((d) => d.category === c);
@@ -89,11 +99,13 @@ export function DrillPicker({ value, onChange, sessionMinutes, error }: Props) {
               );
             })}
           </select>
-        </label>
-        <label className="flex w-24 flex-col gap-1.5">
-          <span className="text-label font-semibold text-ink-2">Minutes</span>
-          <input type="number" inputMode="numeric" min={1} max={300} value={minutes} onChange={(e) => setMinutes(e.target.value)} onKeyDown={addOnEnter} className={cn(inputClass, 'tnum h-11')} />
-        </label>
+        </div>
+        <div className="flex w-24 flex-col gap-1.5">
+          <label htmlFor={`${id}-minutes`} className="text-label font-semibold text-ink-2">
+            Minutes
+          </label>
+          <input id={`${id}-minutes`} type="number" inputMode="numeric" min={1} max={MAX_DRILL_MINUTES} value={minutes} onChange={(e) => setMinutes(e.target.value)} onKeyDown={addOnEnter} className={cn(inputClass, 'tnum h-11')} />
+        </div>
         <Button type="button" variant="secondary" onClick={add} disabled={!canAdd}>
           <Plus aria-hidden weight="bold" />
           Add
@@ -123,16 +135,13 @@ export function DrillPicker({ value, onChange, sessionMinutes, error }: Props) {
         </ul>
       )}
 
-      {value.length > 0 && (
-        <p className={cn('tnum text-label', over ? 'font-semibold text-risk-very-high' : 'text-ink-2')}>
-          {used} {sessionMinutes !== null ? `of ${sessionMinutes}` : ''} minutes in drills
-        </p>
-      )}
-      {error && (
-        <p id={`${id}-error`} role="alert" className="text-small font-semibold text-risk-very-high">
-          {error}
-        </p>
-      )}
+      {/* Always mounted so a screen reader announces each change; empty (and out of the layout) with no drills. */}
+      <p role="status" className={cn('tnum text-label empty:sr-only', over ? 'font-semibold text-risk-very-high' : 'text-ink-2')}>
+        {totalText}
+      </p>
+      <p id={`${id}-error`} role="alert" className="t-error-msg min-h-5 text-label font-medium text-risk-very-high">
+        {error ?? ''}
+      </p>
     </fieldset>
   );
 }

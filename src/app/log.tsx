@@ -52,6 +52,12 @@ export default function LogSession() {
   const load = Number.isInteger(minutes) && minutes > 0 && minutes <= 300 ? sessionLoad(minutes, rpe) : null;
   const previous = sessions.find((s) => s.type === type);
 
+  // The drill total is checked against the session's minutes, so a new duration clears both errors.
+  function changeDuration(next: string) {
+    setDuration(next);
+    if (errors.duration || errors.drills) setErrors((x) => ({ ...x, duration: undefined, drills: undefined }));
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     let input;
@@ -113,17 +119,14 @@ export default function LogSession() {
                   placeholder="75"
                   className={cn(inputClass, 'tnum h-11 w-28')}
                   value={duration}
-                  onChange={(e) => {
-                    setDuration(e.target.value);
-                    if (errors.duration) setErrors((x) => ({ ...x, duration: undefined }));
-                  }}
+                  onChange={(e) => changeDuration(e.target.value)}
                   required
                 />
                 {QUICK_MINUTES.map((m) => (
                   <button
                     key={m}
                     type="button"
-                    onClick={() => setDuration(String(m))}
+                    onClick={() => changeDuration(String(m))}
                     aria-label={`${m} minutes`}
                     className={cn(
                       'press tnum h-11 min-w-12 rounded-[var(--radius-control)] border px-3 text-small font-semibold',
@@ -232,7 +235,7 @@ export default function LogSession() {
                         {s.notes ? `, ${s.notes}` : ''}
                       </p>
                       {s.drills && s.drills.length > 0 && (
-                        <p className="text-label text-ink-3">{s.drills.map((d) => `${drillById(d.drillId)?.name ?? 'Removed drill'} ${d.minutes}′`).join(', ')}</p>
+                        <p className="tnum text-label text-ink-3">{s.drills.map((d) => `${drillById(d.drillId)?.name ?? 'Removed drill'} ${d.minutes} min`).join('; ')}</p>
                       )}
                     </div>
                     <span className="tnum text-body font-semibold text-ink">{s.load}</span>

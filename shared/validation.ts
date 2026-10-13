@@ -81,6 +81,7 @@ export interface SessionInput {
 }
 
 export const MAX_DRILLS_PER_SESSION = 12;
+export const MAX_DRILL_MINUTES = 300;
 
 function drills(value: unknown, sessionMinutes: number): SessionDrill[] {
   if (value === undefined || value === null) return [];
@@ -94,7 +95,7 @@ function drills(value: unknown, sessionMinutes: number): SessionDrill[] {
     if (!DRILL_IDS.has(drillId)) throw new ValidationError('Choose drills from the list.', 'drills');
     if (seen.has(drillId)) throw new ValidationError('Add each drill once, with its total minutes.', 'drills');
     seen.add(drillId);
-    return { drillId, minutes: integer(r.minutes, 1, 300, 'drills', 'Drill minutes') };
+    return { drillId, minutes: integer(r.minutes, 1, MAX_DRILL_MINUTES, 'drills', 'Drill minutes') };
   });
   const total = out.reduce((sum, d) => sum + d.minutes, 0);
   if (total > sessionMinutes) throw new ValidationError(`Drill minutes add up to ${total}, more than the session's ${sessionMinutes}.`, 'drills');
