@@ -90,6 +90,28 @@ describe('movement spike advice', () => {
     expect(recs.find((r) => r.text.includes('knees and ankles'))).toMatchObject({ priority: 2 });
   });
 
+  const cases = [
+    ['sprint', 'hamstrings', 'Duhig et al., 2016'],
+    ['hsr', 'hamstrings', 'Duhig et al., 2016'],
+    ['cod', 'knees and ankles', 'Gabbett, 2016'],
+    ['jump', 'jump', 'Gabbett, 2016'],
+    ['contact', 'contact', 'Gabbett, 2016'],
+  ] as const;
+  for (const [type, keyword, citation] of cases) {
+    for (const [level, priority] of [['DANGER', 1], ['CAUTION', 2]] as const) {
+      it(`maps a ${type} ${level.toLowerCase()} to priority ${priority} advice citing ${citation}`, () => {
+        const recs = recommendations({ ...base, movementSpike: { type, level } });
+        const advice = recs.find((r) => r.citation === citation && r.category === 'Training load');
+        expect(advice?.priority).toBe(priority);
+        expect(advice?.text.toLowerCase()).toContain(keyword);
+      });
+    }
+  }
+
+  it('never gives advice for a strength spike', () => {
+    expect(recommendations({ ...base, movementSpike: { type: 'strength', level: 'DANGER' } })).toEqual(recommendations(base));
+  });
+
   it('adds nothing without a spike', () => {
     expect(recommendations({ ...base, movementSpike: null })).toEqual(recommendations(base));
   });

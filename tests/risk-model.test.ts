@@ -77,7 +77,9 @@ describe('movement load in the risk model', () => {
     const plain = buildRiskModel({ profile, sessions: evenWeeks(), recovery, injuries: [] }, TODAY);
     expect(plain.movement.ready).toBe(false);
     expect(plain.movement.maxPoints).toBe(0);
-    expect(plain.acwrZone).toBe('SWEET_SPOT');
+    expect(plain.movement.worst).toBeNull();
+    expect(plain.composite).toEqual({ score: 9, zone: 'LOW' });
+    expect(plain.recommendations.some((r) => r.text.includes('hamstring'))).toBe(false);
   });
 
   it('raises the training input to the movement-spike points when they are higher', () => {
@@ -93,7 +95,20 @@ describe('movement load in the risk model', () => {
     expect(spiky.acwr).toBe(1);
     expect(spiky.movement.worst?.type).toBe('sprint');
     expect(spiky.movement.maxPoints).toBe(85);
-    expect(spiky.composite!.score).toBeGreaterThan(calm.composite!.score);
+    expect(calm.composite!.score).toBe(9);
+    // 85*0.45 + 10*0.3 + 5*0.25 = 42.5 -> 43
+    expect(spiky.composite).toEqual({ score: 43, zone: 'MODERATE' });
     expect(spiky.recommendations.some((r) => r.text.includes('hamstring'))).toBe(true);
+  });
+
+  it('still holds back the composite when the workload baseline is not ready', () => {
+    // Drills in 3 of the last 4 weeks, but the oldest session is only 20 days old
+    const sessions = evenWeeks()
+      .filter((s) => s.date !== addDays(TODAY, -27))
+      .map((s) => ({ ...s, drills: s.date === addDays(TODAY, -6) ? [{ drillId: 'sprints_long', minutes: 60 }] : [{ drillId: 'sprints_short', minutes: 20 }] }));
+    const model = buildRiskModel({ profile, sessions, recovery, injuries: [] }, TODAY);
+    expect(model.acwrZone).toBe('NA');
+    expect(model.movement.maxPoints).toBe(85);
+    expect(model.composite).toBeNull();
   });
 });
