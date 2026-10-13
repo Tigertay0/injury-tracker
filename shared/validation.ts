@@ -88,7 +88,8 @@ function drills(value: unknown, sessionMinutes: number): SessionDrill[] {
   if (value.length > MAX_DRILLS_PER_SESSION) throw new ValidationError(`Add up to ${MAX_DRILLS_PER_SESSION} drills per session.`, 'drills');
   const seen = new Set<string>();
   const out = value.map((item) => {
-    const r = asObject(item);
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) throw new ValidationError('Choose drills from the list.', 'drills');
+    const r = item as Raw;
     const drillId = typeof r.drillId === 'string' ? r.drillId : '';
     if (!DRILL_IDS.has(drillId)) throw new ValidationError('Choose drills from the list.', 'drills');
     if (seen.has(drillId)) throw new ValidationError('Add each drill once, with its total minutes.', 'drills');
