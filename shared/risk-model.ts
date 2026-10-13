@@ -45,6 +45,8 @@ export interface RiskModel {
   chronic: number;
   days: { date: string; load: number }[];
   movement: MovementSummary;
+  /** The 45% training part of the score: the points used, and whether workload or a movement spike set them. */
+  trainingInput: { points: number; source: 'workload' | 'movement' };
   recovery: RecoveryLog | null;
   recoveryZone: RecoveryZone | null;
   equipmentRisk: EquipmentRisk | null;
@@ -53,6 +55,14 @@ export interface RiskModel {
   assumptions: Assumption[];
   recommendations: Recommendation[];
   fuel: FuelNote[];
+}
+
+// Training input: the worse of the workload ratio and the biggest movement spike. Movement is only
+// credited when it is strictly higher. With no workload baseline (zone NA) nothing is scored yet.
+function trainingInputFor(zone: AcwrZone, movement: MovementSummary): RiskModel['trainingInput'] {
+  if (zone === 'NA') return { points: 0, source: 'workload' };
+  const workloadPoints = acwrRiskScore(zone);
+  return movement.maxPoints > workloadPoints ? { points: movement.maxPoints, source: 'movement' } : { points: workloadPoints, source: 'workload' };
 }
 
 function latestRecentCheckIn(logs: readonly RecoveryLog[], today: string): RecoveryLog | null {
@@ -67,6 +77,7 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
   const acwr = calculateACWR(sessions, today);
   const zone = acwrZone(acwr);
   const movement = movementLoad(sessions, today);
+  const trainingInput = trainingInputFor(zone, movement);
 
   const recovery = latestRecentCheckIn(input.recovery, today);
   const recZone = recovery ? recoveryZone(recovery.score) : null;
@@ -83,8 +94,7 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
       ? null
       : (() => {
           const score = compositeScore({
-            // Training input: the worse of the workload ratio and the biggest movement spike
-            acwrRisk: Math.max(acwrRiskScore(zone), movement.maxPoints),
+            acwrRisk: trainingInput.points,
             recoveryRisk: recZone ? recoveryRiskScore(recZone) : MISSING_RECOVERY_RISK,
             equipmentRisk: equip ? equipmentRiskScore(equip) : MISSING_EQUIPMENT_RISK,
             multiplier: injury.value,
@@ -107,6 +117,7 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
     chronic: Math.round(chronicLoad(sessions, today)),
     days: dailyLoads(sessions, today, CHRONIC_DAYS),
     movement,
+    trainingInput,
     recovery,
     recoveryZone: recZone,
     equipmentRisk: equip,

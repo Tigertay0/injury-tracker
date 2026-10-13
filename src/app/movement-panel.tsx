@@ -4,7 +4,7 @@ import { MOVEMENT_LABEL, SCORED_TYPES, type MovementStatus, type MovementSummary
 import { RiskChip } from '@/components/risk-chip';
 import type { Tone } from '@/lib/labels';
 
-const LEVEL_CHIP: Partial<Record<MovementStatus['level'], { tone: Tone; text: string }>> = {
+export const LEVEL_CHIP: Partial<Record<MovementStatus['level'], { tone: Tone; text: string }>> = {
   CAUTION: { tone: 'high', text: 'Rising' },
   DANGER: { tone: 'very-high', text: 'Spike' },
 };
@@ -37,7 +37,9 @@ export function MovementPanel({ movement }: { movement: MovementSummary }) {
       <h2 id="movement-title" className="text-lead font-semibold text-ink">
         Movement this week
       </h2>
-      <p className="mt-1 text-small text-ink-2">Minutes of each kind of movement from your drills, against your usual week. Drill profiles are estimates.</p>
+      <p className="mt-1 text-small text-ink-2">
+        Minutes of each kind of movement from your drills, against your usual week. Sessions without drills count as zero. Drill profiles are estimates.
+      </p>
 
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-label text-ink-2" aria-hidden>
         <span className="flex items-center gap-2"><span className="h-2 w-4 bg-chart-past" />Usual week</span>

@@ -82,6 +82,7 @@ describe('movement load in the risk model', () => {
     expect(plain.movement.maxPoints).toBe(0);
     expect(plain.movement.worst).toBeNull();
     expect(plain.composite).toEqual({ score: 9, zone: 'LOW' });
+    expect(plain.trainingInput).toEqual({ points: 10, source: 'workload' });
     expect(plain.recommendations.some((r) => r.text.includes('hamstring'))).toBe(false);
   });
 
@@ -101,6 +102,7 @@ describe('movement load in the risk model', () => {
     expect(calm.composite!.score).toBe(9);
     // 85*0.45 + 10*0.3 + 5*0.25 = 42.5 -> 43
     expect(spiky.composite).toEqual({ score: 43, zone: 'MODERATE' });
+    expect(spiky.trainingInput).toEqual({ points: 85, source: 'movement' });
     expect(spiky.recommendations.some((r) => r.text.includes('hamstring'))).toBe(true);
   });
 
@@ -113,6 +115,22 @@ describe('movement load in the risk model', () => {
     expect(model.acwrZone).toBe('NA');
     expect(model.movement.maxPoints).toBe(85);
     expect(model.composite).toBeNull();
+    // nothing is scored yet, so the training input is not credited to movement
+    expect(model.trainingInput).toEqual({ points: 0, source: 'workload' });
+  });
+
+  it('credits the workload ratio when its points tie with or beat the movement spike', () => {
+    // A hard last week (workload ratio well above 1.5) and the same sprint spike as above
+    const thisWeek = addDays(TODAY, -6);
+    const sessions = evenWeeks().map((s) =>
+      s.date === thisWeek
+        ? { ...s, duration: 120, rpe: 10, load: 1200, drills: [{ drillId: 'sprints_long', minutes: 60 }] }
+        : { ...s, drills: [{ drillId: 'sprints_short', minutes: 20 }] },
+    );
+    const model = buildRiskModel({ profile, sessions, recovery, injuries: [] }, TODAY);
+    expect(model.acwrZone).toBe('DANGER');
+    expect(model.movement.maxPoints).toBe(85);
+    expect(model.trainingInput).toEqual({ points: 85, source: 'workload' });
   });
 });
 

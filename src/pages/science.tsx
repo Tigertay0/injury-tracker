@@ -117,7 +117,7 @@ export default function Science() {
 
           <Section id="movement" title="Movement load">
             <p>If you add drills to a session, PitchSafe also tracks what kind of work you did. Each drill has an estimated profile: how much of its time is sprinting, high-speed running, change of direction, jumping and landing, contact, and strength work.</p>
-            <p>For each kind of movement, your minutes over the last 7 days are compared with your average week over the last 28 days, the same way as the workload ratio. A kind of movement is only judged once you have logged drills in at least 3 of the last 4 weeks, with at least 5 minutes of it in an average week.</p>
+            <p>For each kind of movement, your minutes over the last 7 days are compared with your average week since you started logging drills, up to the last 4 weeks, the same way as the workload ratio. A kind of movement is only judged once you have logged drills in at least 3 of the last 4 weeks, with at least 5 minutes of it in an average week.</p>
             <Table
               caption="Movement load zones"
               head={['This week against your usual', 'Zone', 'Risk points']}
@@ -128,7 +128,7 @@ export default function Science() {
               ]}
             />
             <p>The training part of your score uses whichever is higher: your workload-ratio points or your biggest movement spike. Strength work is shown but never scored. Spikes in sprinting and high-speed running are linked to hamstring strains (Duhig et al., 2016).</p>
-            <p>Limits: drill profiles are estimates, and the minutes are what you enter.</p>
+            <p>Limits: drill profiles are estimates, and the minutes are what you enter. Sessions without drills count as zero, so log drills consistently.</p>
           </Section>
 
           <Section id="recovery" title="Recovery">
@@ -198,7 +198,7 @@ export default function Science() {
 
           <Section id="advice" title="The advice">
             <p>
-              Recommendations are fixed rules, not AI. They depend on your load zone, recovery, equipment, injury history and position, and each cites its source where one applies. A very high equipment risk always comes first. Nutrition notes are general principles from the joint sports nutrition position stand (Thomas et al., 2016), not personal dietary advice.
+              Recommendations are fixed rules, not AI. They depend on your load zone, movement spikes from your drills, recovery, equipment, injury history and position, and each cites its source where one applies. A very high equipment risk always comes first. Nutrition notes are general principles from the joint sports nutrition position stand (Thomas et al., 2016), not personal dietary advice.
             </p>
           </Section>
 

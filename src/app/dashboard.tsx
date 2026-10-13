@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { ArrowRight, Bed, FilePdf, FirstAidKit, Plus, SneakerMove, Timer, WarningOctagon, type Icon } from '@phosphor-icons/react';
 import { buildRiskModel, type RiskModel } from '@shared/risk-model';
 import { localToday } from '@shared/dates';
+import { MOVEMENT_LABEL } from '@shared/movement';
 import { FUEL_DISCLAIMER, type RecommendationCategory } from '@shared/recommendations';
 import { LoadChart } from '@/components/load-chart';
 import { RiskChip } from '@/components/risk-chip';
@@ -25,7 +26,7 @@ import {
 } from '@/lib/labels';
 import { useAppBase, useOverview } from '@/lib/player-data';
 import { cn } from '@/lib/utils';
-import { MovementPanel } from './movement-panel';
+import { LEVEL_CHIP, MovementPanel } from './movement-panel';
 import { PageHeader } from './page-header';
 
 /** Where each kind of advice can be acted on, and what the link says. */
@@ -163,6 +164,14 @@ function Tile({ to, icon: Icon, label, value, tone, status }: TileProps) {
   );
 }
 
+/** The ratio value stays; the chip names the movement spike when that, not the ratio, set the training part of the score. */
+function workloadChip(model: RiskModel): { tone: Tone; status: string } {
+  const worst = model.movement.worst;
+  const chip = worst ? LEVEL_CHIP[worst.level] : undefined;
+  if (model.trainingInput.source === 'movement' && worst && chip) return { tone: chip.tone, status: `${MOVEMENT_LABEL[worst.type]} ${chip.text.toLowerCase()}` };
+  return { tone: ACWR_TONE[model.acwrZone], status: ACWR_LABEL[model.acwrZone] };
+}
+
 function ReportButton({ model }: { model: RiskModel }) {
   const overview = useOverview();
   const [busy, setBusy] = useState(false);
@@ -206,6 +215,7 @@ export default function Dashboard() {
   const name = overview.profile?.displayName;
   const thisWeek = model.acute;
   const avgWeek = model.chronic;
+  const workload = workloadChip(model);
 
   return (
     <>
@@ -226,7 +236,7 @@ export default function Dashboard() {
         <Verdict model={model} hasSessions={overview.sessions.length > 0} />
 
         <section aria-label="What makes up your score" className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Tile to={`${base}/log`} icon={Timer} label="Workload ratio" value={model.acwr === null ? 'N/A' : model.acwr.toFixed(2)} tone={ACWR_TONE[model.acwrZone]} status={ACWR_LABEL[model.acwrZone]} />
+          <Tile to={`${base}/log`} icon={Timer} label="Workload ratio" value={model.acwr === null ? 'N/A' : model.acwr.toFixed(2)} tone={workload.tone} status={workload.status} />
           <Tile
             to={`${base}/recovery`}
             icon={Bed}
