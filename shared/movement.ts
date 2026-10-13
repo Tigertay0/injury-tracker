@@ -1,6 +1,7 @@
 // Movement load: what kind of work a player did, from the drills on their sessions.
-// Mirrors the workload ratio: this week's exposure against the average week over the
-// last 28 days. Only judged once there is enough drill history (see the spec).
+// Mirrors the workload ratio: this week's exposure against the average week since the
+// player started logging drills, up to the last 4 weeks. Only judged once there is enough
+// drill history (see the spec).
 import { dayNumber } from './dates';
 import { drillById } from './drills';
 import type { MovementProfile, MovementType, SessionDrill, TrainingSession } from './types';
@@ -72,12 +73,14 @@ export function movementLoad(sessions: readonly TrainingSession[], today: string
   const acute = empty();
   const window = empty();
   const weeksWithDrills = new Set<number>();
+  let oldestDrillAge = 0; // days; only sessions with at least one known drill count
 
   for (const s of sessions) {
     if (!s.drills?.length) continue;
     const age = end - dayNumber(s.date);
     if (age < 0 || age >= WINDOW_DAYS) continue;
     weeksWithDrills.add(Math.floor(age / 7));
+    if (s.drills.some((d) => lookup(d.drillId))) oldestDrillAge = Math.max(oldestDrillAge, age);
     const e = sessionExposure(s.drills, lookup);
     for (const t of MOVEMENT_TYPES) {
       window[t] += e[t];
@@ -86,8 +89,12 @@ export function movementLoad(sessions: readonly TrainingSession[], today: string
   }
 
   const enoughWeeks = weeksWithDrills.size >= MIN_WEEKS_WITH_DRILLS;
+  // Average over the weeks spanned since the oldest drilled session (at most 4), so a player who
+  // started 3 weeks ago is not held against a 4-week average. A week without drills inside that
+  // span still counts as zero minutes.
+  const weeksSpanned = Math.min(WEEKS, Math.floor(oldestDrillAge / 7) + 1);
   const types: MovementStatus[] = MOVEMENT_TYPES.map((type) => {
-    const usual = window[type] / WEEKS;
+    const usual = window[type] / weeksSpanned;
     const ratio = enoughWeeks && usual >= MIN_USUAL_MINUTES ? round(acute[type] / usual, 2) : null;
     const level = spikeLevel(ratio);
     return { type, thisWeek: round(acute[type], 1), usualWeek: round(usual, 1), ratio, level, points: SCORED_TYPES.includes(type) ? spikePoints(level) : 0 };

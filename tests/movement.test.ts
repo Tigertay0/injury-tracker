@@ -59,7 +59,7 @@ describe('movementLoad', () => {
 
   it('has a baseline once drills appear in 3 of the last 4 weeks', () => {
     const m = movementLoad([session(1, BIG_SPRINTS), session(8, BIG_SPRINTS), session(15, BIG_SPRINTS)], TODAY);
-    expect(m.types.find((t) => t.type === 'sprint')?.ratio).not.toBeNull();
+    expect(m.types.find((t) => t.type === 'sprint')?.ratio).toBe(1);
     expect(m.ready).toBe(true);
   });
 
@@ -101,6 +101,59 @@ describe('movementLoad', () => {
   it('ignores future-dated and older-than-28-day sessions', () => {
     const m = movementLoad([session(-2, SPRINTS), session(30, SPRINTS), session(1, SPRINTS)], TODAY);
     expect(m.types.find((t) => t.type === 'sprint')?.thisWeek).toBe(5);
-    expect(m.types.find((t) => t.type === 'sprint')?.usualWeek).toBe(1.3);
+    // only one week is spanned (the 30 day old session is outside the window), so the usual week is that week
+    expect(m.types.find((t) => t.type === 'sprint')?.usualWeek).toBe(5);
+  });
+
+  describe('usual week averages over the weeks spanned, up to 4', () => {
+    // BIG_SPRINTS is 20 min of sprinting per session, well above the 5-minute floor
+
+    it('gives a steady 3-week history a ratio of 1.00, not a false rise', () => {
+      const m = movementLoad([1, 8, 15].map((d) => session(d, BIG_SPRINTS)), TODAY);
+      const sprint = m.types.find((t) => t.type === 'sprint')!;
+      expect(m.ready).toBe(true);
+      expect(sprint.thisWeek).toBe(20);
+      expect(sprint.usualWeek).toBe(20); // 60 min over 3 weeks, not over 4
+      expect(sprint.ratio).toBe(1);
+      expect(sprint.level).toBe('NONE');
+      expect(m.maxPoints).toBe(0);
+      expect(m.worst).toBeNull();
+    });
+
+    it('keeps a steady 4-week history at 1.00', () => {
+      const m = movementLoad([1, 8, 15, 22].map((d) => session(d, BIG_SPRINTS)), TODAY);
+      const sprint = m.types.find((t) => t.type === 'sprint')!;
+      expect(sprint.usualWeek).toBe(20);
+      expect(sprint.ratio).toBe(1);
+      expect(sprint.level).toBe('NONE');
+    });
+
+    it('counts a week without drills inside the span as zero', () => {
+      // weeks 0, 2 and 3 have drills, week 1 is empty: usual = 60 min / 4 weeks = 15
+      const m = movementLoad([1, 15, 22].map((d) => session(d, BIG_SPRINTS)), TODAY);
+      const sprint = m.types.find((t) => t.type === 'sprint')!;
+      expect(sprint.usualWeek).toBe(15);
+      expect(sprint.ratio).toBe(1.33);
+      expect(sprint.level).toBe('CAUTION');
+      expect(m.maxPoints).toBe(50);
+    });
+
+    it('spans from the oldest session that has a known drill', () => {
+      // the 22 day old session only holds a drill that has left the library, so it does not widen the span
+      const removed: SessionDrill[] = [{ drillId: 'removed_drill', minutes: 30 }];
+      const m = movementLoad([session(1, BIG_SPRINTS), session(8, BIG_SPRINTS), session(15, BIG_SPRINTS), session(22, removed)], TODAY);
+      const sprint = m.types.find((t) => t.type === 'sprint')!;
+      expect(sprint.usualWeek).toBe(20);
+      expect(sprint.ratio).toBe(1);
+    });
+
+    it('still flags a real spike after 3 weeks of history', () => {
+      const m = movementLoad([session(1, BIG_SPRINTS), session(2, BIG_SPRINTS), session(8, BIG_SPRINTS), session(15, BIG_SPRINTS)], TODAY);
+      const sprint = m.types.find((t) => t.type === 'sprint')!;
+      expect(sprint.thisWeek).toBe(40);
+      expect(sprint.usualWeek).toBe(26.7); // 80 min over 3 weeks
+      expect(sprint.ratio).toBe(1.5);
+      expect(sprint.level).toBe('CAUTION');
+    });
   });
 });
