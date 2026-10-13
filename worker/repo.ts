@@ -1,6 +1,8 @@
-// Data access. Every query runs with the player's own Clerk token, so Supabase RLS
-// limits it to their rows even if this code had a bug.
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+// Data access on Neon Postgres (through Cloudflare Hyperdrive). Each request runs in
+// one transaction as the restricted pitchsafe_app role with the verified player id set,
+// so row-level security limits every query to that player's rows even if a query
+// below forgot its user_id filter.
+import pg from 'pg';
 import type { Injury, Profile, RecoveryLog, TrainingSession } from '../shared/types';
 import type { EquipmentInput, InjuryInput, ProfileInput, RecoveryCheckIn, SessionInput } from '../shared/validation';
 
@@ -18,7 +20,7 @@ export interface Overview {
 
 export interface PlayerRepo {
   overview(): Promise<Overview>;
-  /** Everything, without the overview's row caps (GDPR export). */
+  /** Everything, without the overview's row caps (data export). */
   exportAll(): Promise<Overview>;
   getProfile(): Promise<Profile | null>;
   createProfile(input: ProfileInput): Promise<Profile>;
@@ -34,7 +36,7 @@ export interface PlayerRepo {
   deleteInjury(id: string): Promise<boolean>;
 }
 
-/** Thrown for database failures; `code` is the Postgres error code when there is one. */
+/** Thrown for database failures; `code` is the Postgres SQLSTATE when there is one. */
 export class RepoError extends Error {
   constructor(
     message: string,
@@ -44,6 +46,8 @@ export class RepoError extends Error {
     this.name = 'RepoError';
   }
 }
+
+export const NO_ROWS = 'NO_ROWS';
 
 // --- Row mapping (snake_case in Postgres, camelCase in the app) ---
 
@@ -59,7 +63,7 @@ const toProfile = (r: Row): Profile => ({
   displayName: (r.display_name as string) ?? '',
   cleatType: (r.cleat_type as Profile['cleatType']) ?? null,
   surfaceType: (r.surface_type as Profile['surfaceType']) ?? null,
-  createdAt: r.created_at as string,
+  createdAt: new Date(r.created_at as string).toISOString(),
 });
 
 const toSession = (r: Row): TrainingSession => ({
@@ -91,176 +95,174 @@ const toInjury = (r: Row): Injury => ({
   returnDate: (r.return_date as string | null) ?? null,
 });
 
-function profileColumns(input: ProfileInput | EquipmentInput): Row {
-  const row: Row = {};
-  if ('position' in input && input.position !== undefined) row.position = input.position;
-  if ('displayName' in input && input.displayName !== undefined) row.display_name = input.displayName;
-  if ('cleatType' in input && input.cleatType !== undefined) row.cleat_type = input.cleatType;
-  if ('surfaceType' in input && input.surfaceType !== undefined) row.surface_type = input.surfaceType;
-  return row;
+// Keep DATE columns as YYYY-MM-DD strings; pg would otherwise build local-time Dates
+const DATE_OID = 1082;
+const typeParsers = {
+  getTypeParser: (oid: number, format?: 'text' | 'binary') =>
+    oid === DATE_OID ? (value: string) => value : pg.types.getTypeParser(oid, format ?? 'text'),
+} as unknown as pg.CustomTypesConfig;
+
+type Query = (text: string, values?: unknown[]) => Promise<Row[]>;
+
+/** Runs `fn` in a transaction as pitchsafe_app with app.user_id set to the player. */
+export async function asPlayer<T>(connectionString: string, userId: string, fn: (q: Query) => Promise<T>): Promise<T> {
+  const client = new pg.Client({ connectionString, types: typeParsers });
+  try {
+    await client.connect();
+  } catch (err) {
+    throw new RepoError(`Database connection failed: ${err instanceof Error ? err.message : 'unknown'}`, 'CONNECT');
+  }
+  const q: Query = async (text, values) => (await client.query(text, values)).rows as Row[];
+  try {
+    await client.query('begin');
+    await client.query('set local role pitchsafe_app');
+    await client.query("select set_config('app.user_id', $1, true)", [userId]);
+    const result = await fn(q);
+    await client.query('commit');
+    return result;
+  } catch (err) {
+    await client.query('rollback').catch(() => undefined);
+    if (err instanceof RepoError) throw err;
+    const code = (err as { code?: string }).code;
+    throw new RepoError(err instanceof Error ? err.message : 'Database error', code);
+  } finally {
+    await client.end().catch(() => undefined);
+  }
 }
 
-interface Result<T> {
-  data: T | null;
-  error: { message: string; code?: string } | null;
+function profileAssignments(input: ProfileInput | EquipmentInput): { sql: string; values: unknown[] } {
+  const pairs: [string, unknown][] = [];
+  if ('position' in input && input.position !== undefined) pairs.push(['position', input.position]);
+  if ('displayName' in input && input.displayName !== undefined) pairs.push(['display_name', input.displayName]);
+  if ('cleatType' in input && input.cleatType !== undefined) pairs.push(['cleat_type', input.cleatType]);
+  if ('surfaceType' in input && input.surfaceType !== undefined) pairs.push(['surface_type', input.surfaceType]);
+  // Column names come from the fixed list above, never from input
+  return { sql: pairs.map(([col], i) => `${col} = $${i + 2}`).join(', '), values: pairs.map(([, v]) => v) };
 }
 
-function maybe<R extends Result<unknown>>(result: R): NonNullable<R['data']> | null {
-  if (result.error) throw new RepoError(result.error.message, result.error.code);
-  return (result.data ?? null) as NonNullable<R['data']> | null;
+function one<T>(rows: Row[], map: (r: Row) => T): T {
+  if (rows.length === 0) throw new RepoError('Expected a row but got none', NO_ROWS);
+  return map(rows[0]);
 }
 
-function one<R extends Result<unknown>>(result: R): NonNullable<R['data']> {
-  const data = maybe(result);
-  if (data === null) throw new RepoError('Expected a row but got none', 'PGRST116');
-  return data;
-}
+export function postgresRepo(connectionString: string, userId: string): PlayerRepo {
+  const run = <T,>(fn: (q: Query) => Promise<T>) => asPlayer(connectionString, userId, fn);
 
-function many<R extends Result<unknown[]>>(result: R): NonNullable<R['data']> {
-  return (maybe(result) ?? []) as NonNullable<R['data']>;
-}
-
-// --- Supabase implementation ---
-
-export interface SupabaseConfig {
-  url: string;
-  publishableKey: string;
-}
-
-export function supabaseRepo(config: SupabaseConfig, accessToken: string, userId: string): PlayerRepo {
-  const db: SupabaseClient = createClient(config.url, config.publishableKey, {
-    accessToken: async () => accessToken,
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  });
+  async function readAll(q: Query, caps: { sessions?: number; recovery?: number; injuries?: number }): Promise<Overview> {
+    const limit = (n?: number) => (n ? `limit ${Math.trunc(n)}` : '');
+    const profile = await q(`select ${PROFILE_COLUMNS} from public.profiles where user_id = $1`, [userId]);
+    const sessions = await q(
+      `select ${SESSION_COLUMNS} from public.training_sessions where user_id = $1 order by session_date desc, created_at desc ${limit(caps.sessions)}`,
+      [userId],
+    );
+    const recovery = await q(`select ${CHECKIN_COLUMNS} from public.recovery_checkins where user_id = $1 order by week_start desc ${limit(caps.recovery)}`, [userId]);
+    const injuries = await q(`select ${INJURY_COLUMNS} from public.injuries where user_id = $1 order by injury_date desc ${limit(caps.injuries)}`, [userId]);
+    return {
+      profile: profile[0] ? toProfile(profile[0]) : null,
+      sessions: sessions.map(toSession),
+      recovery: recovery.map(toCheckIn),
+      injuries: injuries.map(toInjury),
+    };
+  }
 
   return {
-    async overview() {
-      const [profile, sessions, recovery, injuries] = await Promise.all([
-        db.from('profiles').select(PROFILE_COLUMNS).maybeSingle(),
-        db.from('training_sessions').select(SESSION_COLUMNS).order('session_date', { ascending: false }).order('created_at', { ascending: false }).limit(MAX_SESSIONS),
-        db.from('recovery_checkins').select(CHECKIN_COLUMNS).order('week_start', { ascending: false }).limit(MAX_CHECKINS),
-        db.from('injuries').select(INJURY_COLUMNS).order('injury_date', { ascending: false }).limit(MAX_INJURIES),
-      ]);
-      const profileRow = maybe(profile);
-      return {
-        profile: profileRow ? toProfile(profileRow) : null,
-        sessions: many(sessions).map(toSession),
-        recovery: many(recovery).map(toCheckIn),
-        injuries: many(injuries).map(toInjury),
-      };
-    },
+    overview: () => run((q) => readAll(q, { sessions: MAX_SESSIONS, recovery: MAX_CHECKINS, injuries: MAX_INJURIES })),
 
-    async exportAll() {
-      const PAGE = 1000;
-      // PostgREST caps each response, so read every table in pages
-      async function all<T>(table: string, columns: string, order: string, map: (r: Row) => T): Promise<T[]> {
-        const out: T[] = [];
-        for (let from = 0; ; from += PAGE) {
-          const rows = many(await db.from(table).select(columns).order(order, { ascending: false }).range(from, from + PAGE - 1)) as unknown as Row[];
-          out.push(...rows.map(map));
-          if (rows.length < PAGE) return out;
-        }
-      }
-      const profileRow = maybe(await db.from('profiles').select(`${PROFILE_COLUMNS}, consent_version, consented_at`).maybeSingle());
-      return {
-        profile: profileRow ? { ...toProfile(profileRow), consentVersion: profileRow.consent_version, consentedAt: profileRow.consented_at } : null,
-        sessions: await all('training_sessions', SESSION_COLUMNS, 'session_date', toSession),
-        recovery: await all('recovery_checkins', CHECKIN_COLUMNS, 'week_start', toCheckIn),
-        injuries: await all('injuries', INJURY_COLUMNS, 'injury_date', toInjury),
-      };
-    },
+    exportAll: () =>
+      run(async (q) => {
+        const data = await readAll(q, {});
+        const consent = await q('select consent_version, consented_at from public.profiles where user_id = $1', [userId]);
+        const profile = data.profile && consent[0] ? { ...data.profile, consentVersion: consent[0].consent_version, consentedAt: consent[0].consented_at } : data.profile;
+        return { ...data, profile } as Overview;
+      }),
 
-    async getProfile() {
-      const row = maybe(await db.from('profiles').select(PROFILE_COLUMNS).maybeSingle());
-      return row ? toProfile(row) : null;
-    },
+    getProfile: () =>
+      run(async (q) => {
+        const rows = await q(`select ${PROFILE_COLUMNS} from public.profiles where user_id = $1`, [userId]);
+        return rows[0] ? toProfile(rows[0]) : null;
+      }),
 
-    async createProfile(input) {
-      const row = one(
-        await db
-          .from('profiles')
-          .insert({ ...profileColumns(input), consent_version: CONSENT_VERSION, age_confirmed: true })
-          .select(PROFILE_COLUMNS)
-          .single(),
-      );
-      return toProfile(row);
-    },
+    createProfile: (input) =>
+      run(async (q) =>
+        one(
+          await q(
+            `insert into public.profiles (user_id, position, display_name, consent_version, age_confirmed)
+             values ($1, $2, $3, $4, true) returning ${PROFILE_COLUMNS}`,
+            [userId, input.position ?? null, input.displayName ?? '', CONSENT_VERSION],
+          ),
+          toProfile,
+        ),
+      ),
 
-    async updateProfile(input) {
-      const row = one(await db.from('profiles').update(profileColumns(input)).eq('user_id', userId).select(PROFILE_COLUMNS).single());
-      return toProfile(row);
-    },
+    updateProfile: (input) =>
+      run(async (q) => {
+        const { sql, values } = profileAssignments(input);
+        if (!sql) throw new RepoError('Nothing to update', NO_ROWS);
+        return one(await q(`update public.profiles set ${sql} where user_id = $1 returning ${PROFILE_COLUMNS}`, [userId, ...values]), toProfile);
+      }),
 
-    async deleteAllData() {
-      // Sessions, check-ins and injuries cascade from the profile row
-      maybe(await db.from('profiles').delete().eq('user_id', userId));
-    },
+    deleteAllData: () =>
+      run(async (q) => {
+        // Sessions, check-ins and injuries cascade from the profile row
+        await q('delete from public.profiles where user_id = $1', [userId]);
+      }),
 
-    async addSession(input) {
-      const row = one(
-        await db
-          .from('training_sessions')
-          .insert({ session_date: input.date, session_type: input.type, duration_min: input.duration, rpe: input.rpe, notes: input.notes })
-          .select(SESSION_COLUMNS)
-          .single(),
-      );
-      return toSession(row);
-    },
+    addSession: (input) =>
+      run(async (q) =>
+        one(
+          await q(
+            `insert into public.training_sessions (session_date, session_type, duration_min, rpe, notes)
+             values ($1, $2, $3, $4, $5) returning ${SESSION_COLUMNS}`,
+            [input.date, input.type, input.duration, input.rpe, input.notes],
+          ),
+          toSession,
+        ),
+      ),
 
-    async deleteSession(id) {
-      const rows = many(await db.from('training_sessions').delete().eq('user_id', userId).eq('id', id).select('id'));
-      return rows.length > 0;
-    },
+    deleteSession: (id) => run(async (q) => (await q('delete from public.training_sessions where user_id = $1 and id = $2 returning id', [userId, id])).length > 0),
 
-    async saveCheckIn(input) {
-      const row = one(
-        await db
-          .from('recovery_checkins')
-          .upsert(
-            { week_start: input.weekStart, sleep_hours: input.sleep, soreness: input.soreness, stress: input.stress, nutrition: input.nutrition },
-            { onConflict: 'user_id,week_start' },
-          )
-          .select(CHECKIN_COLUMNS)
-          .single(),
-      );
-      return toCheckIn(row);
-    },
+    saveCheckIn: (input) =>
+      run(async (q) =>
+        one(
+          await q(
+            `insert into public.recovery_checkins (week_start, sleep_hours, soreness, stress, nutrition)
+             values ($1, $2, $3, $4, $5)
+             on conflict (user_id, week_start) do update
+               set sleep_hours = excluded.sleep_hours, soreness = excluded.soreness,
+                   stress = excluded.stress, nutrition = excluded.nutrition
+             returning ${CHECKIN_COLUMNS}`,
+            [input.weekStart, input.sleep, input.soreness, input.stress, input.nutrition],
+          ),
+          toCheckIn,
+        ),
+      ),
 
-    async deleteCheckIn(id) {
-      const rows = many(await db.from('recovery_checkins').delete().eq('user_id', userId).eq('id', id).select('id'));
-      return rows.length > 0;
-    },
+    deleteCheckIn: (id) => run(async (q) => (await q('delete from public.recovery_checkins where user_id = $1 and id = $2 returning id', [userId, id])).length > 0),
 
-    async addInjury(input) {
-      const row = one(
-        await db
-          .from('injuries')
-          .insert({
-            body_part: input.bodyPart,
-            injury_type: input.injuryType,
-            severity: input.severity,
-            injury_date: input.injuryDate,
-            return_date: input.returnDate,
-          })
-          .select(INJURY_COLUMNS)
-          .single(),
-      );
-      return toInjury(row);
-    },
+    addInjury: (input) =>
+      run(async (q) =>
+        one(
+          await q(
+            `insert into public.injuries (body_part, injury_type, severity, injury_date, return_date)
+             values ($1, $2, $3, $4, $5) returning ${INJURY_COLUMNS}`,
+            [input.bodyPart, input.injuryType, input.severity, input.injuryDate, input.returnDate],
+          ),
+          toInjury,
+        ),
+      ),
 
-    async getInjury(id) {
-      const row = maybe(await db.from('injuries').select(INJURY_COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle());
-      return row ? toInjury(row) : null;
-    },
+    getInjury: (id) =>
+      run(async (q) => {
+        const rows = await q(`select ${INJURY_COLUMNS} from public.injuries where user_id = $1 and id = $2`, [userId, id]);
+        return rows[0] ? toInjury(rows[0]) : null;
+      }),
 
-    async setInjuryReturn(id, returnDate) {
-      const row = maybe(await db.from('injuries').update({ return_date: returnDate }).eq('user_id', userId).eq('id', id).select(INJURY_COLUMNS).maybeSingle());
-      return row ? toInjury(row) : null;
-    },
+    setInjuryReturn: (id, returnDate) =>
+      run(async (q) => {
+        const rows = await q(`update public.injuries set return_date = $3 where user_id = $1 and id = $2 returning ${INJURY_COLUMNS}`, [userId, id, returnDate]);
+        return rows[0] ? toInjury(rows[0]) : null;
+      }),
 
-    async deleteInjury(id) {
-      const rows = many(await db.from('injuries').delete().eq('user_id', userId).eq('id', id).select('id'));
-      return rows.length > 0;
-    },
+    deleteInjury: (id) => run(async (q) => (await q('delete from public.injuries where user_id = $1 and id = $2 returning id', [userId, id])).length > 0),
   };
 }

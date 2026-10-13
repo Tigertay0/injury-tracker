@@ -22,7 +22,7 @@
 ## Must work
 
 - Sign up / sign in with Clerk (email + Google). Accounts are optional to browse, required to log.
-- All data in Supabase, locked per player by database rules (RLS) tied to the Clerk login.
+- All data in Neon Postgres, locked per player by database rules (RLS) tied to the Clerk login.
 - API on a Cloudflare Worker: checks the login, validates every input, rate-limits each player.
 - Risk math exactly as the PRD (ACWR, recovery, equipment matrix, injury multipliers, composite), covered by tests.
 - Coach PDF report generated in the browser (no health data sent anywhere new).
@@ -31,7 +31,7 @@
 
 ## Lives at
 
-Cloudflare Workers (site + API), custom domain bought on Cloudflare. Supabase Pro (database). Clerk (login).
+Cloudflare Workers (site + API) with Hyperdrive, custom domain bought on Cloudflare. Neon (Postgres database). Clerk (login).
 
 ## Done when
 

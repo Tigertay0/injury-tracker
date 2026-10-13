@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, type Deps } from '../worker/app';
-import { RepoError, type Overview, type PlayerRepo } from '../worker/repo';
+import { NO_ROWS, RepoError, type Overview, type PlayerRepo } from '../worker/repo';
 import { recoveryScore } from '../shared/calculations';
 import type { Injury, Profile, RecoveryLog, TrainingSession } from '../shared/types';
 
@@ -31,7 +31,7 @@ function memoryStore() {
         return o.profile;
       },
       updateProfile: async (input) => {
-        if (!o.profile) throw new RepoError('no rows', 'PGRST116');
+        if (!o.profile) throw new RepoError('no rows', NO_ROWS);
         o.profile = { ...o.profile, ...(input as Partial<Profile>) };
         return o.profile;
       },

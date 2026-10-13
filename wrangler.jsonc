@@ -12,11 +12,13 @@
   // Public values only. CLERK_SECRET_KEY is a secret: `wrangler secret put CLERK_SECRET_KEY`
   // (and `.dev.vars` locally, which git ignores).
   "vars": {
-    "SUPABASE_URL": "",
-    "SUPABASE_PUBLISHABLE_KEY": "",
     "CLERK_PUBLISHABLE_KEY": "",
     "ALLOWED_ORIGINS": "http://localhost:5173"
   },
+  // Neon Postgres through Hyperdrive (created with caching disabled so players always
+  // read their latest writes). Local dev reads the connection string from the
+  // CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE variable in .env.
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "00000000000000000000000000000000" }],
   "ratelimits": [
     { "name": "READ_LIMITER", "namespace_id": "4101", "simple": { "limit": 120, "period": 60 } },
     { "name": "WRITE_LIMITER", "namespace_id": "4102", "simple": { "limit": 30, "period": 60 } }

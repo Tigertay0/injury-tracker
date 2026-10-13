@@ -13,7 +13,7 @@ import {
   validateRecovery,
   validateSession,
 } from '../shared/validation';
-import { RepoError, type PlayerRepo } from './repo';
+import { NO_ROWS, RepoError, type PlayerRepo } from './repo';
 
 export interface Deps {
   /** Returns the Clerk user id for a valid session token, or null. */
@@ -31,7 +31,6 @@ type Ctx = Context<{ Variables: Vars }>;
 const MAX_BODY_BYTES = 8 * 1024;
 const PG_UNIQUE_VIOLATION = '23505';
 const PG_FOREIGN_KEY_VIOLATION = '23503';
-const PGRST_NO_ROWS = 'PGRST116';
 const PG_PROGRAM_LIMIT = '54000';
 
 function bearerToken(header: string | undefined): string | null {
@@ -176,7 +175,7 @@ export function createApp(deps: Deps) {
     if (err instanceof RepoError && err.code === PG_PROGRAM_LIMIT) {
       return c.json({ error: 'This account has reached its storage limit.' }, 409);
     }
-    if (err instanceof RepoError && err.code === PGRST_NO_ROWS) {
+    if (err instanceof RepoError && err.code === NO_ROWS) {
       return c.json({ error: 'Finish setting up your profile first.' }, 404);
     }
     if (err instanceof RepoError && err.code === PG_UNIQUE_VIOLATION) {

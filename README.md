@@ -4,7 +4,7 @@ Free injury-risk tracking for amateur soccer players. Players log sessions, a we
 
 - **Site and app:** Cloudflare Worker (React app as static assets + API under `/api`)
 - **Login:** Clerk
-- **Database:** Supabase Postgres, every row locked to its owner by RLS on the Clerk user id
+- **Database:** Neon Postgres via Cloudflare Hyperdrive, every row locked to its owner by RLS on the Clerk user id
 - **Spec:** [docs/spec.md](docs/spec.md) · **Design system:** [design-system.md](design-system.md) · **Original requirements:** [PRD.md](PRD.md)
 
 ## Pages
@@ -25,12 +25,13 @@ browser ──► Cloudflare Worker ──► /api/* (worker/app.ts)
                 │                    │  1. verify Clerk session token (@clerk/backend)
                 │                    │  2. validate input (shared/validation.ts)
                 │                    │  3. per-player rate limit (Workers Rate Limiting)
-                │                    └─► Supabase PostgREST with the player's own token
-                │                         (RLS: auth.jwt()->>'sub' = user_id)
+                │                    └─► Neon Postgres through Hyperdrive, in a transaction as
+                │                         the restricted pitchsafe_app role with app.user_id set
+                │                         (RLS: user_id = current_setting('app.user_id'))
                 └─► static React app (dist/client)
 ```
 
-No Supabase service key exists. The Clerk secret key is the only server secret.
+Server secrets: the Clerk secret key, and the Neon connection string held inside the Hyperdrive config.
 
 The risk maths lives in `shared/` and is used by the app, the API, the coach PDF and the landing demo. It is covered by tests in `tests/`.
 
@@ -40,31 +41,32 @@ The risk maths lives in `shared/` and is used by the app, the API, the coach PDF
 npm install
 npm run dev        # site + Worker at http://localhost:5173
 npm test           # unit and API tests
+npm run test:db    # schema + RLS tests against a Neon test branch (DATABASE_URL_TEST)
 npm run typecheck
 ```
 
 Local configuration (both files are git-ignored):
 
-- `.env.local`: `VITE_CLERK_PUBLISHABLE_KEY=pk_test_...` and optionally `VITE_CONTACT_EMAIL=you@example.com`
-- `.dev.vars`: `CLERK_SECRET_KEY=sk_test_...`
+- `.env`: `VITE_CLERK_PUBLISHABLE_KEY`, optional `VITE_CONTACT_EMAIL`, and `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` (a Neon dev branch) — see `.env.example`
+- `.dev.vars`: `CLERK_SECRET_KEY` and `DATABASE_URL` (Neon owner URL, for migrations) — see `.dev.vars.example`
 
-Public Worker variables (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `CLERK_PUBLISHABLE_KEY`, `ALLOWED_ORIGINS`) live in `wrangler.jsonc`.
+Public Worker variables (`CLERK_PUBLISHABLE_KEY`, `ALLOWED_ORIGINS`) and the Hyperdrive id live in `wrangler.jsonc`.
 
 ## Deploying
 
 ```bash
-npm run db:push    # apply supabase/migrations to the linked Supabase project
+npm run db:migrate # apply db/migrations to Neon (DATABASE_URL = owner URL)
 npm run deploy     # build and publish the Worker
 ```
 
-The Clerk secret is set once with `npx wrangler secret put CLERK_SECRET_KEY`.
+The Clerk secret is set once with `npx wrangler secret put CLERK_SECRET_KEY`. The Hyperdrive config is created once with `npx wrangler hyperdrive create pitchsafe --connection-string=<neon url> --caching-disabled`.
 
 ## Ownership and running costs
 
 | Service | Used for | Plan |
 |---|---|---|
 | Cloudflare | Hosting, API, domain | Workers free tier covers 100,000 requests a day; domain renews yearly |
-| Supabase | Database | Pro, $25/month per organization plus compute per project |
+| Neon | Database | Free tier to start (0.5 GB, scales to zero); paid plans from about $19/month if you outgrow it |
 | Clerk | Login | Free up to 10,000 monthly active users |
 
 ## Changing things

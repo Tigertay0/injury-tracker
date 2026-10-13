@@ -1,14 +1,19 @@
--- PitchSafe schema. Users sign in with Clerk; Supabase trusts Clerk session tokens
--- (third-party auth), so auth.jwt() ->> 'sub' is the Clerk user id on every row.
--- Every table is owner-only through RLS. The anon role gets nothing.
+-- PitchSafe schema for Neon Postgres.
+--
+-- The Worker connects as the database owner (through Cloudflare Hyperdrive), and for
+-- every request opens a transaction that runs
+--   SET LOCAL ROLE pitchsafe_app;
+--   SELECT set_config('app.user_id', <verified Clerk user id>, true);
+-- pitchsafe_app owns nothing and cannot bypass RLS, so every query is limited to the
+-- caller's rows by the policies below, even if application code forgot a filter.
 
-create or replace function public.clerk_user_id()
+create or replace function public.current_player_id()
 returns text
 language sql
 stable
 set search_path = ''
 as $$
-  select nullif(auth.jwt() ->> 'sub', '')
+  select nullif(current_setting('app.user_id', true), '')
 $$;
 
 create or replace function public.set_updated_at()
@@ -25,7 +30,7 @@ $$;
 -- Profiles ---------------------------------------------------------------------
 
 create table public.profiles (
-  user_id         text primary key default public.clerk_user_id(),
+  user_id         text primary key default public.current_player_id() check (char_length(user_id) between 1 and 64),
   position        text check (position in ('GK', 'DEF', 'MID', 'FWD')),
   display_name    text not null default '' check (char_length(display_name) <= 40),
   cleat_type      text check (cleat_type in ('FG_BLADED', 'FG_CONICAL', 'AG', 'SG', 'MG', 'INDOOR')),
@@ -45,7 +50,7 @@ create trigger profiles_set_updated_at
 
 create table public.training_sessions (
   id           uuid primary key default gen_random_uuid(),
-  user_id      text not null default public.clerk_user_id()
+  user_id      text not null default public.current_player_id()
                  references public.profiles (user_id) on delete cascade,
   session_date date not null check (session_date between date '1990-01-01' and current_date + 2),
   session_type text not null check (session_type in ('training', 'match', 'gym')),
@@ -64,7 +69,7 @@ create index training_sessions_user_date_idx
 
 create table public.recovery_checkins (
   id          uuid primary key default gen_random_uuid(),
-  user_id     text not null default public.clerk_user_id()
+  user_id     text not null default public.current_player_id()
                 references public.profiles (user_id) on delete cascade,
   week_start  date not null check (extract(isodow from week_start) = 1 and week_start between date '1990-01-01' and current_date + 9),
   sleep_hours numeric(3, 1) not null check (sleep_hours between 0 and 12),
@@ -98,7 +103,7 @@ create trigger recovery_checkins_set_updated_at
 
 create table public.injuries (
   id          uuid primary key default gen_random_uuid(),
-  user_id     text not null default public.clerk_user_id()
+  user_id     text not null default public.current_player_id()
                 references public.profiles (user_id) on delete cascade,
   body_part   text not null check (body_part in (
                 'Head', 'Neck', 'Shoulder (L)', 'Shoulder (R)', 'Wrist (L)', 'Wrist (R)', 'Lower back', 'Groin',
@@ -118,33 +123,8 @@ create trigger injuries_set_updated_at
   before update on public.injuries
   for each row execute function public.set_updated_at();
 
--- Privileges: least privilege per role, then RLS on top --------------------------
+-- Per-player row caps, far above real use (5,000 sessions is about 13 years of daily training)
 
-revoke all on public.profiles, public.training_sessions, public.recovery_checkins, public.injuries from anon, authenticated;
-
--- Inserts are column-level so clients cannot set ids, timestamps or the consent time
-grant select, delete on public.profiles to authenticated;
-grant insert (position, display_name, cleat_type, surface_type, consent_version, age_confirmed) on public.profiles to authenticated;
-grant update (position, display_name, cleat_type, surface_type) on public.profiles to authenticated;
-
-grant select, delete on public.training_sessions to authenticated;
-grant insert (session_date, session_type, duration_min, rpe, notes) on public.training_sessions to authenticated;
-
-grant select, delete on public.recovery_checkins to authenticated;
-grant insert (week_start, sleep_hours, soreness, stress, nutrition) on public.recovery_checkins to authenticated;
--- week_start is included because an upsert sets every column it inserts (the value is unchanged)
-grant update (week_start, sleep_hours, soreness, stress, nutrition) on public.recovery_checkins to authenticated;
-
-grant select, delete on public.injuries to authenticated;
-grant insert (body_part, injury_type, severity, injury_date, return_date) on public.injuries to authenticated;
-grant update (return_date) on public.injuries to authenticated;
-
-revoke execute on function public.clerk_user_id() from public, anon;
-grant execute on function public.clerk_user_id() to authenticated;
-revoke execute on function public.set_updated_at() from public, anon, authenticated;
-
--- Per-player row caps, so the public Data API cannot be used to fill the database.
--- Far above real use: 5,000 sessions is about 13 years of daily training.
 create or replace function public.enforce_row_cap()
 returns trigger
 language plpgsql
@@ -162,7 +142,6 @@ begin
   return new;
 end;
 $$;
-revoke execute on function public.enforce_row_cap() from public, anon, authenticated;
 
 create trigger training_sessions_row_cap before insert on public.training_sessions
   for each row execute function public.enforce_row_cap('5000');
@@ -171,49 +150,65 @@ create trigger recovery_checkins_row_cap before insert on public.recovery_checki
 create trigger injuries_row_cap before insert on public.injuries
   for each row execute function public.enforce_row_cap('500');
 
+-- The restricted role the Worker switches to for player queries ---------------------
+
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'pitchsafe_app') then
+    create role pitchsafe_app nologin nobypassrls noinherit;
+  end if;
+end;
+$$;
+
+-- The migrating (owner) role must be able to SET ROLE to it
+grant pitchsafe_app to current_user;
+
+revoke all on public.profiles, public.training_sessions, public.recovery_checkins, public.injuries from public;
+revoke all on function public.current_player_id(), public.set_updated_at(), public.enforce_row_cap() from public;
+grant usage on schema public to pitchsafe_app;
+grant execute on function public.current_player_id() to pitchsafe_app;
+
+-- Least privilege: inserts are column-level so ids, timestamps and the consent time
+-- cannot be set by the application
+grant select, delete on public.profiles to pitchsafe_app;
+grant insert (user_id, position, display_name, cleat_type, surface_type, consent_version, age_confirmed) on public.profiles to pitchsafe_app;
+grant update (position, display_name, cleat_type, surface_type) on public.profiles to pitchsafe_app;
+
+grant select, delete on public.training_sessions to pitchsafe_app;
+grant insert (session_date, session_type, duration_min, rpe, notes) on public.training_sessions to pitchsafe_app;
+
+grant select, delete on public.recovery_checkins to pitchsafe_app;
+grant insert (week_start, sleep_hours, soreness, stress, nutrition) on public.recovery_checkins to pitchsafe_app;
+-- week_start is included because an upsert sets every column it inserts (the value is unchanged)
+grant update (week_start, sleep_hours, soreness, stress, nutrition) on public.recovery_checkins to pitchsafe_app;
+
+grant select, delete on public.injuries to pitchsafe_app;
+grant insert (body_part, injury_type, severity, injury_date, return_date) on public.injuries to pitchsafe_app;
+grant update (return_date) on public.injuries to pitchsafe_app;
+
+-- Row-level security: every policy keys on the player id set for the transaction
+
 alter table public.profiles enable row level security;
 alter table public.training_sessions enable row level security;
 alter table public.recovery_checkins enable row level security;
 alter table public.injuries enable row level security;
 
--- Policies: (select ...) wrapper so the JWT is read once per statement, not per row
+create policy profiles_owner on public.profiles
+  for all to pitchsafe_app
+  using ((select public.current_player_id()) = user_id)
+  with check ((select public.current_player_id()) = user_id);
 
-create policy "Players read their own profile" on public.profiles
-  for select to authenticated using ((select public.clerk_user_id()) = user_id);
-create policy "Players create their own profile" on public.profiles
-  for insert to authenticated with check ((select public.clerk_user_id()) = user_id);
-create policy "Players update their own profile" on public.profiles
-  for update to authenticated
-  using ((select public.clerk_user_id()) = user_id)
-  with check ((select public.clerk_user_id()) = user_id);
-create policy "Players delete their own profile" on public.profiles
-  for delete to authenticated using ((select public.clerk_user_id()) = user_id);
+create policy training_sessions_owner on public.training_sessions
+  for all to pitchsafe_app
+  using ((select public.current_player_id()) = user_id)
+  with check ((select public.current_player_id()) = user_id);
 
-create policy "Players read their own sessions" on public.training_sessions
-  for select to authenticated using ((select public.clerk_user_id()) = user_id);
-create policy "Players log their own sessions" on public.training_sessions
-  for insert to authenticated with check ((select public.clerk_user_id()) = user_id);
-create policy "Players delete their own sessions" on public.training_sessions
-  for delete to authenticated using ((select public.clerk_user_id()) = user_id);
+create policy recovery_checkins_owner on public.recovery_checkins
+  for all to pitchsafe_app
+  using ((select public.current_player_id()) = user_id)
+  with check ((select public.current_player_id()) = user_id);
 
-create policy "Players read their own check-ins" on public.recovery_checkins
-  for select to authenticated using ((select public.clerk_user_id()) = user_id);
-create policy "Players add their own check-ins" on public.recovery_checkins
-  for insert to authenticated with check ((select public.clerk_user_id()) = user_id);
-create policy "Players update their own check-ins" on public.recovery_checkins
-  for update to authenticated
-  using ((select public.clerk_user_id()) = user_id)
-  with check ((select public.clerk_user_id()) = user_id);
-create policy "Players delete their own check-ins" on public.recovery_checkins
-  for delete to authenticated using ((select public.clerk_user_id()) = user_id);
-
-create policy "Players read their own injuries" on public.injuries
-  for select to authenticated using ((select public.clerk_user_id()) = user_id);
-create policy "Players log their own injuries" on public.injuries
-  for insert to authenticated with check ((select public.clerk_user_id()) = user_id);
-create policy "Players update their own injuries" on public.injuries
-  for update to authenticated
-  using ((select public.clerk_user_id()) = user_id)
-  with check ((select public.clerk_user_id()) = user_id);
-create policy "Players delete their own injuries" on public.injuries
-  for delete to authenticated using ((select public.clerk_user_id()) = user_id);
+create policy injuries_owner on public.injuries
+  for all to pitchsafe_app
+  using ((select public.current_player_id()) = user_id)
+  with check ((select public.current_player_id()) = user_id);

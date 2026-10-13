@@ -1,2 +1,4 @@
 # Local Worker secrets for `npm run dev`. Copy to .dev.vars (git-ignored).
 CLERK_SECRET_KEY=sk_test_xxx
+# Neon owner connection string (direct, not pooled). Used by `npm run db:migrate`.
+DATABASE_URL=postgresql://neondb_owner:xxx@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require

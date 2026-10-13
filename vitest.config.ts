@@ -8,5 +8,5 @@ export default defineConfig({
       '@shared': fileURLToPath(new URL('./shared', import.meta.url)),
     },
   },
-  test: { include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'] },
+  test: { include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'], exclude: ['tests/db/**', 'node_modules/**'] },
 });

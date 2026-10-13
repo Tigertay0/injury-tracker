@@ -40,10 +40,10 @@ export default function Privacy() {
             <strong>Clerk</strong> runs sign-in and stores your login details.
           </li>
           <li>
-            <strong>Supabase</strong> hosts the database with your PitchSafe data. Database rules tie every record to your login so no other player can read it.
+            <strong>Neon</strong> hosts the database with your PitchSafe data. Database rules tie every record to your login so no other player can read it.
           </li>
           <li>
-            <strong>Cloudflare</strong> serves the website and the app's server, and keeps short-lived technical logs to keep the service running and secure.
+            <strong>Cloudflare</strong> serves the website and the app's server, connects it to the database, and keeps short-lived technical logs to keep the service running and secure.
           </li>
         </ul>
         <p className="mt-3">Each acts only on our instructions to run PitchSafe. Coach reports are made on your own device and are only shared if you send them.</p>
@@ -56,7 +56,7 @@ export default function Privacy() {
 
       <section>
         <h2>How long we keep it</h2>
-        <p className="mt-3">Your data stays until you delete it. Deleting your account in Settings removes your profile, sessions, check-ins, injuries and login straight away. Copies in the database's daily backups expire within 7 days.</p>
+        <p className="mt-3">Your data stays until you delete it. Deleting your account in Settings removes your profile, sessions, check-ins, injuries and login straight away. Copies kept in the database's restore history expire within 7 days.</p>
       </section>
 
       <section>
