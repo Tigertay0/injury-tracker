@@ -13,7 +13,7 @@
   // (and `.dev.vars` locally, which git ignores).
   "vars": {
     "CLERK_PUBLISHABLE_KEY": "pk_test_c3VwZXJiLXNwYW5pZWwtODEwLmNsZXJrLmFjY291bnRzLmRldiQ",
-    "ALLOWED_ORIGINS": "http://localhost:5173"
+    "ALLOWED_ORIGINS": "https://pitchsafe.tiger-tayo.workers.dev"
   },
   // Neon Postgres through Hyperdrive (created with caching disabled so players always
   // read their latest writes). Local dev reads the connection string from the

@@ -12,7 +12,8 @@ function clerkFrontendHost(publishableKey: string | undefined): string | null {
   return /^[a-z0-9.-]+$/i.test(host) ? host : null;
 }
 
-/** Writes Workers static-asset headers (CSP and friends) into the client build. */
+/** Writes Workers static-asset headers (CSP and friends) into the client build.
+ * Clerk hosts follow https://clerk.com/docs/guides/secure/best-practices/csp-headers */
 function securityHeaders(publishableKey: string | undefined): Plugin {
   return {
     name: 'pitchsafe-security-headers',
@@ -23,12 +24,12 @@ function securityHeaders(publishableKey: string | undefined): Plugin {
       const clerkSrc = clerk ? ` https://${clerk}` : '';
       const csp = [
         "default-src 'self'",
-        `script-src 'self'${clerkSrc} https://challenges.cloudflare.com`,
-        `connect-src 'self'${clerkSrc} https://clerk-telemetry.com https://challenges.cloudflare.com`,
+        `script-src 'self'${clerkSrc} https://challenges.cloudflare.com https://*.protect.clerk.com`,
+        `connect-src 'self'${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com https://*.clerk-telemetry.com https://challenges.cloudflare.com`,
         "img-src 'self' data: https://img.clerk.com",
         "style-src 'self' 'unsafe-inline'", // Clerk injects component styles at runtime
         "font-src 'self' data:",
-        'frame-src https://challenges.cloudflare.com',
+        "frame-src 'self' https://challenges.cloudflare.com https://*.protect.clerk.com",
         "worker-src 'self' blob:",
         "manifest-src 'self'",
         "object-src 'none'",
