@@ -4,6 +4,7 @@ import { EquipmentMatrix } from '@/components/equipment-matrix';
 
 const SECTIONS = [
   { id: 'load', title: 'Training load' },
+  { id: 'movement', title: 'Movement load' },
   { id: 'recovery', title: 'Recovery' },
   { id: 'equipment', title: 'Cleats and surface' },
   { id: 'history', title: 'Injury history' },
@@ -16,6 +17,7 @@ const SECTIONS = [
 const SOURCES = [
   'Hulin, B.T., Gabbett, T.J., Lawson, D.W., Caputi, P. & Sampson, J.A. (2016). The acute:chronic workload ratio predicts injury: high chronic workload may decrease injury risk in elite rugby league players. British Journal of Sports Medicine, 50(4), 231-236.',
   'Gabbett, T.J. (2016). The training-injury prevention paradox: should athletes be training smarter and harder? British Journal of Sports Medicine, 50(5), 273-280.',
+  'Duhig, S., Shield, A.J., Opar, D., Gabbett, T.J., Ferguson, C. & Williams, M. (2016). Effect of high-speed running on hamstring strain injury risk. British Journal of Sports Medicine, 50(24), 1536-1540.',
   'Malone, S., Hughes, B., Doran, D.A., Collins, K. & Gabbett, T.J. (2019). Can the workload-injury relationship be moderated by improved strength, speed and repeated-sprint qualities? Journal of Science and Medicine in Sport, 22(1), 29-34.',
   'Livesay, G.A., Reda, D.R. & Nauman, E.A. (2006). Peak torque and rotational stiffness developed at the shoe-surface interface. The American Journal of Sports Medicine, 34(3), 415-422.',
   'Meyers, M.C. & Barnhill, B.S. (2004). Incidence, causes, and severity of high school football injuries on FieldTurf versus natural grass. The American Journal of Sports Medicine, 32(7), 1626-1638.',
@@ -113,6 +115,22 @@ export default function Science() {
             </p>
           </Section>
 
+          <Section id="movement" title="Movement load">
+            <p>If you add drills to a session, PitchSafe also tracks what kind of work you did. Each drill has an estimated profile: how much of its time is sprinting, high-speed running, change of direction, jumping and landing, contact, and strength work.</p>
+            <p>For each kind of movement, your minutes over the last 7 days are compared with your average week over the last 28 days, the same way as the workload ratio. A kind of movement is only judged once you have logged drills in at least 3 of the last 4 weeks, with at least 5 minutes of it in an average week.</p>
+            <Table
+              caption="Movement load zones"
+              head={['This week against your usual', 'Zone', 'Risk points']}
+              rows={[
+                ['Up to 1.3×', 'Normal', 0],
+                ['Above 1.3× to 1.5×', 'Rising', 50],
+                ['Above 1.5×', 'Spike', 85],
+              ]}
+            />
+            <p>The training part of your score uses whichever is higher: your workload-ratio points or your biggest movement spike. Strength work is shown but never scored. Spikes in sprinting and high-speed running are linked to hamstring strains (Duhig et al., 2016).</p>
+            <p>Limits: drill profiles are estimates, and the minutes are what you enter.</p>
+          </Section>
+
           <Section id="recovery" title="Recovery">
             <p>Once a week you answer four questions. Each becomes a score out of 10 and the recovery score is their average.</p>
             <Formula>Recovery = (sleep score + (10 − soreness) + (10 − stress) + nutrition) ÷ 4</Formula>
@@ -189,7 +207,7 @@ export default function Science() {
               <strong>The ACWR model is debated.</strong> Researchers have questioned how well a single ratio captures individual differences between athletes (Drew & Finch, 2016). PitchSafe uses it as a simple early warning, not a verdict.
             </p>
             <p>
-              <strong>Your inputs are self-reported.</strong> Effort and recovery answers are subjective. <strong>There is no movement data:</strong> without sensors, PitchSafe cannot see how you run, land or cut. <strong>It has not been clinically validated</strong> against real injury outcomes.
+              <strong>Your inputs are self-reported.</strong> Effort and recovery answers are subjective. <strong>Movement load comes from the drills you log, not sensors:</strong> PitchSafe cannot see how you actually run, land or cut. <strong>It has not been clinically validated</strong> against real injury outcomes.
             </p>
             <p>A clinical-grade tool would need wearable GPS and accelerometer data, video or motion-capture screening, links to team medical staff, a large long-term dataset of real injuries, and a validation study with sports medicine professionals.</p>
           </Section>
