@@ -80,6 +80,21 @@ run('Neon schema and row-level security', () => {
     expect(o.recovery[0].sleep).toBe(5);
   });
 
+  it('stores drills with a session and keeps them per player', async () => {
+    const s = await a.addSession({ date: today, type: 'training', duration: 60, rpe: 6, notes: '', drills: [{ drillId: 'rondo_4v2', minutes: 20 }] });
+    expect(s.drills).toEqual([{ drillId: 'rondo_4v2', minutes: 20 }]);
+    const own = (await a.overview()).sessions.find((x) => x.id === s.id);
+    expect(own?.drills).toEqual([{ drillId: 'rondo_4v2', minutes: 20 }]);
+    const theirs = await asPlayer(url!, B, (q) => q('select id from public.session_drills'));
+    expect(theirs).toHaveLength(0);
+  });
+
+  it("cannot attach drills to another player's session", async () => {
+    await expect(
+      asPlayer(url!, B, (q) => q("insert into public.session_drills (session_id, drill_id, minutes) values ($1, 'rondo_4v2', 10)", [aSessionId])),
+    ).rejects.toMatchObject({ code: '23503' });
+  });
+
   it('deleting the profile removes every record (cascade)', async () => {
     await a.deleteAllData();
     const o = await a.overview();
