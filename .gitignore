@@ -40,6 +40,9 @@ npm-debug.log*
 # Debug
 debug/
 
+# Supabase CLI state (leftover from the old stack; the app now uses Neon)
+supabase/
+
 # Cloudflare
 .wrangler/
 .dev.vars

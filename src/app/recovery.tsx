@@ -1,9 +1,9 @@
 // Weekly recovery check-in (PRD 2.2). One per week; saving the same week again updates it.
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { recoveryScore, recoveryZone } from '@shared/calculations';
 import type { RecoveryLog } from '@shared/types';
-import { addDays, localToday, mondayOf } from '@shared/dates';
+import { addDays, mondayOf } from '@shared/dates';
 import { ValidationError, validateRecovery } from '@shared/validation';
 import { ConfirmDelete } from '@/components/confirm-delete';
 import { RiskChip } from '@/components/risk-chip';
@@ -13,6 +13,7 @@ import { Slider } from '@/components/ui/slider';
 import { errorMessage } from '@/lib/api';
 import { RECOVERY_LABEL, RECOVERY_TONE, TONE_TEXT, fmtDate } from '@/lib/labels';
 import { useOverview, usePlayerData } from '@/lib/player-data';
+import { useLocalToday } from '@/lib/use-local-today';
 import { cn } from '@/lib/utils';
 import { PageHeader } from './page-header';
 
@@ -59,7 +60,7 @@ const DEFAULTS = { sleep: 7.5, soreness: 3, stress: 3, nutrition: 7 };
 
 export default function Recovery() {
   const { recovery } = useOverview();
-  const today = useMemo(() => localToday(), []);
+  const today = useLocalToday();
   const thisWeek = mondayOf(today);
   const [week, setWeek] = useState(thisWeek);
   const existing = recovery.find((r) => r.weekStart === week) ?? null;

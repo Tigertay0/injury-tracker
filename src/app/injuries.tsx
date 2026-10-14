@@ -3,7 +3,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { injuryMultiplier } from '@shared/calculations';
-import { localToday } from '@shared/dates';
 import type { Injury, InjuryFactor, Severity } from '@shared/types';
 import { BODY_PARTS, INJURY_TYPES, SEVERITIES, ValidationError, validateInjury, validateInjuryReturn } from '@shared/validation';
 import { ConfirmDelete } from '@/components/confirm-delete';
@@ -14,6 +13,7 @@ import { RadioRows } from '@/components/ui/radio-rows';
 import { ApiError, errorMessage } from '@/lib/api';
 import { SEVERITY_HINT, SEVERITY_LABEL, fmtDate } from '@/lib/labels';
 import { useOverview, usePlayerData } from '@/lib/player-data';
+import { useLocalToday } from '@/lib/use-local-today';
 import { cn } from '@/lib/utils';
 import { PageHeader } from './page-header';
 
@@ -36,9 +36,10 @@ type Errors = Partial<Record<'bodyPart' | 'injuryType' | 'severity' | 'injuryDat
 
 function ReturnControl({ injury }: { injury: Injury }) {
   const { actions } = usePlayerData();
-  const today = useMemo(() => localToday(), []);
+  const today = useLocalToday();
   const [editing, setEditing] = useState(false);
-  const [date, setDate] = useState(today);
+  const [pickedDate, setDate] = useState<string | null>(null);
+  const date = pickedDate ?? today;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -92,7 +93,7 @@ function ReturnControl({ injury }: { injury: Injury }) {
 export default function Injuries() {
   const { injuries } = useOverview();
   const { actions } = usePlayerData();
-  const today = useMemo(() => localToday(), []);
+  const today = useLocalToday();
   const multiplier = useMemo(() => injuryMultiplier(injuries, today), [injuries, today]);
 
   const [bodyPart, setBodyPart] = useState('');
