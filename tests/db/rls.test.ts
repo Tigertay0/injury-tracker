@@ -80,6 +80,12 @@ run('Neon schema and row-level security', () => {
     expect(o.recovery[0].sleep).toBe(5);
   });
 
+  it('cannot move a check-in to another week (no week_start update grant)', async () => {
+    await expect(
+      asPlayer(url!, A, (q) => q('update public.recovery_checkins set week_start = $1 where user_id = $2', [addDays(mondayOf(today), -7), A])),
+    ).rejects.toMatchObject({ code: '42501' });
+  });
+
   it('deleting the profile removes every record (cascade)', async () => {
     await a.deleteAllData();
     const o = await a.overview();

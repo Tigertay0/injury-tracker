@@ -1,9 +1,8 @@
 // Log a session. The load preview sits beside the inputs, with the last session of
 // the same type ghosted next to it for comparison (Hevy's "previous" column).
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { sessionLoad } from '@shared/calculations';
-import { localToday } from '@shared/dates';
 import type { SessionType } from '@shared/types';
 import { ValidationError, validateSession } from '@shared/validation';
 import { ConfirmDelete } from '@/components/confirm-delete';
@@ -15,6 +14,7 @@ import { Slider } from '@/components/ui/slider';
 import { ApiError, errorMessage } from '@/lib/api';
 import { SESSION_LABEL, fmtDate, fmtWeekday } from '@/lib/labels';
 import { useOverview, usePlayerData } from '@/lib/player-data';
+import { useLocalToday } from '@/lib/use-local-today';
 import { cn } from '@/lib/utils';
 import { PageHeader } from './page-header';
 
@@ -33,9 +33,11 @@ type Errors = Partial<Record<'date' | 'duration' | 'rpe' | 'notes' | 'form', str
 export default function LogSession() {
   const { sessions } = useOverview();
   const { actions } = usePlayerData();
-  const today = useMemo(() => localToday(), []);
+  const today = useLocalToday();
 
-  const [date, setDate] = useState(today);
+  // The date follows today (also past midnight) until the player picks one
+  const [pickedDate, setDate] = useState<string | null>(null);
+  const date = pickedDate ?? today;
   const [type, setType] = useState<SessionType>('training');
   const [duration, setDuration] = useState('');
   const [rpe, setRpe] = useState(5);

@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Bed, FilePdf, FirstAidKit, Plus, SneakerMove, Timer, WarningOctagon, type Icon } from '@phosphor-icons/react';
 import { buildRiskModel, type RiskModel } from '@shared/risk-model';
-import { localToday } from '@shared/dates';
 import { FUEL_DISCLAIMER, type RecommendationCategory } from '@shared/recommendations';
 import { LoadChart } from '@/components/load-chart';
 import { RiskChip } from '@/components/risk-chip';
@@ -24,6 +23,7 @@ import {
   type Tone,
 } from '@/lib/labels';
 import { useAppBase, useOverview } from '@/lib/player-data';
+import { useLocalToday } from '@/lib/use-local-today';
 import { cn } from '@/lib/utils';
 import { PageHeader } from './page-header';
 
@@ -200,7 +200,7 @@ function ReportButton({ model }: { model: RiskModel }) {
 export default function Dashboard() {
   const overview = useOverview();
   const base = useAppBase();
-  const today = useMemo(() => localToday(), []);
+  const today = useLocalToday();
   const model = useMemo(() => buildRiskModel(overview, today), [overview, today]);
   const name = overview.profile?.displayName;
   const thisWeek = model.acute;
