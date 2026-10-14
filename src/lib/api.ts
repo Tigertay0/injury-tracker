@@ -40,6 +40,7 @@ async function request<T>(getToken: () => Promise<string | null>, method: Method
   if (!res.ok) {
     throw new ApiError(data?.error ?? `Request failed (${res.status}). Try again.`, res.status, data?.field);
   }
+  if (data === null) throw new ApiError('Unexpected response from the server. Try again.', res.status);
   return data as T;
 }
 

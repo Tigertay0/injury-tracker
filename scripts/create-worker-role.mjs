@@ -20,21 +20,22 @@ const password = randomBytes(24).toString('base64url'); // 192 bits, URL-safe
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 await client.connect();
 try {
-  const exists = (await client.query('select 1 from pg_roles where rolname = $1', [ROLE])).rowCount > 0;
-  const pw = client.escapeLiteral(password);
-  if (exists) {
-    await client.query(`alter role ${ROLE} with login nobypassrls password ${pw}`);
-  } else {
-    await client.query(`create role ${ROLE} with login nobypassrls noinherit password ${pw}`);
-  }
-  await client.query(`grant pitchsafe_app to ${ROLE}`);
-  await client.query(`grant connect on database ${client.escapeIdentifier(client.database)} to ${ROLE}`);
-
+  // Write the connection string first: if the path is bad we fail before the live password changes
   const url = new URL(process.env.DATABASE_URL);
   url.username = ROLE;
   url.password = password;
   url.searchParams.delete('channel_binding');
   writeFileSync(out, url.toString(), { mode: 0o600 });
+
+  const exists = (await client.query('select 1 from pg_roles where rolname = $1', [ROLE])).rowCount > 0;
+  const pw = client.escapeLiteral(password);
+  if (exists) {
+    await client.query(`alter role ${ROLE} with login nobypassrls noinherit nosuperuser nocreaterole nocreatedb password ${pw}`);
+  } else {
+    await client.query(`create role ${ROLE} with login nobypassrls noinherit password ${pw}`);
+  }
+  await client.query(`grant pitchsafe_app to ${ROLE}`);
+  await client.query(`grant connect on database ${client.escapeIdentifier(client.database)} to ${ROLE}`);
   console.log(`${exists ? 'rotated' : 'created'} ${ROLE}; connection string written to ${out}`);
 } finally {
   await client.end();
