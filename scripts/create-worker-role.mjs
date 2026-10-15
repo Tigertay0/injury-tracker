@@ -6,7 +6,7 @@
 // Writes the worker's connection string to <output-file> (keep it out of git) and
 // prints nothing secret.
 import { randomBytes } from 'node:crypto';
-import { writeFileSync } from 'node:fs';
+import { renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import pg from 'pg';
 
 const out = process.argv[2];
@@ -20,12 +20,14 @@ const password = randomBytes(24).toString('base64url'); // 192 bits, URL-safe
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 await client.connect();
 try {
-  // Write the connection string first: if the path is bad we fail before the live password changes
+  // Write a temp file first: if the path is bad we fail before the live password changes, and the
+  // real file is only replaced once the role is set
   const url = new URL(process.env.DATABASE_URL);
   url.username = ROLE;
   url.password = password;
   url.searchParams.delete('channel_binding');
-  writeFileSync(out, url.toString(), { mode: 0o600 });
+  const tmp = `${out}.tmp`;
+  writeFileSync(tmp, url.toString(), { mode: 0o600 });
 
   const exists = (await client.query('select 1 from pg_roles where rolname = $1', [ROLE])).rowCount > 0;
   const pw = client.escapeLiteral(password);
@@ -36,7 +38,12 @@ try {
   }
   await client.query(`grant pitchsafe_app to ${ROLE}`);
   await client.query(`grant connect on database ${client.escapeIdentifier(client.database)} to ${ROLE}`);
+  renameSync(tmp, out);
   console.log(`${exists ? 'rotated' : 'created'} ${ROLE}; connection string written to ${out}`);
+} catch (err) {
+  // Never leave a connection string whose password was not set
+  try { unlinkSync(`${out}.tmp`); } catch {}
+  throw err;
 } finally {
   await client.end();
 }
