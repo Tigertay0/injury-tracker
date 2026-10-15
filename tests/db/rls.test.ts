@@ -104,6 +104,12 @@ run('Neon schema and row-level security', () => {
     ).rejects.toMatchObject({ code: '23503' });
   });
 
+  it('cannot move a check-in to another week (no week_start update grant)', async () => {
+    await expect(
+      asPlayer(url!, A, (q) => q('update public.recovery_checkins set week_start = $1 where user_id = $2', [addDays(mondayOf(today), -7), A])),
+    ).rejects.toMatchObject({ code: '42501' });
+  });
+
   it('deleting the profile removes every record (cascade)', async () => {
     // Make sure there are drills to remove, so the check below cannot pass on an empty table
     await a.addSession({ date: today, type: 'training', duration: 60, rpe: 5, notes: '', drills: [{ drillId: 'rondo_4v2', minutes: 10 }] });

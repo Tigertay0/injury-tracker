@@ -58,7 +58,10 @@ export function createApp(deps: Deps) {
 
   app.get('/health', async (c) => {
     if (c.req.query('db') === undefined || !deps.pingDatabase) return c.json({ ok: true });
-    const database = await deps.pingDatabase().catch(() => false);
+    const database = await deps.pingDatabase().catch((err: unknown) => {
+      console.error('[health] database ping failed', { message: err instanceof Error ? err.message : 'unknown', code: (err as { code?: string }).code });
+      return false;
+    });
     return c.json({ ok: database, database }, database ? 200 : 503);
   });
 
@@ -187,7 +190,7 @@ export function createApp(deps: Deps) {
     if (err instanceof RepoError && err.code === PG_UNIQUE_VIOLATION) {
       return c.json({ error: 'That record already exists.' }, 409);
     }
-    console.error('[api] unhandled error', { path: c.req.path, method: c.req.method, name: err.name, message: err.message });
+    console.error('[api] unhandled error', { path: c.req.path, method: c.req.method, name: err.name, message: err.message, code: err instanceof RepoError ? err.code : undefined });
     return c.json({ error: 'Something went wrong on our side. Try again.' }, 500);
   });
 

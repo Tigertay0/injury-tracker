@@ -39,8 +39,14 @@ function usePlayerDataState() {
     () => ({
       reload: load,
       async createProfile(input: ProfileInput & { consent: true; ageConfirmed: true }) {
-        const profile = await api.post<Profile>('/me', input);
-        update((d) => ({ ...d, profile }));
+        try {
+          const profile = await api.post<Profile>('/me', input);
+          update((d) => ({ ...d, profile }));
+        } catch (err) {
+          // The profile already exists (a lost response, double tap or second tab): pick it up
+          if (err instanceof ApiError && err.status === 409) return load();
+          throw err;
+        }
       },
       async updateProfile(input: ProfileInput) {
         const profile = await api.patch<Profile>('/me', input);

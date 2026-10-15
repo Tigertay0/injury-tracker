@@ -98,11 +98,14 @@ const typeParsers = {
     oid === DATE_OID ? (value: string) => value : pg.types.getTypeParser(oid, format ?? 'text'),
 } as unknown as pg.CustomTypesConfig;
 
+// A stalled connection must fail (and be logged) rather than hang the request
+const TIMEOUTS = { connectionTimeoutMillis: 5000, query_timeout: 10000 };
+
 type Query = (text: string, values?: unknown[]) => Promise<Row[]>;
 
 /** Runs `fn` in a transaction as pitchsafe_app with app.user_id set to the player. */
 export async function asPlayer<T>(connectionString: string, userId: string, fn: (q: Query) => Promise<T>): Promise<T> {
-  const client = new pg.Client({ connectionString, types: typeParsers });
+  const client = new pg.Client({ connectionString, types: typeParsers, ...TIMEOUTS });
   try {
     await client.connect();
   } catch (err) {
@@ -132,7 +135,7 @@ export async function asPlayer<T>(connectionString: string, userId: string, fn: 
  * migration 0002: if that has not run, the health check fails instead of the drills feature.
  */
 export async function pingDatabase(connectionString: string): Promise<boolean> {
-  const client = new pg.Client({ connectionString });
+  const client = new pg.Client({ connectionString, ...TIMEOUTS });
   try {
     await client.connect();
     const { rows } = await client.query("select to_regclass('public.session_drills') is not null as ok");
