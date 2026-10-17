@@ -52,7 +52,7 @@ export function buildSystemPrompt(): string {
     '- strength: share of the drill time spent in strength or injury-prevention work, for example Nordic curls, 0 to 1.',
     '',
     'The shares describe exposure and need not add up to 1: a small-sided game is both change-of-direction and contact heavy. They are shares of the whole drill time, rests and recoveries included, so a drill with long rests has small shares.',
-    'Also give a one-sentence `reason` for the values you chose.',
+    'Also give a one-sentence `reason` for the values you chose, in 150 characters or fewer.',
     '',
     'These built-in drills show the scale. Keep your values consistent with them.',
     'name | category | intensity sprint hsr cod jump contact strength',
@@ -97,7 +97,12 @@ const INVISIBLE_CHARS = /\p{Cf}/gu;
 function cleanReason(value: unknown): string {
   if (typeof value !== 'string') return '';
   const text = value.replace(CONTROL_CHARS, ' ').replace(INVISIBLE_CHARS, '').replace(/\s+/g, ' ').trim();
-  return [...text].slice(0, REASON_MAX_CHARS).join('').trimEnd();
+  const chars = [...text];
+  if (chars.length <= REASON_MAX_CHARS) return text;
+  // Too long: end at the last whole word that fits, then an ellipsis, never mid-word
+  const head = chars.slice(0, REASON_MAX_CHARS - 1).join('');
+  const lastSpace = head.lastIndexOf(' ');
+  return `${(lastSpace > 0 ? head.slice(0, lastSpace) : head).replace(/[\s,;:.]+$/, '')}…`;
 }
 
 const isCategory = (value: unknown): value is DrillCategory => DRILL_CATEGORIES.some((c) => c === value);

@@ -114,6 +114,19 @@ describe('parseEstimate', () => {
     expect(reason.startsWith('Line one')).toBe(true);
   });
 
+  it('ends a too-long reason at a whole word with an ellipsis', () => {
+    const long = 'A small-sided pressing game with frequent bursts and duels '.repeat(5).trim();
+    const { reason } = parseEstimate(ok({ ...valid, reason: long }));
+    expect([...reason].length).toBeLessThanOrEqual(200);
+    expect(reason.endsWith('…')).toBe(true);
+    const lastWord = reason.slice(0, -1).split(' ').pop()!;
+    expect(long.split(' ')).toContain(lastWord);
+  });
+
+  it('keeps a short reason unchanged', () => {
+    expect(parseEstimate(ok({ ...valid, reason: 'Tight grid, many turns.' })).reason).toBe('Tight grid, many turns.');
+  });
+
   it('rejects a message with no text block', () => {
     const noText = { ...ok(valid), content: [{ type: 'thinking', thinking: '', signature: 's' }] } as unknown as Anthropic.Message;
     expect(() => parseEstimate(noText)).toThrow(DrillEstimateError);
