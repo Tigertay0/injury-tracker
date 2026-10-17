@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DrillEstimate } from '../shared/custom-drills';
 import { ValidationError } from '../shared/validation';
-import { blankProfile, draftToValues, firstInvalidShare, matchesEstimate, profileFromEstimate, SHARES_ERROR } from '../src/lib/custom-drill-form';
+import { blankProfile, draftToValues, firstInvalidShare, markEstimateStale, matchesEstimate, profileFromEstimate, SHARES_ERROR } from '../src/lib/custom-drill-form';
 
 const ESTIMATE: DrillEstimate = {
   category: 'small_sided',
@@ -140,5 +140,71 @@ describe('matchesEstimate', () => {
     for (const draft of [base, { ...base, intensity: 2 }, { ...base, shares: { ...base.shares, jump: '4' } }]) {
       expect(draftToValues(draft).aiEstimated).toBe(matchesEstimate(draft));
     }
+  });
+});
+
+describe('markEstimateStale', () => {
+  it('starts fresh: an estimate that just arrived is not stale', () => {
+    expect(profileFromEstimate(ESTIMATE).stale).toBe(false);
+    expect(blankProfile().stale).toBe(false);
+  });
+
+  it('marks an estimate stale and keeps the values the player sees', () => {
+    const fresh = profileFromEstimate(ESTIMATE);
+    const stale = markEstimateStale(fresh);
+    expect(stale.stale).toBe(true);
+    expect(stale.estimate).toBe(fresh.estimate);
+    expect(stale.category).toBe(fresh.category);
+    expect(stale.intensity).toBe(fresh.intensity);
+    expect(stale.shares).toEqual(fresh.shares);
+  });
+
+  it('returns a new draft and leaves the original alone', () => {
+    const fresh = profileFromEstimate(ESTIMATE);
+    const stale = markEstimateStale(fresh);
+    expect(stale).not.toBe(fresh);
+    expect(fresh.stale).toBe(false);
+  });
+
+  it('stops matching the estimate, even though every value is still the AI\'s', () => {
+    const fresh = profileFromEstimate(ESTIMATE);
+    expect(matchesEstimate(fresh)).toBe(true);
+    expect(matchesEstimate(markEstimateStale(fresh))).toBe(false);
+  });
+
+  it('saves aiEstimated as false once the text changed', () => {
+    const fresh = profileFromEstimate(ESTIMATE);
+    expect(draftToValues(fresh).aiEstimated).toBe(true);
+    const values = draftToValues(markEstimateStale(fresh));
+    expect(values.aiEstimated).toBe(false);
+    expect(values.profile).toEqual(ESTIMATE.profile);
+    expect(values.category).toBe('small_sided');
+  });
+
+  it('stays stale when the values are edited and then changed back', () => {
+    const fresh = profileFromEstimate(ESTIMATE);
+    const edited = { ...markEstimateStale(fresh), intensity: 3, shares: { ...fresh.shares, cod: '41' } };
+    const restored = { ...edited, intensity: fresh.intensity, shares: { ...fresh.shares } };
+    expect(matchesEstimate(restored)).toBe(false);
+    expect(restored.stale).toBe(true);
+  });
+
+  it('is already stale after the first edit, so more edits change nothing', () => {
+    const stale = markEstimateStale(profileFromEstimate(ESTIMATE));
+    expect(markEstimateStale(stale)).toBe(stale);
+  });
+
+  it('does nothing without an estimate, so typed values are never marked', () => {
+    const manual = { ...blankProfile(), category: 'technical' as const };
+    expect(markEstimateStale(manual)).toBe(manual);
+    expect(markEstimateStale(manual).stale).toBe(false);
+  });
+
+  it('a fresh estimate after a stale one starts clean', () => {
+    const stale = markEstimateStale(profileFromEstimate(ESTIMATE));
+    const again = profileFromEstimate({ ...ESTIMATE, category: 'speed' });
+    expect(stale.stale).toBe(true);
+    expect(again.stale).toBe(false);
+    expect(matchesEstimate(again)).toBe(true);
   });
 });

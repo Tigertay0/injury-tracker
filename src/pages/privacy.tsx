@@ -77,10 +77,10 @@ export default function Privacy() {
         <p className="mt-3">
           Your data stays until you delete it. Deleting your account in Settings removes your profile, sessions, check-ins, injuries, custom drills and login straight away. Copies kept in the database's restore history expire within 7 days.
         </p>
-        <p className="mt-3">When you remove a custom drill, it is archived so past sessions that used it keep its name and load. Archived drills are deleted with your account.</p>
         <p className="mt-3">
           If you have PitchSafe Plus, cancel it in Settings before you delete your account. Payment records are kept by Stripe and Clerk Billing under their own policies.
         </p>
+        <p className="mt-3">When you remove a custom drill, it is archived so past sessions that used it keep its name and load. Archived drills are deleted with your account.</p>
       </section>
 
       <section>
@@ -88,7 +88,7 @@ export default function Privacy() {
         <ul>
           <li>See and download your data, including your custom drills, from Settings, as a JSON file.</li>
           <li>Correct your data by editing or deleting entries. Custom drills can't be edited; removing one archives it until you delete your account.</li>
-          <li>Delete your PitchSafe data and your login from Settings. If you have PitchSafe Plus, cancel it in Settings first. Payment records are kept by Stripe and Clerk Billing under their own policies.</li>
+          <li>Delete your PitchSafe data and your login from Settings.</li>
           <li>Withdraw consent at any time by deleting your account.</li>
         </ul>
       </section>

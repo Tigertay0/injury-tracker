@@ -127,7 +127,7 @@ function DeleteAccount() {
       <AlertDialogContent className="app-scope">
         <AlertDialogTitle>Delete everything?</AlertDialogTitle>
         <AlertDialogDescription>
-          This permanently deletes your profile, sessions, check-ins, injuries and your login. It cannot be undone. Download your data first if you want a copy.
+          This permanently deletes your profile, sessions, check-ins, injuries, custom drills and your login. It cannot be undone. Download your data first if you want a copy. If you have PitchSafe Plus, cancel it first in Settings.
         </AlertDialogDescription>
         <label htmlFor="confirm-delete" className="mt-5 block text-small font-semibold text-ink">
           Type <span className="font-mono">delete</span> to confirm
@@ -286,7 +286,7 @@ export default function Settings() {
 
         {!isDemo && plusAvailable && <PlusCard plus={plus} />}
 
-        <Card title="Your data" description="Download a copy of everything PitchSafe stores about you, or delete it all.">
+        <Card title="Your data" description="Download a copy of your PitchSafe data, or delete it.">
           <div className="flex flex-wrap gap-3">
             <Button
               variant="secondary"

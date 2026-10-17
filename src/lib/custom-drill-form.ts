@@ -15,6 +15,11 @@ export interface ProfileDraft {
   shares: ShareInputs;
   /** What the AI suggested, when the player asked for an estimate. Decides `aiEstimated` and shows the reason. */
   estimate: DrillEstimate | null;
+  /**
+   * True once the player edits the drill's name or description after the estimate arrived: the
+   * estimate was made for different text. Putting the text back does not undo it; only a new estimate does.
+   */
+  stale: boolean;
 }
 
 export const DEFAULT_INTENSITY = 5;
@@ -35,7 +40,7 @@ const mapShares = (fn: (type: MovementType) => string): ShareInputs => ({
 
 /** The editor for a player who fills in the values themselves. */
 export function blankProfile(): ProfileDraft {
-  return { category: '', intensity: DEFAULT_INTENSITY, shares: mapShares(() => '0'), estimate: null };
+  return { category: '', intensity: DEFAULT_INTENSITY, shares: mapShares(() => '0'), estimate: null, stale: false };
 }
 
 /** The editor filled in from an AI estimate. */
@@ -45,7 +50,13 @@ export function profileFromEstimate(estimate: DrillEstimate): ProfileDraft {
     intensity: estimate.profile.intensity,
     shares: mapShares((type) => toPercentText(estimate.profile[type])),
     estimate,
+    stale: false,
   };
+}
+
+/** The draft after the name or description changed: the estimate stays on screen as a starting point, but no longer counts as the AI's. Drafts without an estimate are returned as they are. */
+export function markEstimateStale(draft: ProfileDraft): ProfileDraft {
+  return draft.estimate === null || draft.stale ? draft : { ...draft, stale: true };
 }
 
 export function isWholePercent(text: string): boolean {
@@ -81,12 +92,13 @@ function toProfile(draft: ProfileDraft): MovementProfile | null {
 
 /**
  * Whether the draft still holds exactly what the AI suggested: the same category, intensity and all
- * six shares. It is the one rule behind both the editor's "Estimated by AI" tag and the saved
- * `aiEstimated` flag. False without an estimate, and while a box is empty or not a whole percent.
+ * six shares, for the text it was asked about. It is the one rule behind both the editor's
+ * "Estimated by AI" tag and the saved `aiEstimated` flag. False without an estimate, once the text
+ * changed after it, and while a box is empty or not a whole percent.
  */
 export function matchesEstimate(draft: ProfileDraft): boolean {
-  const { estimate, category } = draft;
-  if (estimate === null || category === '') return false;
+  const { estimate, category, stale } = draft;
+  if (estimate === null || stale || category === '') return false;
   const profile = toProfile(draft);
   return profile !== null && category === estimate.category && profile.intensity === estimate.profile.intensity && MOVEMENT_TYPES.every((type) => profile[type] === estimate.profile[type]);
 }

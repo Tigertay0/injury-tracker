@@ -13,7 +13,7 @@ import { Field, FieldSet, inputClass } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ApiError, errorMessage } from '@/lib/api';
-import { blankProfile, draftToValues, firstInvalidShare, isWholePercent, matchesEstimate, profileFromEstimate, type ProfileDraft } from '@/lib/custom-drill-form';
+import { blankProfile, draftToValues, firstInvalidShare, isWholePercent, markEstimateStale, matchesEstimate, profileFromEstimate, type ProfileDraft } from '@/lib/custom-drill-form';
 import { useAccount, useAppBase, useOverview, usePlayerData } from '@/lib/player-data';
 import { cn } from '@/lib/utils';
 import { PageHeader } from './page-header';
@@ -21,6 +21,7 @@ import { PageHeader } from './page-header';
 const NO_DRILLS: readonly CustomDrill[] = [];
 const CARD = 'rounded-[var(--radius-panel)] border border-line bg-surface';
 const ALERT = 'rounded-[var(--radius-control)] bg-risk-very-high-soft px-4 py-3 text-small font-medium text-risk-very-high';
+const TEXT_CHANGED_NOTE = 'Your text changed after the estimate. Estimate again to update it.';
 const SHARE_INPUT = 'tnum h-11 pr-8 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
 
 type ErrorField = 'name' | 'description' | 'category' | 'shares' | 'form';
@@ -54,7 +55,7 @@ interface ProfileEditorProps {
 function ProfileEditor({ draft, onChange, errors, attempt, categoryRef, shareRefs }: ProfileEditorProps) {
   const id = useId();
   const { estimate } = draft;
-  // The AI tag and its reason describe the model's values, so they show only while the values are still exactly those
+  // The AI tag and its reason describe the model's values for the text it was given, so they show only while the values are still exactly those and the text is unchanged
   const asEstimated = matchesEstimate(draft);
   const estimateNotes = !estimate ? undefined : asEstimated ? `${id}-reason ${id}-check` : `${id}-changed`;
 
@@ -80,7 +81,7 @@ function ProfileEditor({ draft, onChange, errors, attempt, categoryRef, shareRef
             </>
           ) : (
             <p id={`${id}-changed`} className="text-label text-ink-2">
-              You changed the AI's values.
+              {draft.stale ? TEXT_CHANGED_NOTE : "You changed the AI's values."}
             </p>
           )}
         </div>
@@ -181,10 +182,15 @@ function LimitCard() {
 
 const PENDING_BUTTON = 'aria-disabled:cursor-progress aria-disabled:opacity-55';
 
-/** What happened to the last estimate, shown in the status line: it arrived, or it was dropped because the text changed. */
-type EstimateNote = 'ready' | 'stale';
+/**
+ * What happened to the last estimate, shown in the status line: it arrived, the text changed after it
+ * arrived (the editor shows that note itself, so the status line only announces it), or the text
+ * changed before it arrived and it was dropped.
+ */
+type EstimateNote = 'ready' | 'edited' | 'stale';
 const ESTIMATE_NOTE_TEXT: Record<EstimateNote, string> = {
   ready: 'Estimate ready. Check the values above.',
+  edited: TEXT_CHANGED_NOTE,
   stale: 'Your text changed, so the estimate was not used. Estimate again.',
 };
 
@@ -230,8 +236,8 @@ function FormActions({ stage, estimating, saving, estimateNote, estimateError, o
 
       <p id={disclosureId} className="-mt-1 text-label text-ink-2">
         Estimating sends the drill's name and description to Anthropic.{' '}
-        <Link to="/privacy" className="font-semibold text-accent-ink underline underline-offset-2">
-          How we use it
+        <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink underline underline-offset-2">
+          How we use it<span className="sr-only"> (opens in a new tab)</span>
         </Link>
       </p>
 
@@ -292,6 +298,13 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
       const bad = firstInvalidShare(shares);
       if (bad) shareRefs.current.get(bad)?.focus();
     }
+  }
+
+  // Once an estimate is in, editing the name or description means it was made for different text
+  function textEdited() {
+    if (!draft || draft.estimate === null || draft.stale) return;
+    setDraft(markEstimateStale(draft));
+    setEstimateNote('edited');
   }
 
   function reset() {
@@ -397,6 +410,7 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
               setName(e.target.value);
               currentText.current = { ...currentText.current, name: e.target.value };
               clearError('name');
+              textEdited();
             }}
           />
         )}
@@ -414,6 +428,7 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
               setDescription(e.target.value);
               currentText.current = { ...currentText.current, description: e.target.value };
               clearError('description');
+              textEdited();
             }}
           />
         )}
