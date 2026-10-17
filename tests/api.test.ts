@@ -119,8 +119,8 @@ let store: ReturnType<typeof memoryStore>;
 let deps: Deps;
 let app: ReturnType<typeof createApp>;
 
-function call(method: string, path: string, { token = 'token-a', body }: { token?: string | null; body?: unknown } = {}) {
-  const headers: Record<string, string> = {};
+function call(method: string, path: string, { token = 'token-a', body, headers: extra }: { token?: string | null; body?: unknown; headers?: Record<string, string> } = {}) {
+  const headers: Record<string, string> = { ...extra };
   if (token) headers.authorization = `Bearer ${token}`;
   if (body !== undefined) headers['content-type'] = 'application/json';
   return app.request(`/api${path}`, { method, headers, body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body) });
@@ -131,6 +131,8 @@ async function onboard(token = 'token-a') {
 }
 
 beforeEach(() => {
+  // Some tests lapse the Plus player; start each one with Plus active again
+  TOKENS['token-plus'].plus = true;
   store = memoryStore();
   deps = {
     verifyToken: async (t) => TOKENS[t] ?? null,
@@ -368,6 +370,143 @@ describe('injuries', () => {
     expect((await call('PATCH', `/injuries/${created.id}`, { body: { returnDate: '2026-09-01' } })).status).toBe(400);
     const ok = await call('PATCH', `/injuries/${created.id}`, { body: { returnDate: '2026-10-05' } });
     expect(await ok.json()).toMatchObject({ returnDate: '2026-10-05' });
+  });
+});
+
+describe('custom drills', () => {
+  const drill = {
+    name: 'Grid 4v4',
+    description: 'two-touch',
+    category: 'small_sided',
+    profile: { intensity: 7, sprint: 0.05, hsr: 0.1, cod: 0.4, jump: 0, contact: 0.2, strength: 0 },
+    aiEstimated: false,
+  };
+  const PLUS_REQUIRED = { error: 'Custom drills need PitchSafe Plus.', code: 'plus_required' };
+  const session = (drillId: string) => ({ date: TODAY, type: 'training', duration: 90, rpe: 6, drills: [{ drillId, minutes: 15 }] });
+  const create = async (token = 'token-plus') => (await call('POST', '/drills/custom', { token, body: drill })).json();
+
+  it('lets Plus players create custom drills and blocks free players', async () => {
+    await onboard('token-plus');
+    await onboard('token-a');
+    const created = await call('POST', '/drills/custom', { token: 'token-plus', body: drill });
+    expect(created.status).toBe(201);
+    expect(await created.json()).toMatchObject({ ...drill, archived: false });
+    const free = await call('POST', '/drills/custom', { token: 'token-a', body: drill });
+    expect(free.status).toBe(403);
+    expect(await free.json()).toEqual(PLUS_REQUIRED);
+    const overview = await (await call('GET', '/overview', { token: 'token-plus' })).json();
+    expect(overview.customDrills).toHaveLength(1);
+  });
+
+  it('answers 403 "not available yet" when Plus is switched off', async () => {
+    await onboard('token-plus');
+    app = createApp({ ...deps, plusEnabled: false });
+    const res = await call('POST', '/drills/custom', { token: 'token-plus', body: drill });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'PitchSafe Plus is not available yet.' });
+  });
+
+  it('checks Plus before the body, so a free player with a bad body gets 403', async () => {
+    await onboard('token-a');
+    const res = await call('POST', '/drills/custom', { token: 'token-a', body: { name: '' } });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual(PLUS_REQUIRED);
+  });
+
+  it('validates the drill for Plus players with a field-level 400', async () => {
+    await onboard('token-plus');
+    const res = await call('POST', '/drills/custom', { token: 'token-plus', body: { ...drill, name: '  ' } });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: 'Give the drill a name.', field: 'name' });
+    expect((await call('POST', '/drills/custom', { token: 'token-plus', body: '{not json' })).status).toBe(400);
+  });
+
+  it('asks a Plus player without a profile to finish setting up', async () => {
+    const res = await call('POST', '/drills/custom', { token: 'token-plus', body: drill });
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/profile/i);
+  });
+
+  it("keeps a lapsed player's drills working", async () => {
+    await onboard('token-plus');
+    const created = await create();
+    TOKENS['token-plus'].plus = false;
+
+    const logged = await call('POST', '/sessions', { token: 'token-plus', body: session(`custom:${created.id}`) });
+    expect(logged.status).toBe(201);
+    const overview = await (await call('GET', '/overview', { token: 'token-plus' })).json();
+    expect(overview.account).toEqual({ plusAvailable: true, plus: false });
+    expect(overview.customDrills.map((d: CustomDrill) => d.id)).toEqual([created.id]);
+    expect(overview.sessions[0].drills).toEqual([{ drillId: `custom:${created.id}`, minutes: 15 }]);
+
+    const again = await call('POST', '/drills/custom', { token: 'token-plus', body: drill });
+    expect(again.status).toBe(403);
+    expect(await again.json()).toEqual(PLUS_REQUIRED);
+  });
+
+  it('rejects unknown custom drills on sessions with 400', async () => {
+    await onboard('token-plus');
+    const res = await call('POST', '/sessions', { token: 'token-plus', body: session('custom:00000000-0000-4000-8000-0000000000ff') });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'Choose drills from the list.', field: 'drills' });
+    expect((await (await call('GET', '/overview', { token: 'token-plus' })).json()).sessions).toEqual([]);
+  });
+
+  it("rejects another player's custom drill on sessions", async () => {
+    await onboard('token-plus');
+    await onboard('token-a');
+    const created = await create();
+    const res = await call('POST', '/sessions', { token: 'token-a', body: session(`custom:${created.id}`) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).field).toBe('drills');
+  });
+
+  it('archives with DELETE even without Plus, then refuses it on new sessions', async () => {
+    await onboard('token-plus');
+    const created = await create();
+    TOKENS['token-plus'].plus = false;
+    const res = await call('DELETE', `/drills/custom/${created.id}`, { token: 'token-plus' });
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe('');
+    const overview = await (await call('GET', '/overview', { token: 'token-plus' })).json();
+    expect(overview.customDrills[0]).toMatchObject({ id: created.id, archived: true });
+    const logged = await call('POST', '/sessions', { token: 'token-plus', body: session(`custom:${created.id}`) });
+    expect(logged.status).toBe(400);
+  });
+
+  it('answers 404 for unknown drills and 400 for ids that are not UUIDs', async () => {
+    await onboard('token-plus');
+    const unknown = await call('DELETE', '/drills/custom/00000000-0000-4000-8000-000000000999', { token: 'token-plus' });
+    expect(unknown.status).toBe(404);
+    expect(await unknown.json()).toEqual({ error: 'Drill not found.' });
+    expect((await call('DELETE', '/drills/custom/..%2Fprofiles', { token: 'token-plus' })).status).toBe(400);
+  });
+
+  it("cannot archive another player's drill", async () => {
+    await onboard('token-plus');
+    await onboard('token-a');
+    const created = await create();
+    expect((await call('DELETE', `/drills/custom/${created.id}`, { token: 'token-a' })).status).toBe(404);
+    expect((await call('DELETE', `/drills/custom/${created.id}`, { token: 'token-plus' })).status).toBe(204);
+  });
+
+  it('maps the 100-drill limit to 409', async () => {
+    await onboard('token-plus');
+    for (let i = 0; i < MAX_CUSTOM_DRILLS; i++) {
+      expect((await call('POST', '/drills/custom', { token: 'token-plus', body: drill })).status).toBe(201);
+    }
+    const res = await call('POST', '/drills/custom', { token: 'token-plus', body: drill });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'You can keep up to 100 custom drills. Remove one first.' });
+  });
+
+  it('never lets a client decide whether it is Plus', async () => {
+    await onboard('token-a');
+    const overview = await call('GET', '/overview?plus=1', { token: 'token-a', headers: { 'X-Plus': 'true' } });
+    expect((await overview.json()).account.plus).toBe(false);
+    const res = await call('POST', '/drills/custom?plus=1', { token: 'token-a', headers: { 'X-Plus': 'true' }, body: { ...drill, plus: true } });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual(PLUS_REQUIRED);
   });
 });
 

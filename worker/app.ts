@@ -2,12 +2,13 @@
 import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
-import type { DrillEstimate } from '../shared/custom-drills';
+import { MAX_CUSTOM_DRILLS, type DrillEstimate } from '../shared/custom-drills';
 import { utcToday } from '../shared/dates';
 import {
   ValidationError,
   type EstimateRequest,
   requireId,
+  validateCustomDrill,
   validateEquipment,
   validateInjury,
   validateInjuryReturn,
@@ -15,7 +16,7 @@ import {
   validateRecovery,
   validateSession,
 } from '../shared/validation';
-import { NO_ROWS, RepoError, type PlayerRepo } from './repo';
+import { CUSTOM_DRILL_LIMIT, NO_ROWS, RepoError, UNKNOWN_DRILL, type PlayerRepo } from './repo';
 
 export interface Deps {
   /** Returns the Clerk user id and whether the token carries PitchSafe Plus, or null for an invalid token. */
@@ -96,7 +97,8 @@ export function createApp(deps: Deps) {
       return c.json({ error: 'Too many requests. Wait a minute and try again.' }, 429, { 'Retry-After': '60' });
     }
     c.set('userId', userId);
-    c.set('plus', plus);
+    // Only the verified token and the sale switch decide this; nothing from the request does
+    c.set('plus', plusEnabled && plus);
     c.set('repo', deps.repoFor(token, userId));
     c.header('Cache-Control', 'no-store');
     await next();
@@ -165,6 +167,19 @@ export function createApp(deps: Deps) {
     return removed ? c.body(null, 204) : c.json({ error: 'Session not found.' }, 404);
   });
 
+  // --- Custom drills (creating needs Plus; removing your own data never does) ---
+
+  // Plus first, then validation, so a free player always gets the upgrade prompt
+  app.post('/drills/custom', requirePlus(plusEnabled), async (c) => {
+    const input = validateCustomDrill(await readJson(c));
+    return c.json(await c.var.repo.addCustomDrill(input), 201);
+  });
+
+  app.delete('/drills/custom/:id', async (c) => {
+    const archived = await c.var.repo.archiveCustomDrill(requireId(c.req.param('id')));
+    return archived ? c.body(null, 204) : c.json({ error: 'Drill not found.' }, 404);
+  });
+
   // --- Recovery check-ins (one per week; saving again replaces it) ---
 
   app.put('/recovery', async (c) => {
@@ -213,6 +228,12 @@ export function createApp(deps: Deps) {
     }
     if (err instanceof RepoError && err.code === PG_UNIQUE_VIOLATION) {
       return c.json({ error: 'That record already exists.' }, 409);
+    }
+    if (err instanceof RepoError && err.code === UNKNOWN_DRILL) {
+      return c.json({ error: 'Choose drills from the list.', field: 'drills' }, 400);
+    }
+    if (err instanceof RepoError && err.code === CUSTOM_DRILL_LIMIT) {
+      return c.json({ error: `You can keep up to ${MAX_CUSTOM_DRILLS} custom drills. Remove one first.` }, 409);
     }
     console.error('[api] unhandled error', { path: c.req.path, method: c.req.method, name: err.name, message: err.message, code: err instanceof RepoError ? err.code : undefined });
     return c.json({ error: 'Something went wrong on our side. Try again.' }, 500);
