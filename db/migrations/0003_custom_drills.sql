@@ -85,11 +85,14 @@ alter table public.session_drills
   add constraint session_drills_one_kind check ((drill_id is null) <> (custom_drill_id is null));
 
 -- The composite key ties the drill to the same player as the row, so a player can never log
--- someone else's drill. It stays NO ACTION (not RESTRICT) on purpose: deleting a profile
--- then cascades through custom_drills and session_drills in one statement without tripping it.
+-- someone else's drill. It cascades on delete on purpose: the app role cannot delete custom
+-- drills, so they only ever go with their profile. Deleting a profile cascades through
+-- custom_drills and session_drills in the same statement, and a plain NO ACTION check could
+-- fail there depending on which cascade Postgres fires first (account deletion must not
+-- depend on that order).
 alter table public.session_drills
   add constraint session_drills_custom_fk foreign key (custom_drill_id, user_id)
-  references public.custom_drills (id, user_id);
+  references public.custom_drills (id, user_id) on delete cascade;
 
 alter table public.session_drills
   add constraint session_drills_custom_once unique (session_id, custom_drill_id);
