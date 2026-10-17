@@ -23,12 +23,14 @@
     ]
   },
   "observability": { "enabled": true },
-  // Public values only. CLERK_SECRET_KEY is a secret: `wrangler secret put CLERK_SECRET_KEY`
-  // (and `.dev.vars` locally, which git ignores).
+  // Public values only. CLERK_SECRET_KEY and ANTHROPIC_API_KEY are secrets:
+  // `wrangler secret put CLERK_SECRET_KEY` (and `.dev.vars` locally, which git ignores).
   "vars": {
     "CLERK_PUBLISHABLE_KEY": "pk_test_c3VwZXJiLXNwYW5pZWwtODEwLmNsZXJrLmFjY291bnRzLmRldiQ",
     "ALLOWED_ORIGINS": "https://pitchsafe.us,https://pitchsafe.tiger-tayo.workers.dev",
-    "SITE_HOST": "pitchsafe.us"
+    "SITE_HOST": "pitchsafe.us",
+    // PitchSafe Plus. Switch to "true" only after Clerk production and Stripe are live.
+    "PLUS_ENABLED": "false"
   },
   // Custom domains on the pitchsafe.us zone (same Cloudflare account). The workers.dev
   // address stays on as a fallback; it must be enabled explicitly once routes exist.
@@ -43,6 +45,7 @@
   "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "bc2ce410b3324dd68df0b915c86bbe44" }],
   "ratelimits": [
     { "name": "READ_LIMITER", "namespace_id": "4101", "simple": { "limit": 120, "period": 60 } },
-    { "name": "WRITE_LIMITER", "namespace_id": "4102", "simple": { "limit": 30, "period": 60 } }
+    { "name": "WRITE_LIMITER", "namespace_id": "4102", "simple": { "limit": 30, "period": 60 } },
+    { "name": "AI_LIMITER", "namespace_id": "4103", "simple": { "limit": 5, "period": 60 } }
   ]
 }

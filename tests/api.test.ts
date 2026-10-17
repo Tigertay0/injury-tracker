@@ -1,12 +1,17 @@
+import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createApp, type Deps } from '../worker/app';
+import { createApp, requirePlus, type Deps } from '../worker/app';
 import { CUSTOM_DRILL_LIMIT, NO_ROWS, RepoError, UNKNOWN_DRILL, type Overview, type PlayerRepo } from '../worker/repo';
 import { recoveryScore } from '../shared/calculations';
 import { MAX_CUSTOM_DRILLS, customDrillIdFromKey } from '../shared/custom-drills';
 import type { CustomDrill, Injury, Profile, RecoveryLog, TrainingSession } from '../shared/types';
 
 const TODAY = '2026-10-12';
-const TOKENS: Record<string, string> = { 'token-a': 'user_a', 'token-b': 'user_b' };
+const TOKENS: Record<string, { userId: string; plus: boolean }> = {
+  'token-a': { userId: 'user_a', plus: false },
+  'token-b': { userId: 'user_b', plus: false },
+  'token-plus': { userId: 'user_plus', plus: true },
+};
 
 // In-memory stand-in for Supabase, keyed by user like RLS would be
 function memoryStore() {
@@ -133,6 +138,7 @@ beforeEach(() => {
     allow: vi.fn(async () => true),
     deleteClerkUser: vi.fn(async () => undefined),
     today: () => TODAY,
+    plusEnabled: true,
   };
   app = createApp(deps);
 });
@@ -151,6 +157,68 @@ describe('auth', () => {
   it('marks API responses as not cacheable', async () => {
     const res = await call('GET', '/overview');
     expect(res.headers.get('cache-control')).toBe('no-store');
+  });
+});
+
+describe('account', () => {
+  it('reports a free player as not on Plus', async () => {
+    const body = await (await call('GET', '/overview')).json();
+    expect(body.account).toEqual({ plusAvailable: true, plus: false });
+  });
+
+  it('reports a Plus player from the session token', async () => {
+    const body = await (await call('GET', '/overview', { token: 'token-plus' })).json();
+    expect(body.account).toEqual({ plusAvailable: true, plus: true });
+  });
+
+  it('keeps the rest of the overview intact', async () => {
+    const body = await (await call('GET', '/overview', { token: 'token-plus' })).json();
+    expect(body).toMatchObject({ profile: null, sessions: [], recovery: [], injuries: [], customDrills: [] });
+  });
+
+  it('hides Plus from everyone while the switch is off', async () => {
+    app = createApp({ ...deps, plusEnabled: false });
+    const body = await (await call('GET', '/overview', { token: 'token-plus' })).json();
+    expect(body.account).toEqual({ plusAvailable: false, plus: false });
+  });
+
+  it('treats a missing switch as off', async () => {
+    const { plusEnabled: _omitted, ...withoutSwitch } = deps;
+    app = createApp(withoutSwitch);
+    const body = await (await call('GET', '/overview', { token: 'token-plus' })).json();
+    expect(body.account).toEqual({ plusAvailable: false, plus: false });
+  });
+});
+
+// requirePlus guards the paid routes added later; here it runs on a throwaway app, after a
+// stand-in for the auth middleware that sets the flag the real one takes from the token
+describe('requirePlus', () => {
+  const guarded = (plusEnabled: boolean, plus: boolean) => {
+    const paid = new Hono<{ Variables: { plus: boolean } }>();
+    paid.use('*', async (c, next) => {
+      c.set('plus', plus);
+      await next();
+    });
+    paid.get('/paid', requirePlus(plusEnabled), (c) => c.json({ ok: true }));
+    return paid;
+  };
+
+  it('lets a Plus player through when Plus is on', async () => {
+    const res = await guarded(true, true).request('/paid');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+
+  it('asks a free player to upgrade', async () => {
+    const res = await guarded(true, false).request('/paid');
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'Custom drills need PitchSafe Plus.', code: 'plus_required' });
+  });
+
+  it('says Plus is not available yet while the switch is off, even for a Plus token', async () => {
+    const res = await guarded(false, true).request('/paid');
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'PitchSafe Plus is not available yet.' });
   });
 });
 

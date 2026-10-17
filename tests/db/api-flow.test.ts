@@ -20,7 +20,7 @@ const today = utcToday();
 const deletedClerkUsers: string[] = [];
 
 const app = createApp({
-  verifyToken: async (token) => (token.startsWith('t-') ? token.slice(2) : null),
+  verifyToken: async (token) => (token.startsWith('t-') ? { userId: token.slice(2), plus: false } : null),
   repoFor: (_token, userId) => postgresRepo(url!, userId),
   allow: async () => true,
   deleteClerkUser: async (userId) => {

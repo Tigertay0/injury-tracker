@@ -1,10 +1,12 @@
 // PitchSafe API. Every route except /api/health needs a valid Clerk session token.
-import { Hono, type Context } from 'hono';
+import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
+import type { DrillEstimate } from '../shared/custom-drills';
 import { utcToday } from '../shared/dates';
 import {
   ValidationError,
+  type EstimateRequest,
   requireId,
   validateEquipment,
   validateInjury,
@@ -16,18 +18,22 @@ import {
 import { NO_ROWS, RepoError, type PlayerRepo } from './repo';
 
 export interface Deps {
-  /** Returns the Clerk user id for a valid session token, or null. */
-  verifyToken(token: string): Promise<string | null>;
+  /** Returns the Clerk user id and whether the token carries PitchSafe Plus, or null for an invalid token. */
+  verifyToken(token: string): Promise<{ userId: string; plus: boolean } | null>;
   repoFor(token: string, userId: string): PlayerRepo;
   /** True when the caller is still under the limit for this bucket. */
-  allow(bucket: 'read' | 'write', userId: string): Promise<boolean>;
+  allow(bucket: 'read' | 'write' | 'ai', userId: string): Promise<boolean>;
   deleteClerkUser(userId: string): Promise<void>;
   /** Cheap database round trip for monitoring, which also confirms the schema is migrated; no player data involved. */
   pingDatabase?(): Promise<boolean>;
   today?(): string;
+  /** Whether PitchSafe Plus is on sale yet. Off by default, so nobody is treated as a Plus player. */
+  plusEnabled?: boolean;
+  /** AI drill estimate; the route that calls it is behind Plus. */
+  estimateDrill?(input: EstimateRequest): Promise<DrillEstimate>;
 }
 
-type Vars = { userId: string; repo: PlayerRepo };
+type Vars = { userId: string; plus: boolean; repo: PlayerRepo };
 type Ctx = Context<{ Variables: Vars }>;
 
 const MAX_BODY_BYTES = 8 * 1024;
@@ -38,6 +44,18 @@ const PG_PROGRAM_LIMIT = '54000';
 function bearerToken(header: string | undefined): string | null {
   const match = header ? /^Bearer\s+(\S+)$/i.exec(header) : null;
   return match ? match[1] : null;
+}
+
+/**
+ * Guards a paid route. It reads the `plus` flag the auth middleware set from the verified
+ * session token, so it must run after that middleware.
+ */
+export function requirePlus(plusEnabled: boolean): MiddlewareHandler<{ Variables: { plus: boolean } }> {
+  return async (c, next) => {
+    if (!plusEnabled) return c.json({ error: 'PitchSafe Plus is not available yet.' }, 403);
+    if (!c.var.plus) return c.json({ error: 'Custom drills need PitchSafe Plus.', code: 'plus_required' }, 403);
+    await next();
+  };
 }
 
 // Size is enforced by the bodyLimit middleware, which counts streamed bytes
@@ -51,6 +69,7 @@ async function readJson(c: Ctx): Promise<unknown> {
 
 export function createApp(deps: Deps) {
   const today = deps.today ?? (() => utcToday());
+  const plusEnabled = deps.plusEnabled ?? false;
   const app = new Hono<{ Variables: Vars }>().basePath('/api');
 
   app.use('*', secureHeaders({ crossOriginResourcePolicy: 'same-origin' }));
@@ -68,14 +87,16 @@ export function createApp(deps: Deps) {
   // Auth, then per-user rate limit
   app.use('*', async (c, next) => {
     const token = bearerToken(c.req.header('authorization'));
-    const userId = token ? await deps.verifyToken(token) : null;
-    if (!token || !userId) return c.json({ error: 'Sign in to continue.' }, 401);
+    const identity = token ? await deps.verifyToken(token) : null;
+    if (!token || !identity) return c.json({ error: 'Sign in to continue.' }, 401);
+    const { userId, plus } = identity;
 
     const bucket = c.req.method === 'GET' ? 'read' : 'write';
     if (!(await deps.allow(bucket, userId))) {
       return c.json({ error: 'Too many requests. Wait a minute and try again.' }, 429, { 'Retry-After': '60' });
     }
     c.set('userId', userId);
+    c.set('plus', plus);
     c.set('repo', deps.repoFor(token, userId));
     c.header('Cache-Control', 'no-store');
     await next();
@@ -83,7 +104,10 @@ export function createApp(deps: Deps) {
 
   // --- Profile ---
 
-  app.get('/overview', async (c) => c.json(await c.var.repo.overview()));
+  app.get('/overview', async (c) => {
+    const overview = await c.var.repo.overview();
+    return c.json({ ...overview, account: { plusAvailable: plusEnabled, plus: plusEnabled && c.var.plus } });
+  });
 
   app.post('/me', async (c) => {
     const input = validateProfile(await readJson(c), { creating: true });
