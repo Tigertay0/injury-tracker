@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DrillEstimate } from '../shared/custom-drills';
 import { ValidationError } from '../shared/validation';
-import { blankProfile, draftToValues, firstInvalidShare, profileFromEstimate, SHARES_ERROR } from '../src/lib/custom-drill-form';
+import { blankProfile, draftToValues, firstInvalidShare, matchesEstimate, profileFromEstimate, SHARES_ERROR } from '../src/lib/custom-drill-form';
 
 const ESTIMATE: DrillEstimate = {
   category: 'small_sided',
@@ -79,5 +79,66 @@ describe('firstInvalidShare', () => {
 
   it('names the first bad box in display order', () => {
     expect(firstInvalidShare({ ...blankProfile().shares, jump: '', cod: '300' })).toBe('cod');
+  });
+});
+
+describe('matchesEstimate', () => {
+  const TYPES = ['sprint', 'hsr', 'cod', 'jump', 'contact', 'strength'] as const;
+
+  it('is true for an untouched estimate', () => {
+    expect(matchesEstimate(profileFromEstimate(ESTIMATE))).toBe(true);
+  });
+
+  it('is false after changing the category', () => {
+    expect(matchesEstimate({ ...profileFromEstimate(ESTIMATE), category: 'technical' })).toBe(false);
+  });
+
+  it('is false after changing the intensity', () => {
+    expect(matchesEstimate({ ...profileFromEstimate(ESTIMATE), intensity: 7 })).toBe(false);
+  });
+
+  it.each(TYPES)('is false after changing %s by one point, in either direction', (type) => {
+    const base = profileFromEstimate(ESTIMATE);
+    const at = (delta: number) => ({ ...base, shares: { ...base.shares, [type]: String(Number(base.shares[type]) + delta) } });
+    expect(matchesEstimate(at(1))).toBe(false);
+    expect(matchesEstimate(at(-1))).toBe(false);
+  });
+
+  it('is true again when the player changes each value back', () => {
+    const base = profileFromEstimate(ESTIMATE);
+    const edited = { ...base, category: 'speed' as const, intensity: 3, shares: { ...base.shares, cod: '41', strength: '9' } };
+    expect(matchesEstimate(edited)).toBe(false);
+    const partlyBack = { ...edited, category: base.category, intensity: base.intensity };
+    expect(matchesEstimate(partlyBack)).toBe(false);
+    const allBack = { ...partlyBack, shares: { ...base.shares } };
+    expect(matchesEstimate(allBack)).toBe(true);
+  });
+
+  it('is true for the same percent typed with spaces', () => {
+    const base = profileFromEstimate(ESTIMATE);
+    expect(matchesEstimate({ ...base, shares: { ...base.shares, cod: ' 40 ' } })).toBe(true);
+  });
+
+  it('is false while a share box is empty or invalid', () => {
+    const base = profileFromEstimate(ESTIMATE);
+    expect(matchesEstimate({ ...base, shares: { ...base.shares, hsr: '' } })).toBe(false);
+    expect(matchesEstimate({ ...base, shares: { ...base.shares, hsr: '8.5' } })).toBe(false);
+  });
+
+  it('is false without an estimate, even for matching-looking values', () => {
+    const manual = { ...profileFromEstimate(ESTIMATE), estimate: null };
+    expect(matchesEstimate(manual)).toBe(false);
+    expect(matchesEstimate(blankProfile())).toBe(false);
+  });
+
+  it('is false while no category is chosen', () => {
+    expect(matchesEstimate({ ...profileFromEstimate(ESTIMATE), category: '' })).toBe(false);
+  });
+
+  it('agrees with the aiEstimated flag that is saved', () => {
+    const base = profileFromEstimate(ESTIMATE);
+    for (const draft of [base, { ...base, intensity: 2 }, { ...base, shares: { ...base.shares, jump: '4' } }]) {
+      expect(draftToValues(draft).aiEstimated).toBe(matchesEstimate(draft));
+    }
   });
 });

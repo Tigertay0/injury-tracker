@@ -64,15 +64,11 @@ export interface DraftValues {
   aiEstimated: boolean;
 }
 
-/**
- * The values to save. Percents become shares of 0 to 1 with two decimals. `aiEstimated` is true only
- * when the category, intensity and all six shares equal the estimate's exactly.
- */
-export function draftToValues(draft: ProfileDraft): DraftValues {
-  if (draft.category === '') throw new ValidationError('Choose a category.', 'category');
-  if (firstInvalidShare(draft.shares) !== null) throw new ValidationError(SHARES_ERROR, 'shares');
+/** The profile the draft would save, or null while a share box is not a whole percent. Percents become shares with two decimals. */
+function toProfile(draft: ProfileDraft): MovementProfile | null {
+  if (firstInvalidShare(draft.shares) !== null) return null;
   const share = (type: MovementType) => Math.round(Number(draft.shares[type].trim())) / 100;
-  const profile: MovementProfile = {
+  return {
     intensity: draft.intensity,
     sprint: share('sprint'),
     hsr: share('hsr'),
@@ -81,11 +77,24 @@ export function draftToValues(draft: ProfileDraft): DraftValues {
     contact: share('contact'),
     strength: share('strength'),
   };
-  const { estimate } = draft;
-  const aiEstimated =
-    estimate !== null &&
-    draft.category === estimate.category &&
-    profile.intensity === estimate.profile.intensity &&
-    MOVEMENT_TYPES.every((type) => profile[type] === estimate.profile[type]);
-  return { category: draft.category, profile, aiEstimated };
+}
+
+/**
+ * Whether the draft still holds exactly what the AI suggested: the same category, intensity and all
+ * six shares. It is the one rule behind both the editor's "Estimated by AI" tag and the saved
+ * `aiEstimated` flag. False without an estimate, and while a box is empty or not a whole percent.
+ */
+export function matchesEstimate(draft: ProfileDraft): boolean {
+  const { estimate, category } = draft;
+  if (estimate === null || category === '') return false;
+  const profile = toProfile(draft);
+  return profile !== null && category === estimate.category && profile.intensity === estimate.profile.intensity && MOVEMENT_TYPES.every((type) => profile[type] === estimate.profile[type]);
+}
+
+/** The values to save. `aiEstimated` is `matchesEstimate`: true only for the model's exact values. */
+export function draftToValues(draft: ProfileDraft): DraftValues {
+  if (draft.category === '') throw new ValidationError('Choose a category.', 'category');
+  const profile = toProfile(draft);
+  if (profile === null) throw new ValidationError(SHARES_ERROR, 'shares');
+  return { category: draft.category, profile, aiEstimated: matchesEstimate(draft) };
 }

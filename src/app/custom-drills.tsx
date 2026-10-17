@@ -13,7 +13,7 @@ import { Field, FieldSet, inputClass } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ApiError, errorMessage } from '@/lib/api';
-import { blankProfile, draftToValues, firstInvalidShare, isWholePercent, profileFromEstimate, type ProfileDraft } from '@/lib/custom-drill-form';
+import { blankProfile, draftToValues, firstInvalidShare, isWholePercent, matchesEstimate, profileFromEstimate, type ProfileDraft } from '@/lib/custom-drill-form';
 import { useAccount, useAppBase, useOverview, usePlayerData } from '@/lib/player-data';
 import { cn } from '@/lib/utils';
 import { PageHeader } from './page-header';
@@ -54,7 +54,9 @@ interface ProfileEditorProps {
 function ProfileEditor({ draft, onChange, errors, attempt, categoryRef, shareRefs }: ProfileEditorProps) {
   const id = useId();
   const { estimate } = draft;
-  const estimateNotes = estimate ? `${id}-reason ${id}-check` : undefined;
+  // The AI tag and its reason describe the model's values, so they show only while the values are still exactly those
+  const asEstimated = matchesEstimate(draft);
+  const estimateNotes = !estimate ? undefined : asEstimated ? `${id}-reason ${id}-check` : `${id}-changed`;
 
   return (
     <div role="group" aria-labelledby={`${id}-title`} className="flex flex-col gap-5 border-t border-line pt-5">
@@ -64,15 +66,23 @@ function ProfileEditor({ draft, onChange, errors, attempt, categoryRef, shareRef
 
       {estimate && (
         <div className="flex flex-col items-start gap-2 border border-line bg-sunken p-4">
-          <SourceTag aiEstimated className="bg-surface" />
-          {estimate.reason && (
-            <p id={`${id}-reason`} className="text-body text-ink wrap-anywhere">
-              {estimate.reason}
+          {asEstimated ? (
+            <>
+              <SourceTag aiEstimated className="bg-surface" />
+              {estimate.reason && (
+                <p id={`${id}-reason`} className="text-body text-ink wrap-anywhere">
+                  {estimate.reason}
+                </p>
+              )}
+              <p id={`${id}-check`} className="text-label text-ink-2">
+                Check the values and change any that look wrong.
+              </p>
+            </>
+          ) : (
+            <p id={`${id}-changed`} className="text-label text-ink-2">
+              You changed the AI's values.
             </p>
           )}
-          <p id={`${id}-check`} className="text-label text-ink-2">
-            Check the values and change any that look wrong.
-          </p>
         </div>
       )}
 
@@ -171,12 +181,19 @@ function LimitCard() {
 
 const PENDING_BUTTON = 'aria-disabled:cursor-progress aria-disabled:opacity-55';
 
+/** What happened to the last estimate, shown in the status line: it arrived, or it was dropped because the text changed. */
+type EstimateNote = 'ready' | 'stale';
+const ESTIMATE_NOTE_TEXT: Record<EstimateNote, string> = {
+  ready: 'Estimate ready. Check the values above.',
+  stale: 'Your text changed, so the estimate was not used. Estimate again.',
+};
+
 interface FormActionsProps {
   /** describe: name and description only. review: an AI estimate is in the editor. manual: the player's own values. */
   stage: 'describe' | 'review' | 'manual';
   estimating: boolean;
   saving: boolean;
-  estimateReady: boolean;
+  estimateNote: EstimateNote | null;
   estimateError: string | null;
   onEstimate: () => void;
   onEnterValues: () => void;
@@ -184,13 +201,12 @@ interface FormActionsProps {
 }
 
 /** The buttons, the estimate's progress for screen readers, and its failure message. */
-function FormActions({ stage, estimating, saving, estimateReady, estimateError, onEstimate, onEnterValues, actionsRef }: FormActionsProps) {
+function FormActions({ stage, estimating, saving, estimateNote, estimateError, onEstimate, onEnterValues, actionsRef }: FormActionsProps) {
   return (
     <>
       <div ref={actionsRef} aria-busy={estimating} className="flex flex-col gap-3 sm:flex-row">
         {stage === 'describe' ? (
           <>
-            {/* Not disabled while estimating: a disabled button would drop keyboard focus */}
             <Button key="estimate" type="submit" size="lg" aria-disabled={estimating} className={cn('w-full sm:w-auto', PENDING_BUTTON)}>
               {estimating ? 'Estimating…' : 'Estimate with AI'}
             </Button>
@@ -200,7 +216,8 @@ function FormActions({ stage, estimating, saving, estimateReady, estimateError, 
           </>
         ) : (
           <>
-            <Button key="save" type="submit" size="lg" disabled={saving || estimating} className="w-full sm:w-auto">
+            {/* aria-disabled, not disabled: the buttons keep keyboard focus, and save() ignores the press */}
+            <Button key="save" type="submit" size="lg" aria-disabled={saving || estimating} className={cn('w-full sm:w-auto', PENDING_BUTTON)}>
               {saving ? 'Saving…' : 'Save drill'}
             </Button>
             <Button key="estimate-again" type="button" size="lg" variant="secondary" aria-disabled={estimating || saving} onClick={onEstimate} className={cn('w-full sm:w-auto', PENDING_BUTTON)}>
@@ -211,8 +228,8 @@ function FormActions({ stage, estimating, saving, estimateReady, estimateError, 
       </div>
 
       {/* Outside the busy region, which would hold back announcements made inside it */}
-      <p role="status" className={cn('-mt-2 text-label text-ink-2', !estimating && 'sr-only')}>
-        {estimating ? 'Estimating how this drill loads your body. This can take a few seconds.' : estimateReady ? 'Estimate ready. Check the values above.' : ''}
+      <p role="status" className={cn('-mt-2 text-label text-ink-2', !estimating && estimateNote !== 'stale' && 'sr-only')}>
+        {estimating ? 'Estimating how this drill loads your body. This can take a few seconds.' : estimateNote ? ESTIMATE_NOTE_TEXT[estimateNote] : ''}
       </p>
       {estimateError && (
         <p role="alert" className={ALERT}>
@@ -229,7 +246,7 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
   const [description, setDescription] = useState('');
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
   const [estimating, setEstimating] = useState(false);
-  const [estimateReady, setEstimateReady] = useState(false);
+  const [estimateNote, setEstimateNote] = useState<EstimateNote | null>(null);
   const [estimateError, setEstimateError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [attempt, setAttempt] = useState(0);
@@ -239,6 +256,8 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
   // Each estimate gets a number. An answer is only used if it is still the latest request, so one that
   // arrives after the form was reset, switched to manual entry or left is ignored.
   const latestRequest = useRef(0);
+  // The text as it is now, which an estimate that resolves later is checked against
+  const currentText = useRef({ name: '', description: '' });
   const categoryRef = useRef<HTMLSelectElement>(null);
   const shareRefs = useRef(new Map<MovementType, HTMLInputElement>());
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -269,11 +288,12 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
 
   function reset() {
     latestRequest.current += 1;
+    currentText.current = { name: '', description: '' };
     setName('');
     setDescription('');
     setDraft(null);
     setEstimating(false);
-    setEstimateReady(false);
+    setEstimateNote(null);
     setEstimateError(null);
     setErrors({});
   }
@@ -281,7 +301,7 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
   function enterValues() {
     latestRequest.current += 1;
     setEstimating(false);
-    setEstimateReady(false);
+    setEstimateNote(null);
     setEstimateError(null);
     setDraft(blankProfile());
     setEditorFocus((n) => n + 1);
@@ -299,16 +319,22 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
     const request = ++latestRequest.current;
     setErrors({});
     setEstimateError(null);
-    setEstimateReady(false);
+    setEstimateNote(null);
     setEstimating(true);
     try {
       const result = await actions.estimateDrill(input);
       if (request !== latestRequest.current) return;
-      // Keep the player where they are if they moved on to edit the text while waiting
+      // Text the player changed while waiting is not what was estimated, so the answer is not used
+      const now = currentText.current;
+      if (now.name.trim() !== input.name || now.description.trim() !== input.description) {
+        setEstimateNote('stale');
+        return;
+      }
+      // Keep the player where they are if they moved on to another field while waiting
       const focused = document.activeElement;
       const stayedPut = focused === null || focused === document.body || actionsRef.current?.contains(focused);
       setDraft(profileFromEstimate(result));
-      setEstimateReady(true);
+      setEstimateNote('ready');
       if (stayedPut) setEditorFocus((n) => n + 1);
     } catch (err) {
       if (request !== latestRequest.current) return;
@@ -361,6 +387,7 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
             autoComplete="off"
             onChange={(e) => {
               setName(e.target.value);
+              currentText.current = { ...currentText.current, name: e.target.value };
               clearError('name');
             }}
           />
@@ -377,6 +404,7 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
             value={description}
             onChange={(e) => {
               setDescription(e.target.value);
+              currentText.current = { ...currentText.current, description: e.target.value };
               clearError('description');
             }}
           />
@@ -409,7 +437,7 @@ function DrillForm({ onSaved }: { onSaved: (id: string) => void }) {
         stage={draft === null ? 'describe' : draft.estimate ? 'review' : 'manual'}
         estimating={estimating}
         saving={saving}
-        estimateReady={estimateReady}
+        estimateNote={estimateNote}
         estimateError={estimateError}
         onEstimate={() => void estimate()}
         onEnterValues={enterValues}
@@ -495,18 +523,51 @@ function DrillList({ drills, focusRequest, onRemoved }: DrillListProps) {
   );
 }
 
-function PlusDrills() {
+/** The player's active drills, newest first. Archived ones stay in their old sessions, not here. */
+function useActiveDrills(): readonly CustomDrill[] {
   const { customDrills = NO_DRILLS } = useOverview();
-  const drills = useMemo(() => customDrills.filter((d) => !d.archived).sort(newestFirst), [customDrills]);
+  return useMemo(() => customDrills.filter((d) => !d.archived).sort(newestFirst), [customDrills]);
+}
+
+const TWO_COLUMNS = 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]';
+
+function PlusDrills() {
+  const drills = useActiveDrills();
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
   const focusRow = (id: string | null) => setFocusRequest({ id });
 
   return (
     <>
       <PageHeader title="My drills" description="Describe a drill and AI estimates how it loads your body. Check the numbers, then pick it when you log a session." />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className={TWO_COLUMNS}>
         {drills.length >= MAX_CUSTOM_DRILLS ? <LimitCard /> : <DrillForm onSaved={focusRow} />}
         <DrillList drills={drills} focusRequest={focusRequest} onRemoved={focusRow} />
+      </div>
+    </>
+  );
+}
+
+/** Players without Plus: the upgrade card, plus any drills they saved while they had it, which they can still remove. */
+function UpgradeToPlus({ base }: { base: string }) {
+  const drills = useActiveDrills();
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
+  // With the last drill gone the list disappears, so focus goes to the one control left on the page
+  const focusAfterRemoval = (id: string | null) => (id === null ? linkRef.current?.focus() : setFocusRequest({ id }));
+
+  return (
+    <>
+      <PageHeader title="My drills" />
+      <div className={cn(drills.length > 0 && TWO_COLUMNS)}>
+        <section className={cn(CARD, 'flex max-w-xl flex-col items-start gap-5 self-start p-5 md:p-6')}>
+          <p className="text-body text-ink">Create your own drills and personal workouts, and AI works out how each one loads your body. Part of PitchSafe Plus, $60 a year.</p>
+          <Button asChild size="lg">
+            <Link ref={linkRef} to={`${base}/settings#plus`}>
+              See PitchSafe Plus
+            </Link>
+          </Button>
+        </section>
+        {drills.length > 0 && <DrillList drills={drills} focusRequest={focusRequest} onRemoved={focusAfterRemoval} />}
       </div>
     </>
   );
@@ -517,20 +578,6 @@ export default function CustomDrills() {
   const base = useAppBase();
 
   if (!plusAvailable) return <PageHeader title="My drills" description="PitchSafe Plus isn't available yet." />;
-
-  if (!plus) {
-    return (
-      <>
-        <PageHeader title="My drills" />
-        <section className={cn(CARD, 'flex max-w-xl flex-col items-start gap-5 p-5 md:p-6')}>
-          <p className="text-body text-ink">Create your own drills and personal workouts, and AI works out how each one loads your body. Part of PitchSafe Plus, $60 a year.</p>
-          <Button asChild size="lg">
-            <Link to={`${base}/settings#plus`}>See PitchSafe Plus</Link>
-          </Button>
-        </section>
-      </>
-    );
-  }
-
+  if (!plus) return <UpgradeToPlus base={base} />;
   return <PlusDrills />;
 }
