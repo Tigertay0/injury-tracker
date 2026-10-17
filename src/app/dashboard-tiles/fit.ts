@@ -47,3 +47,28 @@ export function fitState(heights: readonly number[], gap: number, room: number, 
 export function footerMode({ hidden, cramped }: FitState): 'flow' | 'pinned' {
   return hidden > 0 || cramped ? 'pinned' : 'flow';
 }
+
+/**
+ * Whether extra content (the fuel trigger pills) fits under the list and the footer.
+ * @param room     the height left once the footer is counted
+ * @param listHeight  the height of the whole list
+ */
+export function trailingFits(room: number, listHeight: number, trailingHeight: number, gap: number): boolean {
+  return listHeight + gap + trailingHeight <= room;
+}
+
+export type FocusTarget = 'toggle' | 'scroller' | 'other';
+
+/**
+ * Whether the element that has keyboard focus is about to leave the page. The "See all" button goes when
+ * nothing is hidden any more; the scrolling list goes when it closes by itself or the tile is no longer
+ * cramped. The tile then moves focus somewhere steady first, so it does not fall to the page.
+ */
+export function focusWouldBeLost(focused: FocusTarget, now: { open: boolean; cramped: boolean }, next: FitState): boolean {
+  if (focused === 'toggle') return next.hidden === 0;
+  if (focused === 'scroller') {
+    const keepsScroller = (now.open && next.hidden > 0) || next.cramped;
+    return !keepsScroller;
+  }
+  return false;
+}

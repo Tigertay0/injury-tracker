@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COMPOSITE_ZONE_MAX, COMPOSITE_ZONES, compositeZone } from '@shared/calculations';
+import { COMPOSITE_SCORE_MAX, COMPOSITE_ZONE_MAX, COMPOSITE_ZONES, compositeScore, compositeZone } from '@shared/calculations';
 import { GAUGE_MAX, gaugeSegments, gaugeTicks, markerPosition } from '@/app/dashboard-tiles/zones';
 
 describe('the shared zone thresholds', () => {
@@ -14,6 +14,13 @@ describe('the shared zone thresholds', () => {
 
   it('list the four zones from low to very high', () => {
     expect(COMPOSITE_ZONES).toEqual(['LOW', 'MODERATE', 'HIGH', 'VERY_HIGH']);
+  });
+});
+
+describe('the top of the scale', () => {
+  it('is the cap compositeScore applies, and the gauge ends there', () => {
+    expect(compositeScore({ acwrRisk: 100, recoveryRisk: 100, equipmentRisk: 100, multiplier: 2 })).toBe(COMPOSITE_SCORE_MAX);
+    expect(GAUGE_MAX).toBe(COMPOSITE_SCORE_MAX);
   });
 });
 

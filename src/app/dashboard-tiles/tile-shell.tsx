@@ -26,7 +26,7 @@ interface TileShellProps {
 
 export function TileShell({ title, titleId, meta, children, className }: TileShellProps) {
   return (
-    <section aria-labelledby={titleId} className="@container flex h-full min-h-0 flex-1 flex-col">
+    <section aria-labelledby={titleId} tabIndex={-1} className="@container flex h-full min-h-0 flex-1 flex-col">
       <div className={cn('flex min-h-0 flex-1 flex-col gap-3', TILE_PADDING, className)}>
         <header className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
           <h2 id={titleId} className={TILE_LABEL}>

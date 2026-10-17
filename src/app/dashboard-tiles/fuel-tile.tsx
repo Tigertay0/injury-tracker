@@ -1,6 +1,7 @@
 // Fuel and recovery notes, with the nutrition disclaimer always in view. Notes that do not fit the
 // tile sit behind "See all". The note count is the tile's figure; in a small tile it moves up beside the
 // title, where it costs no height.
+import { useMemo } from 'react';
 import { Check } from '@phosphor-icons/react';
 import { FUEL_DISCLAIMER, type FuelNote } from '@shared/recommendations';
 import type { WidgetSize } from '@/lib/widget-layout';
@@ -22,11 +23,11 @@ function Note({ note }: { note: FuelNote }) {
 /** The three things that produce a note (fuelNotes in shared/recommendations.ts), by note id. */
 const TRIGGERS: Record<FuelNote['id'], string> = { HIGH_LOAD: 'Heavy week', POOR_RECOVERY: 'Low recovery', POST_SESSION: 'After a hard session' };
 
-/** Which of those the player has right now. A tall tile has room to show them. */
-function Triggers({ notes }: { notes: readonly FuelNote[] }) {
+/** Which of those the player has right now. The list leaves them out when there is no room for them. */
+function Triggers({ notes, className }: { notes: readonly FuelNote[]; className?: string }) {
   const active = new Set(notes.map((n) => n.id));
   return (
-    <ul aria-hidden className="flex flex-wrap gap-1.5">
+    <ul aria-hidden className={cn('flex flex-wrap gap-1.5', className)}>
       {(Object.keys(TRIGGERS) as FuelNote['id'][]).map((id) => (
         <li
           key={id}
@@ -48,6 +49,12 @@ const DISCLAIMER = <p className="rounded-[var(--radius-control)] bg-sunken px-3 
 export function FuelTile({ notes, size }: { notes: readonly FuelNote[]; size: WidgetSize }) {
   const unit = notes.length === 1 ? 'note' : 'notes';
   const bigFigure = size === 'tall';
+  // A tile with the height for it shows the pills; the list drops them when its own items need the room
+  // A tall tile always has the height. A square one has it only from 300px wide (not on the narrowest phones).
+  const triggers = useMemo(() => {
+    if (size === 'tall') return <Triggers notes={notes} />;
+    return size === 'lg' ? <Triggers notes={notes} className="hidden @[300px]:flex" /> : undefined;
+  }, [notes, size]);
   return (
     <TileShell
       title={TILE_TITLES.fuel}
@@ -69,14 +76,15 @@ export function FuelTile({ notes, size }: { notes: readonly FuelNote[]; size: Wi
           scrollLabel="All fuel notes, scrollable"
           listClassName="flex flex-col gap-4"
           footer={DISCLAIMER}
+          trailing={triggers}
         />
       ) : (
         <>
           <p className="flex-1 text-small text-ink-2">Nothing to flag right now. Notes appear after a heavy week, when recovery is low, or after a hard session.</p>
           {DISCLAIMER}
+          {triggers}
         </>
       )}
-      {bigFigure && <Triggers notes={notes} />}
     </TileShell>
   );
 }

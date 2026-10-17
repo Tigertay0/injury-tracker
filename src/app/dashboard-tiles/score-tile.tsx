@@ -50,8 +50,8 @@ function Assumptions({ model }: { model: RiskModel }) {
   );
 }
 
-/** The space the middle of the tile gives to its picture. Under 340px there is no room for it, and the text sits at the bottom instead. */
-const MIDDLE = 'my-auto hidden @[340px]:block';
+/** The middle of the tile takes the free height for its picture (see ZoneGauge and SessionStrip). Under 340px there is no room for it, and the text sits at the bottom instead. */
+const MIDDLE = 'hidden @[340px]:flex';
 const BOTTOM = 'mt-auto flex flex-col gap-3 @[340px]:mt-0';
 const BODY = 'flex flex-1 flex-col gap-3';
 
@@ -94,7 +94,7 @@ function Baseline({ model }: { model: RiskModel }) {
           <span className={cn(BIG_NUMBER, 'text-display-s @[340px]:text-display-m')}>Day {daysCovered}</span>
           <span className="tnum text-lead font-semibold text-ink-3">of 28</span>
         </p>
-        <SessionStrip days={model.days.map((d) => d.load > 0)} className={cn(MIDDLE, '@[340px]:grid')} />
+        <SessionStrip days={model.days.map((d) => d.load > 0)} className="my-auto hidden @[340px]:grid" />
         <div className={BOTTOM}>
           <div
             className="h-2.5 w-full overflow-hidden rounded-[var(--radius-chip)] bg-accent-soft"
@@ -123,7 +123,7 @@ function FirstSession({ model }: { model: RiskModel }) {
         <p className="text-body text-ink-2">
           Every session counts, easy ones included. After four weeks of logging you get your full risk score. Your cleat and recovery checks work today.
         </p>
-        <SessionStrip days={model.days.map((d) => d.load > 0)} className={cn(MIDDLE, '@[340px]:grid')} />
+        <SessionStrip days={model.days.map((d) => d.load > 0)} className="my-auto hidden @[340px]:grid" />
         <Button asChild size="lg" className="mt-auto self-start @[340px]:mt-0">
           <Link to={`${base}/log`}>
             <Plus aria-hidden weight="bold" />

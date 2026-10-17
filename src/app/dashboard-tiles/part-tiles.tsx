@@ -42,6 +42,8 @@ interface PartTileProps {
 function PartTile({ to, label, value, tone, status, meter, note, size }: PartTileProps) {
   const noteId = useId();
   const stretched = size !== 'sm';
+  // Only a square tile draws the note, so only that one points at it
+  const describedBy = !stretched && note ? noteId : undefined;
   const figure = <span className={cn(BIG_NUMBER, 'min-w-0 break-words')}>{value}</span>;
   const summary = (
     <div className={cn('flex flex-col gap-2', stretched && 'w-1/2 shrink-0')}>
@@ -55,7 +57,7 @@ function PartTile({ to, label, value, tone, status, meter, note, size }: PartTil
     <Link
       to={to}
       aria-label={`${label} ${value} ${status}`}
-      aria-describedby={note ? noteId : undefined}
+      aria-describedby={describedBy}
       className="group @container flex h-full min-h-0 flex-1 flex-col transition-colors duration-150 ease-out hover:bg-sunken/60"
     >
       <div className={cn('flex min-h-0 flex-1 flex-col gap-2', TILE_PADDING)}>

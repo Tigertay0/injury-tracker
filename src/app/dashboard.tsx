@@ -1,7 +1,7 @@
 // Dashboard: a grid of tiles in the style of the 21st.dev draggable widget grid. The injury risk score
 // comes first with the four inputs behind it, then the load chart, movement, advice and fuel notes.
 // The player can rearrange the tiles, and the order is saved to their account.
-import { useCallback, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, ArrowsOutCardinal, Check, Plus } from '@phosphor-icons/react';
 import { buildRiskModel } from '@shared/risk-model';
@@ -46,7 +46,9 @@ export default function Dashboard() {
   // Arranging is a mode of its own, because while tiles can be dragged their links cannot be followed.
   const [arranging, setArranging] = useState(false);
   const arrangingNow = useRef(arranging);
-  arrangingNow.current = arranging;
+  useEffect(() => {
+    arrangingNow.current = arranging;
+  }, [arranging]);
   // The grid keeps its tab order from when it was drawn. After tiles moved, drawing it again makes the tab
   // order match what the player now sees: on Done, or at once when a refused save puts the old order back.
   const [gridKey, setGridKey] = useState(0);

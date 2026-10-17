@@ -5,8 +5,8 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { fitState, footerMode, type FitState } from './fit';
-import { ScrollRegion } from './scroll-region';
+import { fitState, focusWouldBeLost, footerMode, trailingFits, type FitState, type FocusTarget } from './fit';
+import { focusTile, ScrollRegion } from './scroll-region';
 
 /** The "See all" button (36px) and the gap above it. */
 const TOGGLE_RESERVE = 44;
@@ -27,38 +27,70 @@ interface FitListProps<T> {
   listClassName?: string;
   /** Always in view under the list. It follows the list when everything fits, and is pinned to the bottom of the tile while "See all" or a scrolling list is there. */
   footer?: ReactNode;
+  /** Extra content for the bottom of the tile, drawn only when it fits without crowding the list or the footer. */
+  trailing?: ReactNode;
   className?: string;
 }
 
-export function FitList<T>({ items, keyOf, renderItem, noun, scrollLabel, listHidden, listClassName = 'flex flex-col gap-2', footer, className }: FitListProps<T>) {
+interface Layout {
+  fit: FitState;
+  trailingShown: boolean;
+}
+
+/** What kind of element has focus inside the list, for deciding whether a layout change would take it away. */
+function focusKind(box: HTMLElement | null): FocusTarget {
+  const focused = document.activeElement;
+  if (!box || !focused || !box.contains(focused)) return 'other';
+  if (focused.hasAttribute('data-fit-toggle')) return 'toggle';
+  return focused.getAttribute('role') === 'group' ? 'scroller' : 'other';
+}
+
+export function FitList<T>({ items, keyOf, renderItem, noun, scrollLabel, listHidden, listClassName = 'flex flex-col gap-2', footer, trailing, className }: FitListProps<T>) {
   const box = useRef<HTMLDivElement>(null);
   const ghost = useRef<HTMLOListElement>(null);
   const ghostFooter = useRef<HTMLDivElement>(null);
+  const ghostTrailing = useRef<HTMLDivElement>(null);
   const listId = useId();
-  const [fit, setFit] = useState<FitState>({ count: items.length, hidden: 0, cramped: false });
+  const [layout, setLayout] = useState<Layout>({ fit: { count: items.length, hidden: 0, cramped: false }, trailingShown: false });
   const [open, setOpen] = useState(false);
+  // The measuring function lives as long as the list, so it reads the latest values through a ref that is
+  // brought up to date after each render and before the list is measured
+  const latest = useRef({ open, layout });
+  useLayoutEffect(() => {
+    latest.current = { open, layout };
+  });
 
   const measure = useCallback(() => {
     const copy = ghost.current;
     if (!box.current || !copy) return;
-    const footerHeight = ghostFooter.current?.offsetHeight ?? 0;
-    const room = box.current.clientHeight - (footerHeight > 0 ? footerHeight + BOX_GAP : 0);
+    const footerBlock = ghostFooter.current?.offsetHeight ? ghostFooter.current.offsetHeight + BOX_GAP : 0;
+    const room = box.current.clientHeight - footerBlock;
     const heights = Array.from(copy.children, (child) => (child as HTMLElement).offsetHeight);
     const gap = Number.parseFloat(getComputedStyle(copy).rowGap) || 0;
-    const next = fitState(heights, gap, room, TOGGLE_RESERVE);
-    setFit((was) => (was.count === next.count && was.hidden === next.hidden && was.cramped === next.cramped ? was : next));
+    const fit = fitState(heights, gap, room, TOGGLE_RESERVE);
+    const listHeight = heights.reduce((sum, h, i) => sum + h + (i > 0 ? gap : 0), 0);
+    const trailingHeight = ghostTrailing.current?.offsetHeight ?? 0;
+    const trailingShown = trailingHeight > 0 && fit.hidden === 0 && !fit.cramped && trailingFits(room, listHeight, trailingHeight, BOX_GAP);
+
+    const { open: wasOpen, layout: was } = latest.current;
+    // Keep keyboard focus on something steady if this change takes the focused element away
+    if (focusWouldBeLost(focusKind(box.current), { open: wasOpen, cramped: was.fit.cramped }, fit)) focusTile(box.current);
+    setLayout((prev) =>
+      prev.trailingShown === trailingShown && prev.fit.count === fit.count && prev.fit.hidden === fit.hidden && prev.fit.cramped === fit.cramped ? prev : { fit, trailingShown },
+    );
     // A bigger tile can make everything fit while the list is open: close it, so it is not left open and scrolling
-    if (next.hidden === 0) setOpen(false);
+    if (fit.hidden === 0) setOpen(false);
   }, []);
 
   // Measure before the first paint, and again whenever the tile or the text inside it changes size
   useLayoutEffect(() => {
     measure();
     const observer = new ResizeObserver(measure);
-    for (const el of [box.current, ghost.current, ghostFooter.current]) if (el) observer.observe(el);
+    for (const el of [box.current, ghost.current, ghostFooter.current, ghostTrailing.current]) if (el) observer.observe(el);
     return () => observer.disconnect();
-  }, [measure, items, footer]);
+  }, [measure, items, footer, trailing]);
 
+  const { fit, trailingShown } = layout;
   const { cramped, hidden } = fit;
   const showAll = open || cramped;
   const shown = showAll ? items : items.slice(0, fit.count);
@@ -81,12 +113,13 @@ export function FitList<T>({ items, keyOf, renderItem, noun, scrollLabel, listHi
         <div className="-mx-2.5 min-h-0 overflow-hidden px-2.5">{list}</div>
       )}
       {hidden > 0 && (
-        <Button type="button" variant="secondary" size="sm" className="self-start" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((was) => !was)}>
+        <Button type="button" variant="secondary" size="sm" className="self-start" data-fit-toggle aria-expanded={open} aria-controls={listId} onClick={() => setOpen((was) => !was)}>
           {open ? 'Show fewer' : `See all ${items.length} ${noun}`}
         </Button>
       )}
       {footer && <div className={footerMode(fit) === 'pinned' ? 'mt-auto' : undefined}>{footer}</div>}
-      {/* The same list and footer, unseen, to read their heights at the tile's width */}
+      {trailingShown && <div className="mt-auto">{trailing}</div>}
+      {/* The same list, footer and extra content, unseen, to read their heights at the tile's width */}
       <div aria-hidden inert className="pointer-events-none invisible absolute inset-x-0 top-0 -z-10">
         <ol ref={ghost} className={listClassName}>
           {items.map((item, i) => (
@@ -94,6 +127,7 @@ export function FitList<T>({ items, keyOf, renderItem, noun, scrollLabel, listHi
           ))}
         </ol>
         {footer && <div ref={ghostFooter}>{footer}</div>}
+        {trailing && <div ref={ghostTrailing}>{trailing}</div>}
       </div>
     </div>
   );

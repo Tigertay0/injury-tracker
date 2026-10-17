@@ -1,10 +1,10 @@
 // Geometry of the risk zone gauge on the score tile. The zone bounds come from shared/calculations.ts,
 // the same constants `compositeZone` uses, so the gauge cannot drift from the score's zones.
-import { COMPOSITE_ZONE_MAX, COMPOSITE_ZONES } from '@shared/calculations';
+import { COMPOSITE_SCORE_MAX, COMPOSITE_ZONE_MAX, COMPOSITE_ZONES } from '@shared/calculations';
 import type { CompositeZone } from '@shared/types';
 
-/** The top of the score scale. */
-export const GAUGE_MAX = 100;
+/** The top of the score scale: the cap the score itself has. */
+export const GAUGE_MAX = COMPOSITE_SCORE_MAX;
 
 export interface GaugeSegment {
   zone: CompositeZone;

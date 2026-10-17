@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countThatFit, fitState, footerMode } from '@/app/dashboard-tiles/fit';
+import { countThatFit, fitState, focusWouldBeLost, footerMode, trailingFits } from '@/app/dashboard-tiles/fit';
 
 describe('countThatFit', () => {
   const reserve = 44; // the "See all" button and the gap above it
@@ -82,5 +82,51 @@ describe('footerMode', () => {
 
   it('pins the footer in a cramped tile, so only the notes scroll', () => {
     expect(footerMode({ count: 1, hidden: 0, cramped: true })).toBe('pinned');
+  });
+});
+
+describe('trailingFits', () => {
+  it('shows the extra content when it fits under the list and the footer', () => {
+    // 200 of list, 8 gap, 56 extra = 264
+    expect(trailingFits(264, 200, 56, 8)).toBe(true);
+    expect(trailingFits(300, 200, 56, 8)).toBe(true);
+  });
+
+  it('leaves it out when it would crowd the list', () => {
+    expect(trailingFits(263, 200, 56, 8)).toBe(false);
+  });
+
+  it('is false when the list alone does not fit', () => {
+    expect(trailingFits(150, 200, 20, 8)).toBe(false);
+  });
+});
+
+describe('focusWouldBeLost', () => {
+  const next = (hidden: number, cramped = false) => ({ count: 1, hidden, cramped });
+
+  it('loses a focused "See all" or "Show fewer" button when nothing is hidden any more', () => {
+    expect(focusWouldBeLost('toggle', { open: true, cramped: false }, next(0))).toBe(true);
+    expect(focusWouldBeLost('toggle', { open: false, cramped: false }, next(0))).toBe(true);
+  });
+
+  it('keeps the button while something is still hidden', () => {
+    expect(focusWouldBeLost('toggle', { open: true, cramped: false }, next(2))).toBe(false);
+  });
+
+  it('loses a focused scrolling list when it closes by itself', () => {
+    expect(focusWouldBeLost('scroller', { open: true, cramped: false }, next(0))).toBe(true);
+  });
+
+  it('loses a focused scrolling list when a cramped tile gets room again and the list is closed', () => {
+    expect(focusWouldBeLost('scroller', { open: false, cramped: true }, next(0, false))).toBe(true);
+  });
+
+  it('keeps a scrolling list that is open with items hidden, or still cramped', () => {
+    expect(focusWouldBeLost('scroller', { open: true, cramped: false }, next(2))).toBe(false);
+    expect(focusWouldBeLost('scroller', { open: false, cramped: true }, next(0, true))).toBe(false);
+  });
+
+  it('never loses anything else', () => {
+    expect(focusWouldBeLost('other', { open: true, cramped: true }, next(0))).toBe(false);
   });
 });

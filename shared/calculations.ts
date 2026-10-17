@@ -157,9 +157,12 @@ export interface CompositeInput {
   multiplier: number;
 }
 
+/** The top of the composite score: the score is capped here. */
+export const COMPOSITE_SCORE_MAX = 100;
+
 export function compositeScore({ acwrRisk, recoveryRisk, equipmentRisk, multiplier }: CompositeInput): number {
   const base = acwrRisk * 0.45 + recoveryRisk * 0.3 + equipmentRisk * 0.25;
-  return Math.min(Math.round(base * multiplier), 100);
+  return Math.min(Math.round(base * multiplier), COMPOSITE_SCORE_MAX);
 }
 
 /** Composite zones from the lowest risk to the highest. */
