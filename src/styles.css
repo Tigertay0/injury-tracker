@@ -223,10 +223,12 @@
   --text-score--line-height: 0.85;
   --text-score--letter-spacing: -0.05em;
 
-  /* Shape lock: square corners everywhere. Only radio buttons stay round. */
-  --radius-control: 0px;
-  --radius-panel: 0px;
-  --radius-chip: 0px;
+  /* Shape lock: 12px controls, 24px tiles and panels, pill chips. Radio dots stay round. A rounded
+     thing inside a padded rounded container steps down: inner radius = outer radius - padding
+     (never below about 6px). */
+  --radius-control: 12px;
+  --radius-panel: 24px;
+  --radius-chip: 9999px;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);

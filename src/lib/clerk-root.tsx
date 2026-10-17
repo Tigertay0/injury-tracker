@@ -21,7 +21,7 @@ export const clerkAppearance = {
     colorDanger: 'var(--ps-clerk-danger)',
     colorSuccess: 'var(--ps-clerk-success)',
     fontFamily: 'var(--font-sans)',
-    borderRadius: '0px',
+    borderRadius: '12px',
   },
   elements: {
     // Account deletion must go through Settings so PitchSafe data is erased first

@@ -139,7 +139,7 @@ export function DrillPicker({ value, onChange, customDrills, sessionMinutes, err
       )}
 
       {value.length > 0 && (
-        <ul className="border border-line">
+        <ul className="rounded-[var(--radius-control)] border border-line">
           {value.map((d) => (
             <li key={d.drillId} className="flex items-center gap-3 border-b border-line pr-1 pl-3 last:border-b-0">
               <span className="min-w-0 flex-1 py-2 text-body text-ink wrap-anywhere">{nameOf(d.drillId) ?? 'Removed drill'}</span>
@@ -152,7 +152,7 @@ export function DrillPicker({ value, onChange, customDrills, sessionMinutes, err
                 }}
                 onClick={() => remove(d.drillId)}
                 aria-label={`Remove ${nameOf(d.drillId) ?? 'drill'}`}
-                className="grid size-11 place-items-center text-ink-2 hover:bg-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"
+                className="grid size-11 place-items-center rounded-[calc(var(--radius-control)-4px)] text-ink-2 hover:bg-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"
               >
                 <X aria-hidden className="size-4" />
               </button>

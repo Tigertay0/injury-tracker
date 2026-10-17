@@ -1,5 +1,5 @@
 // Floating header for the marketing pages, after the Floodlit home direction. Glass bar
-// over the hero, square corners, auth-aware actions, and a sheet menu on phones
+// over the hero, rounded corners, auth-aware actions, and a sheet menu on phones
 // (structure from 21st.dev ln-dev7/header-17).
 import { useState } from 'react';
 import { Link } from 'react-router';
@@ -16,7 +16,7 @@ const NAV = [
   { label: 'FAQ', to: '/#faq' },
 ];
 
-const navLink = 'px-3.5 py-2 text-small font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white';
+const navLink = 'rounded-[var(--radius-control)] px-3.5 py-2 text-small font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white';
 
 export function MarketingHeader() {
   const [open, setOpen] = useState(false);
@@ -25,7 +25,7 @@ export function MarketingHeader() {
 
   return (
     <header className="fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-30 px-3 sm:top-[calc(env(safe-area-inset-top)+1.25rem)]">
-      <div className="mx-auto flex h-14 max-w-[960px] items-center justify-between gap-4 border border-white/10 bg-[#070b18]/90 pr-2 pl-5 shadow-[0_8px_32px_rgb(0_0_0/0.35)] md:bg-[#070b18]/60 md:backdrop-blur-xl">
+      <div className="mx-auto flex h-14 max-w-[960px] items-center justify-between gap-4 rounded-[calc(var(--radius-control)+8px)] border border-white/10 bg-[#070b18]/90 pr-2 pl-5 shadow-[0_8px_32px_rgb(0_0_0/0.35)] md:bg-[#070b18]/60 md:backdrop-blur-xl">
         <Link to="/" aria-label="PitchSafe home">
           <Wordmark className="text-white" />
         </Link>
@@ -44,11 +44,11 @@ export function MarketingHeader() {
               Sign in
             </Link>
           )}
-          <Link to={primary.to} className="inline-flex h-10 items-center bg-white px-4 text-small font-semibold text-[#060a1a] transition-colors hover:bg-[#dfe9ff]">
+          <Link to={primary.to} className="inline-flex h-10 items-center rounded-[var(--radius-control)] bg-white px-4 text-small font-semibold text-[#060a1a] transition-colors hover:bg-[#dfe9ff]">
             {primary.label}
           </Link>
           <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger className="grid size-10 place-items-center text-white/80 hover:bg-white/10 hover:text-white md:hidden" aria-label="Open menu">
+            <SheetTrigger className="grid size-10 place-items-center rounded-[var(--radius-control)] text-white/80 hover:bg-white/10 hover:text-white md:hidden" aria-label="Open menu">
               <List aria-hidden className="size-5" />
             </SheetTrigger>
             <SheetContent side="right" className="site-night p-6">
@@ -64,7 +64,7 @@ export function MarketingHeader() {
                 ))}
               </nav>
               {!isSignedIn && (
-                <Link to="/sign-in" onClick={() => setOpen(false)} className="mt-auto inline-flex h-12 items-center justify-center border border-line-strong text-body font-semibold text-ink">
+                <Link to="/sign-in" onClick={() => setOpen(false)} className="mt-auto inline-flex h-12 items-center justify-center rounded-[var(--radius-control)] border border-line-strong text-body font-semibold text-ink">
                   Sign in
                 </Link>
               )}

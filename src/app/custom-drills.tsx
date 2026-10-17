@@ -39,7 +39,7 @@ interface FocusRequest {
 const newestFirst = (a: CustomDrill, b: CustomDrill) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0);
 
 function SourceTag({ aiEstimated, className }: { aiEstimated: boolean; className?: string }) {
-  return <span className={cn('inline-flex items-center border border-line bg-sunken px-2 py-0.5 text-caption font-semibold text-ink-2', className)}>{aiEstimated ? 'Estimated by AI' : 'Your values'}</span>;
+  return <span className={cn('inline-flex items-center rounded-[var(--radius-chip)] border border-line bg-sunken px-2.5 py-0.5 text-caption font-semibold text-ink-2', className)}>{aiEstimated ? 'Estimated by AI' : 'Your values'}</span>;
 }
 
 interface ProfileEditorProps {
@@ -66,7 +66,7 @@ function ProfileEditor({ draft, onChange, errors, attempt, categoryRef, shareRef
       </h3>
 
       {estimate && (
-        <div className="flex flex-col items-start gap-2 border border-line bg-sunken p-4">
+        <div className="flex flex-col items-start gap-2 rounded-[var(--radius-control)] border border-line bg-sunken p-4">
           {asEstimated ? (
             <>
               <SourceTag aiEstimated className="bg-surface" />
@@ -521,7 +521,7 @@ function DrillList({ drills, focusRequest, onRemoved }: DrillListProps) {
                 else rowRefs.current.delete(d.id);
               }}
               tabIndex={-1}
-              className="flex items-start gap-3 border-t border-line py-4 pr-3 pl-5 focus-visible:outline-offset-[-2px] md:pl-6"
+              className="flex items-start gap-3 border-t border-line py-4 pr-3 pl-5 focus-visible:outline-offset-[-2px] last:rounded-b-[calc(var(--radius-panel)-1px)] md:pl-6"
             >
               <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
                 <p className="text-body font-semibold text-ink wrap-anywhere">{d.name}</p>

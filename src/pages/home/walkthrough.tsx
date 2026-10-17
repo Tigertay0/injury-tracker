@@ -206,7 +206,7 @@ export function Walkthrough() {
                     aria-labelledby={`${uid}-${s.id}-title`}
                     aria-describedby={`${uid}-${s.id}-text`}
                     className={cn(
-                      'group relative w-full overflow-hidden border px-5 py-5 text-left transition-colors duration-200 ease-out sm:px-6',
+                      'group relative w-full overflow-hidden rounded-[var(--radius-panel)] border px-5 py-5 text-left transition-colors duration-200 ease-out sm:px-6',
                       'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]',
                       active ? 'border-white/20 bg-white/[0.06]' : 'border-white/10 bg-transparent hover:bg-white/[0.03]',
                     )}
@@ -240,7 +240,7 @@ export function Walkthrough() {
 
           {/* The phone */}
           <div className="order-1 mx-auto w-full max-w-[16.5rem] sm:max-w-[20rem] lg:order-2">
-            <div ref={phoneRef} className="relative aspect-[390/844] w-full overflow-hidden border border-white/15 bg-[#0b1020] shadow-[0_40px_80px_-24px_rgb(29_63_214/0.55)]">
+            <div ref={phoneRef} className="relative aspect-[390/844] w-full overflow-hidden rounded-[var(--radius-panel)] border border-white/15 bg-[#0b1020] shadow-[0_40px_80px_-24px_rgb(29_63_214/0.55)]">
               {/* All screens stay mounted (so they load ahead of time); the new one fades in
                   over the previous one, which stays opaque underneath to avoid a dark dip */}
               {STEPS.map((s, i) => {
@@ -271,7 +271,7 @@ export function Walkthrough() {
                   <span
                     key={t.label}
                     aria-hidden
-                    className="absolute z-10 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center border-2 border-white bg-[#2346e0] text-label font-bold text-white"
+                    className="absolute z-10 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white bg-[#2346e0] text-label font-bold text-white"
                     style={{ left: `${t.x}%`, top: `${t.y}%` }}
                   >
                     {i + 1}
@@ -290,7 +290,7 @@ export function Walkthrough() {
                   <span
                     key={`label-${step.id}-${tapIndex}-${runId}`}
                     className={cn(
-                      'walk-label absolute whitespace-nowrap bg-white px-2.5 py-1 text-label font-semibold text-[#060a1a] shadow-[0_6px_20px_rgb(0_0_0/0.4)]',
+                      'walk-label absolute whitespace-nowrap rounded-[var(--radius-control)] bg-white px-2.5 py-1 text-label font-semibold text-[#060a1a] shadow-[0_6px_20px_rgb(0_0_0/0.4)]',
                       target.y > 70 ? 'bottom-7' : 'top-7',
                       target.x > 60 ? 'right-0' : target.x < 35 ? 'left-[-0.5rem]' : '-translate-x-1/2',
                     )}
@@ -316,7 +316,7 @@ export function Walkthrough() {
                 <button
                   type="button"
                   onClick={() => setPaused((p) => !p)}
-                  className="inline-flex h-10 items-center gap-2 border border-white/15 px-4 text-small font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]"
+                  className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-control)] border border-white/15 px-4 text-small font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]"
                 >
                   {paused ? <Play aria-hidden weight="fill" className="size-4" /> : <Pause aria-hidden weight="fill" className="size-4" />}
                   {paused ? 'Play the walkthrough' : 'Pause the walkthrough'}

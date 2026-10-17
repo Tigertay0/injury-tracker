@@ -7,7 +7,8 @@ Tokens live in `src/styles.css` (`:root`, dark overrides scoped to `.app-scope`,
 Free injury-risk tracker for amateur soccer players (13-25) and coaches. Marketing pages (home, science, use, legal, sign-in) are **Persuade/Read** on a dark "floodlit" night ground (`.site-night`); the app is **Operate**, mobile-first, light and dark via tokens.
 
 - 2026-10-13 direction change, chosen by the owner from three previews: **Floodlit** home (Glass Fold WebGL shader hero, Aceternity Container Scroll tilting the real dashboard, spotlight cards). The owner's taste for rich shaders and scroll motion overrides the default "no glow/glass" bans on the marketing pages.
-- Owner feedback: small rounded corners read as AI-made. Shape is now **square everywhere**.
+- Owner feedback, 2026-10-13: small rounded corners read as AI-made, so the shape went square everywhere.
+- Owner feedback, 2026-10-17: the square, boxy look reads as tacky. Shape is now **rounded everywhere**, with a clear size per role (see Shape and depth). This replaces the square rule.
 - Removed AI tells: kicker pill above the hero headline, eyebrow labels above headings, gradient text on numbers, decorative status dots.
 
 ## References
@@ -56,7 +57,19 @@ Scale (role tokens): caption 12, label 13, small 14, body 16, lead 18, h3 22, h2
 
 ## Shape and depth
 
-Shape lock: square corners everywhere (`--radius-control`, `--radius-panel` and `--radius-chip` are all 0, Clerk `borderRadius` 0, square chart columns). Only radio buttons stay round, because that is what people expect a radio to look like. Hairline borders instead of shadows; `shadow-lift` for the use-app card, the slider thumb and the mobile log button, `shadow-overlay` for dialogs, both tinted to the ground hue. The segmented control uses a solid accent fill and no shadow.
+Shape lock: one rounded system, three tokens in `src/styles.css`. Nothing else uses an ad-hoc radius, and no interactive control has a square corner.
+
+| Token | Value | Used for |
+|---|---|---|
+| `--radius-control` | 12px | buttons, inputs, selects, the segmented control, small cards, icon tiles, nav items |
+| `--radius-panel` | 24px | dashboard tiles, page panels, dialogs, sheets, the phone and desktop frames on the home page |
+| `--radius-chip` | 9999px | chips, tags, progress and zone bars, slider track and thumb |
+
+Radio dots stay round (`rounded-full`), because that is what people expect a radio to look like. Clerk gets `borderRadius: '12px'`. Load chart columns have a 4px rounded top and a flat base.
+
+Nested radii step down: a rounded element inside a padded rounded container uses inner radius = outer radius - padding (never below about 6px), so the corners stay concentric. The segmented control is the worked example: 12px outer, and the sliding fill and every segment use `calc(var(--radius-control) - 1px)` so they sit flush inside the 1px border. Its dividers are short inset hairlines (a border would curve round a rounded segment) and fade out beside the selected segment. Other derived radii follow the same rule and are written as `calc()` on the tokens: the floating header bar is 20px (`--radius-control` + its 8px inset, so the 12px call-to-action button sits concentric inside it), and the home-page phone frame's inner screen is `--radius-panel` minus its 7px bezel.
+
+Hairline borders instead of shadows; `shadow-lift` for the use-app card, the slider thumb and the mobile log button, `shadow-overlay` for dialogs, both tinted to the ground hue. The segmented control uses a solid accent fill and no shadow. Focus outlines follow `border-radius`, so a rounded control gets a rounded ring.
 
 ## Motion
 
@@ -66,11 +79,11 @@ Easing tokens `--ease-out`, `--ease-in-out`, `--ease-drawer`. Press scale 0.97 (
 
 | Component | 21st.dev source | What changed |
 |---|---|---|
-| Marketing header | [ln-dev7/header-17](https://21st.dev/@ln-dev7/components/header-17) | Floating square glass bar over the hero, auth-aware actions, our sheet on phones |
+| Marketing header | [ln-dev7/header-17](https://21st.dev/@ln-dev7/components/header-17) | Floating rounded glass bar over the hero, auth-aware actions, our sheet on phones |
 | Home hero background | [meerbahadin10/glass-fold](https://21st.dev/meerbahadin10/glass-fold) (GradFlow) | Shader kept; PitchSafe blues; pauses off screen; still frame for reduced motion |
-| Dashboard reveal | [aceternity/container-scroll-animation](https://21st.dev/aceternity/container-scroll-animation) | motion/react, typed, square frame, flat card for reduced motion; shows a real dark dashboard screenshot |
+| Dashboard reveal | [aceternity/container-scroll-animation](https://21st.dev/aceternity/container-scroll-animation) | motion/react, typed, rounded frame, flat card for reduced motion; shows a real dark dashboard screenshot |
 | Radio rows | [sean0205/c-radio-group-8](https://21st.dev/@sean0205/components/c-radio-group-8) | Added explainer line and trailing slot (risk chip), selected tint, 56px rows |
-| Load chart | [bklitai/bar-chart](https://21st.dev/@bklitai/components/bar-chart) | Mechanisms only (faded neighbours, value-first tooltip; data-ends now square); rebuilt as plain SVG without visx/Motion for hero performance; keyboard navigation and table view added |
+| Load chart | [bklitai/bar-chart](https://21st.dev/@bklitai/components/bar-chart) | Mechanisms only (faded neighbours, value-first tooltip; columns have a 4px rounded top); rebuilt as plain SVG without visx/Motion for hero performance; keyboard navigation and table view added |
 | FAQ | [shadcnblockscom/faq3](https://21st.dev/@shadcnblockscom/components/faq3) | Single-column stacked questions; transitions.dev accordion motion |
 | Button, sheet, slider, alert dialog | shadcn/ui (Radix) | Rewritten to tokens, 44px targets, exact transition properties |
 

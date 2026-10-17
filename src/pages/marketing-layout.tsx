@@ -38,7 +38,7 @@ export function MarketingLayout() {
   const isHome = useLocation().pathname === '/';
   return (
     <div className="site-night flex min-h-dvh flex-col bg-ground text-ink [color-scheme:dark]">
-      <a href="#main" className="sr-only z-50 bg-surface px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+      <a href="#main" className="sr-only z-50 rounded-[var(--radius-control)] bg-surface px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
         Skip to content
       </a>
       <MarketingHeader />

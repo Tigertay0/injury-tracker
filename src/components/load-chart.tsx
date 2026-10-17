@@ -25,7 +25,7 @@ interface LoadChartProps {
 const VIEW_W = 560;
 const BAR_MAX = 24;
 const GAP = 2;
-const RADIUS = 0;
+const RADIUS = 4;
 
 function niceMax(value: number): number {
   if (value <= 0) return 100;
@@ -34,7 +34,7 @@ function niceMax(value: number): number {
   return (steps.find((s) => s * pow >= value) ?? 10) * pow;
 }
 
-/** Column path with a square top and base. */
+/** Column path with rounded top corners and a flat base. */
 function columnPath(x: number, y: number, w: number, h: number): string {
   const r = Math.min(RADIUS, w / 2, h);
   return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;

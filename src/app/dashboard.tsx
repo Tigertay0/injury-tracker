@@ -124,7 +124,7 @@ function Verdict({ model, hasSessions }: { model: RiskModel; hasSessions: boolea
         <span className="tnum text-lead font-semibold text-ink-3">of 28</span>
       </p>
       <div
-        className="mt-4 h-2.5 max-w-md overflow-hidden bg-accent-soft"
+        className="mt-4 h-2.5 max-w-md overflow-hidden rounded-[var(--radius-chip)] bg-accent-soft"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={28}
@@ -287,12 +287,12 @@ export default function Dashboard() {
               {model.recommendations.map((r) => {
                 const next = NEXT_STEP[r.category];
                 return (
-                  <li key={r.text} className="border-b border-line last:border-b-0">
+                  <li key={r.text} className="border-b border-line first:rounded-t-[calc(var(--radius-panel)-1px)] last:rounded-b-[calc(var(--radius-panel)-1px)] last:border-b-0">
                     {/* The whole row opens the screen where the player can act on it */}
                     <Link
                       to={`${base}${next.path}`}
                       className={cn(
-                        'group flex gap-4 p-4 transition-colors duration-150 ease-out hover:bg-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus md:px-6',
+                        'group flex gap-4 rounded-[inherit] p-4 transition-colors duration-150 ease-out hover:bg-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus md:px-6',
                         r.urgent && 'bg-risk-very-high-soft hover:bg-risk-very-high-soft',
                       )}
                     >
