@@ -2,3 +2,7 @@
 CLERK_SECRET_KEY=sk_test_xxx
 # Neon owner connection string (direct, not pooled). Used by `npm run db:migrate`.
 DATABASE_URL=postgresql://neondb_owner:xxx@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+# Set to true to switch PitchSafe Plus on locally; anything else leaves it off.
+PLUS_ENABLED=
+# Anthropic API key for AI drill estimates (Plus). Leave blank and the estimate route answers 503.
+ANTHROPIC_API_KEY=

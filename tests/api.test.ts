@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, requirePlus, type Deps } from '../worker/app';
 import { CUSTOM_DRILL_LIMIT, NO_ROWS, RepoError, UNKNOWN_DRILL, type Overview, type PlayerRepo } from '../worker/repo';
 import { recoveryScore } from '../shared/calculations';
-import { MAX_CUSTOM_DRILLS, customDrillIdFromKey } from '../shared/custom-drills';
+import { MAX_CUSTOM_DRILLS, MAX_DAILY_ESTIMATES, customDrillIdFromKey, type DrillEstimate } from '../shared/custom-drills';
+import { DrillEstimateError } from '../worker/drill-estimator';
 import type { CustomDrill, Injury, Profile, RecoveryLog, TrainingSession } from '../shared/types';
 
 const TODAY = '2026-10-12';
@@ -507,6 +508,138 @@ describe('custom drills', () => {
     const res = await call('POST', '/drills/custom?plus=1', { token: 'token-a', headers: { 'X-Plus': 'true' }, body: { ...drill, plus: true } });
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual(PLUS_REQUIRED);
+  });
+});
+
+describe('drill estimates', () => {
+  const body = { name: '  Grid 4v4  ', description: 'two-touch, 4 x 4 min' };
+  const estimate: DrillEstimate = {
+    category: 'small_sided',
+    profile: { intensity: 7, sprint: 0.05, hsr: 0.1, cod: 0.4, jump: 0, contact: 0.2, strength: 0 },
+    reason: 'Tight grid, many turns.',
+  };
+  const PLUS_REQUIRED = { error: 'Custom drills need PitchSafe Plus.', code: 'plus_required' };
+  const DAILY_LIMIT = { error: "You've used today's 20 AI estimates. Enter the values yourself, or try again tomorrow." };
+  const estimateCall = (token = 'token-plus', payload: unknown = body) => call('POST', '/drills/custom/estimate', { token, body: payload });
+  const withEstimator = (estimateDrill: Deps['estimateDrill']) => {
+    deps.estimateDrill = estimateDrill;
+    app = createApp(deps);
+  };
+
+  it('returns the estimate to a Plus player, from the trimmed name and description', async () => {
+    const estimateDrill = vi.fn(async () => estimate);
+    withEstimator(estimateDrill);
+    const res = await estimateCall();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(estimate);
+    expect(estimateDrill).toHaveBeenCalledExactlyOnceWith({ name: 'Grid 4v4', description: 'two-touch, 4 x 4 min' });
+    expect(res.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('blocks free players before anything is spent', async () => {
+    const estimateDrill = vi.fn(async () => estimate);
+    withEstimator(estimateDrill);
+    const res = await estimateCall('token-a', { name: '' });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual(PLUS_REQUIRED);
+    expect(estimateDrill).not.toHaveBeenCalled();
+    expect(deps.allow).not.toHaveBeenCalledWith('ai', 'user_a');
+  });
+
+  it('says Plus is not available yet while the switch is off', async () => {
+    deps.estimateDrill = vi.fn(async () => estimate);
+    app = createApp({ ...deps, plusEnabled: false });
+    const res = await estimateCall();
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'PitchSafe Plus is not available yet.' });
+    expect(deps.estimateDrill).not.toHaveBeenCalled();
+  });
+
+  it('answers 429 with Retry-After when the AI limiter says no', async () => {
+    deps.allow = vi.fn(async (bucket) => bucket !== 'ai');
+    const estimateDrill = vi.fn(async () => estimate);
+    withEstimator(estimateDrill);
+    const res = await estimateCall();
+    expect(res.status).toBe(429);
+    expect(res.headers.get('retry-after')).toBe('60');
+    expect(await res.json()).toEqual({ error: 'Too many estimates. Wait a minute and try again.' });
+    expect(deps.allow).toHaveBeenCalledWith('ai', 'user_plus');
+    expect(estimateDrill).not.toHaveBeenCalled();
+  });
+
+  it('allows 20 estimates a day and refuses the 21st, counting per day', async () => {
+    let day = TODAY;
+    deps.today = () => day;
+    const estimateDrill = vi.fn(async () => estimate);
+    withEstimator(estimateDrill);
+    for (let i = 0; i < MAX_DAILY_ESTIMATES; i++) expect((await estimateCall()).status).toBe(200);
+
+    const refused = await estimateCall();
+    expect(refused.status).toBe(429);
+    expect(await refused.json()).toEqual(DAILY_LIMIT);
+    expect(estimateDrill).toHaveBeenCalledTimes(MAX_DAILY_ESTIMATES);
+    expect((await estimateCall()).status).toBe(429);
+
+    day = '2026-10-13';
+    expect((await estimateCall()).status).toBe(200);
+  });
+
+  it('counts each player separately', async () => {
+    TOKENS['token-other-plus'] = { userId: 'user_other_plus', plus: true };
+    withEstimator(vi.fn(async () => estimate));
+    for (let i = 0; i < MAX_DAILY_ESTIMATES; i++) await estimateCall();
+    expect((await estimateCall()).status).toBe(429);
+    expect((await estimateCall('token-other-plus')).status).toBe(200);
+    delete TOKENS['token-other-plus'];
+  });
+
+  it('answers 502 with a friendly message when the estimator fails', async () => {
+    withEstimator(vi.fn(async () => { throw new DrillEstimateError('internal detail: model said SECRET'); }));
+    const res = await estimateCall();
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ error: "We couldn't estimate this drill. Enter the values yourself." });
+  });
+
+  it('keeps unexpected estimator failures as a generic 500', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    withEstimator(vi.fn(async () => { throw new TypeError('kaboom'); }));
+    const res = await estimateCall();
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Something went wrong on our side. Try again.' });
+  });
+
+  it('answers 503 when no estimator is configured, without using up an estimate', async () => {
+    for (let i = 0; i < 5; i++) {
+      const res = await estimateCall();
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ error: 'AI estimates are not available right now. Enter the values yourself.' });
+    }
+    withEstimator(vi.fn(async () => estimate));
+    for (let i = 0; i < MAX_DAILY_ESTIMATES; i++) expect((await estimateCall()).status).toBe(200);
+    expect((await estimateCall()).status).toBe(429);
+  });
+
+  it('rejects an invalid body with 400 before the estimator runs or anything is counted', async () => {
+    const estimateDrill = vi.fn(async () => estimate);
+    withEstimator(estimateDrill);
+    const noName = await estimateCall('token-plus', { name: '  ', description: 'x' });
+    expect(noName.status).toBe(400);
+    expect((await noName.json()).field).toBe('name');
+    expect((await estimateCall('token-plus', { name: 'a'.repeat(61) })).status).toBe(400);
+    expect((await estimateCall('token-plus', { name: 'ok', description: 'a'.repeat(501) })).status).toBe(400);
+    expect((await estimateCall('token-plus', '{not json')).status).toBe(400);
+    expect((await estimateCall('token-plus', [])).status).toBe(400);
+    expect(estimateDrill).not.toHaveBeenCalled();
+
+    for (let i = 0; i < MAX_DAILY_ESTIMATES; i++) expect((await estimateCall()).status).toBe(200);
+    expect((await estimateCall()).status).toBe(429);
+  });
+
+  it('does not take extra fields from the request into the estimator', async () => {
+    const estimateDrill = vi.fn(async () => estimate);
+    withEstimator(estimateDrill);
+    await estimateCall('token-plus', { name: 'Grid', description: '', userId: 'user_a', email: 'a@b.c', profile: { intensity: 1 } });
+    expect(estimateDrill).toHaveBeenCalledExactlyOnceWith({ name: 'Grid', description: '' });
   });
 });
 

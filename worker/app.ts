@@ -2,7 +2,7 @@
 import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
-import { MAX_CUSTOM_DRILLS, type DrillEstimate } from '../shared/custom-drills';
+import { MAX_CUSTOM_DRILLS, MAX_DAILY_ESTIMATES, type DrillEstimate } from '../shared/custom-drills';
 import { utcToday } from '../shared/dates';
 import {
   ValidationError,
@@ -10,12 +10,14 @@ import {
   requireId,
   validateCustomDrill,
   validateEquipment,
+  validateEstimateRequest,
   validateInjury,
   validateInjuryReturn,
   validateProfile,
   validateRecovery,
   validateSession,
 } from '../shared/validation';
+import { DrillEstimateError } from './drill-estimator';
 import { CUSTOM_DRILL_LIMIT, NO_ROWS, RepoError, UNKNOWN_DRILL, type PlayerRepo } from './repo';
 
 export interface Deps {
@@ -173,6 +175,26 @@ export function createApp(deps: Deps) {
   app.post('/drills/custom', requirePlus(plusEnabled), async (c) => {
     const input = validateCustomDrill(await readJson(c));
     return c.json(await c.var.repo.addCustomDrill(input), 201);
+  });
+
+  // The AI estimate. Order matters: Plus, then the per-minute limiter, then the body (so a
+  // bad request never costs a daily estimate), then availability, then the daily count
+  app.post('/drills/custom/estimate', requirePlus(plusEnabled), async (c) => {
+    if (!(await deps.allow('ai', c.var.userId))) {
+      return c.json({ error: 'Too many estimates. Wait a minute and try again.' }, 429, { 'Retry-After': '60' });
+    }
+    const input = validateEstimateRequest(await readJson(c));
+    if (!deps.estimateDrill) return c.json({ error: 'AI estimates are not available right now. Enter the values yourself.' }, 503);
+    // The server's UTC day, never a date from the client
+    if ((await c.var.repo.countEstimate(today())) > MAX_DAILY_ESTIMATES) {
+      return c.json({ error: `You've used today's ${MAX_DAILY_ESTIMATES} AI estimates. Enter the values yourself, or try again tomorrow.` }, 429);
+    }
+    try {
+      return c.json(await deps.estimateDrill(input));
+    } catch (err) {
+      if (err instanceof DrillEstimateError) return c.json({ error: "We couldn't estimate this drill. Enter the values yourself." }, 502);
+      throw err;
+    }
   });
 
   app.delete('/drills/custom/:id', async (c) => {

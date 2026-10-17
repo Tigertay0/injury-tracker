@@ -1,9 +1,11 @@
 // Cloudflare Worker entry: runs first on every request to enforce https and the bare
 // domain, serves the React app from static assets, and wires the API to Clerk, Neon (via
 // Hyperdrive) and the rate limiters.
+import Anthropic from '@anthropic-ai/sdk';
 import { createClerkClient, verifyToken } from '@clerk/backend';
 import { createApp } from './app';
 import { canonicalRedirect } from './canonical';
+import { createDrillEstimator } from './drill-estimator';
 import { PLUS_FEATURE, hasUserFeature } from './entitlements';
 import { pingDatabase, postgresRepo } from './repo';
 
@@ -59,6 +61,10 @@ function buildApp(env: Env) {
     },
     pingDatabase: () => pingDatabase(env.HYPERDRIVE.connectionString),
     plusEnabled: env.PLUS_ENABLED === 'true',
+    // Without the secret the estimate route answers 503 and players enter the values by hand
+    estimateDrill: env.ANTHROPIC_API_KEY
+      ? createDrillEstimator(new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 0, timeout: 15_000 }))
+      : undefined,
   });
 }
 
