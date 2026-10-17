@@ -62,7 +62,9 @@ export default function Recovery() {
   const { recovery } = useOverview();
   const today = useLocalToday();
   const thisWeek = mondayOf(today);
-  const [week, setWeek] = useState(thisWeek);
+  // The week follows today (also past Monday midnight) until the player picks one of the offered weeks
+  const [pickedWeek, setWeek] = useState<string | null>(null);
+  const week = pickedWeek === thisWeek || pickedWeek === addDays(thisWeek, -7) ? pickedWeek : thisWeek;
   const existing = recovery.find((r) => r.weekStart === week) ?? null;
 
   return (

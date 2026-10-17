@@ -44,8 +44,11 @@ function usePlayerDataState() {
           update((d) => ({ ...d, profile }));
         } catch (err) {
           // The profile already exists (a lost response, double tap or second tab): pick it up
-          if (err instanceof ApiError && err.status === 409) return load();
-          throw err;
+          if (!(err instanceof ApiError && err.status === 409)) throw err;
+          // Fetch outside load() so a failure here reaches the caller instead of the error state
+          const data = await api.get<Overview>('/overview');
+          if (!data.profile) throw err;
+          update(() => data);
         }
       },
       async updateProfile(input: ProfileInput) {
