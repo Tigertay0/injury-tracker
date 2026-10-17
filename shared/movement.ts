@@ -79,8 +79,9 @@ export function movementLoad(sessions: readonly TrainingSession[], today: string
     if (!s.drills?.length) continue;
     const age = end - dayNumber(s.date);
     if (age < 0 || age >= WINDOW_DAYS) continue;
+    if (!s.drills.some((d) => lookup(d.drillId))) continue;
     weeksWithDrills.add(Math.floor(age / 7));
-    if (s.drills.some((d) => lookup(d.drillId))) oldestDrillAge = Math.max(oldestDrillAge, age);
+    oldestDrillAge = Math.max(oldestDrillAge, age);
     const e = sessionExposure(s.drills, lookup);
     for (const t of MOVEMENT_TYPES) {
       window[t] += e[t];
