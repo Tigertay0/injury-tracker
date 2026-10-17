@@ -122,6 +122,24 @@
   color-scheme: dark;
 }
 
+/* Colours handed to Clerk's components (src/lib/clerk-root.tsx). Clerk sets internal custom
+   properties with names like --accent on its own elements, so passing var(--accent) would make
+   that property point at itself and the colour would drop out (an invisible Subscribe button).
+   These copies use names Clerk never sets, and are redeclared wherever the theme tokens change. */
+:root,
+.app-scope,
+.theme-night,
+.site-night {
+  --ps-clerk-accent: var(--accent);
+  --ps-clerk-on-accent: var(--on-accent);
+  --ps-clerk-ink: var(--ink);
+  --ps-clerk-ink-2: var(--ink-2);
+  --ps-clerk-surface: var(--surface);
+  --ps-clerk-line-strong: var(--line-strong);
+  --ps-clerk-danger: var(--risk-very-high);
+  --ps-clerk-success: var(--risk-low);
+}
+
 @theme inline {
   --color-ground: var(--ground);
   --color-surface: var(--surface);
