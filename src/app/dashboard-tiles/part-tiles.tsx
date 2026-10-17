@@ -18,12 +18,13 @@ import {
   RECOVERY_TONE,
   type Tone,
 } from '@/lib/labels';
-import { useAppBase } from '@/lib/player-data';
+import { useAppBase, useOverview } from '@/lib/player-data';
 import type { WidgetSize } from '@/lib/widget-layout';
 import { cn } from '@/lib/utils';
 import { TILE_TITLES } from '../dashboard-order';
 import { LEVEL_CHIP } from '../movement-panel';
 import { FillMeter, RatioMeter, SegmentMeter } from './meters';
+import { equipmentNote, injuryNote, recoveryNote } from './part-notes';
 import { BIG_NUMBER, TILE_LABEL, TILE_PADDING } from './tile-shell';
 
 interface PartTileProps {
@@ -33,7 +34,7 @@ interface PartTileProps {
   tone: Tone;
   status: string;
   meter: ReactNode;
-  /** A sentence under the figure, shown only when the tile is square and big enough to hold it. */
+  /** A line under the figure, shown only when the tile is square and big enough to hold it. */
   note?: string;
   size: WidgetSize;
 }
@@ -59,7 +60,8 @@ function PartTile({ to, label, value, tone, status, meter, note, size }: PartTil
     >
       <div className={cn('flex min-h-0 flex-1 flex-col gap-2', TILE_PADDING)}>
         <div className="flex items-start justify-between gap-2">
-          <span className={TILE_LABEL}>{label}</span>
+          {/* Below 200px a label can wrap, so two lines are kept for it and the figures line up across a row */}
+          <span className={cn(TILE_LABEL, !stretched && '@max-[199px]:min-h-[2.7em]')}>{label}</span>
           <ArrowUpRight aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-3 transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
         </div>
         {stretched ? (
@@ -124,6 +126,7 @@ export function RecoveryTile({ model, size }: PartProps) {
       tone={tone}
       status={model.recoveryZone ? RECOVERY_LABEL[model.recoveryZone] : 'No check-in'}
       meter={<FillMeter fraction={model.recovery ? model.recovery.score / 10 : 0} tone={tone} />}
+      note={recoveryNote(model.recovery)}
       size={size}
     />
   );
@@ -133,6 +136,7 @@ const EQUIPMENT_LEVELS: readonly EquipmentRisk[] = ['LOW', 'MEDIUM', 'HIGH', 'VE
 
 export function EquipmentTile({ model, size }: PartProps) {
   const base = useAppBase();
+  const profile = useOverview().profile;
   const risk = model.equipmentRisk;
   const tone = risk ? EQUIPMENT_TONE[risk] : 'neutral';
   return (
@@ -143,6 +147,7 @@ export function EquipmentTile({ model, size }: PartProps) {
       tone={tone}
       status={risk ? EQUIPMENT_LABEL[risk] : 'Not set'}
       meter={<SegmentMeter filled={risk ? EQUIPMENT_LEVELS.indexOf(risk) + 1 : 0} total={EQUIPMENT_LEVELS.length} tone={tone} />}
+      note={equipmentNote(profile)}
       size={size}
     />
   );
@@ -151,6 +156,7 @@ export function EquipmentTile({ model, size }: PartProps) {
 /** The score is multiplied by 1 to 2 for past injuries (calculations.ts), so the meter runs over that range. */
 export function InjuryTile({ model, size }: PartProps) {
   const base = useAppBase();
+  const { injuries } = useOverview();
   const { value } = model.injury;
   const tone: Tone = value >= 1.3 ? 'high' : value > 1 ? 'moderate' : 'low';
   return (
@@ -161,6 +167,7 @@ export function InjuryTile({ model, size }: PartProps) {
       tone={tone}
       status={value > 1 ? 'Raises score' : 'No extra risk'}
       meter={<FillMeter fraction={value - 1} tone={tone} />}
+      note={injuryNote(injuries)}
       size={size}
     />
   );

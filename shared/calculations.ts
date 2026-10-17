@@ -162,9 +162,15 @@ export function compositeScore({ acwrRisk, recoveryRisk, equipmentRisk, multipli
   return Math.min(Math.round(base * multiplier), 100);
 }
 
+/** Composite zones from the lowest risk to the highest. */
+export const COMPOSITE_ZONES: readonly CompositeZone[] = ['LOW', 'MODERATE', 'HIGH', 'VERY_HIGH'];
+
+/** The highest score in each zone but the last: anything above HIGH is VERY_HIGH. `compositeZone` and the dashboard gauge both read these. */
+export const COMPOSITE_ZONE_MAX = { LOW: 30, MODERATE: 59, HIGH: 79 } as const;
+
 export function compositeZone(score: number): CompositeZone {
-  if (score <= 30) return 'LOW';
-  if (score <= 59) return 'MODERATE';
-  if (score <= 79) return 'HIGH';
+  if (score <= COMPOSITE_ZONE_MAX.LOW) return 'LOW';
+  if (score <= COMPOSITE_ZONE_MAX.MODERATE) return 'MODERATE';
+  if (score <= COMPOSITE_ZONE_MAX.HIGH) return 'HIGH';
   return 'VERY_HIGH';
 }

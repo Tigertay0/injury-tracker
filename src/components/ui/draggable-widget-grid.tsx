@@ -62,6 +62,8 @@ export interface DraggableWidgetGridProps {
   gap?: number;
   /** Any CSS length. Defaults to the panel radius token. */
   radius?: string;
+  /** Fade and slide the widgets in when the grid first draws. Turn off when a grid is drawn again on a screen the player is already looking at. */
+  animateEntrance?: boolean;
   className?: string;
 }
 
@@ -141,6 +143,7 @@ interface WidgetProps {
   held: boolean;
   raised: boolean;
   landed: boolean;
+  animateEntrance: boolean;
   handlers: WidgetHandlers;
   hintId: string;
   position: number;
@@ -160,6 +163,7 @@ const Widget = memo(function Widget({
   held,
   raised,
   landed,
+  animateEntrance,
   handlers,
   hintId,
   position,
@@ -302,7 +306,7 @@ const Widget = memo(function Widget({
     >
       <motion.div
         // No entrance animation under prefers-reduced-motion; MotionConfig does not cover opacity.
-        initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.97 }}
+        initial={reduceMotion || !animateEntrance ? false : { opacity: 0, y: 18, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', visualDuration: 0.6, bounce: 0.12, delay }}
         className={cn(
@@ -327,6 +331,7 @@ export function DraggableWidgetGrid({
   cellSize = 215,
   gap = 12,
   radius = 'var(--radius-panel)',
+  animateEntrance = true,
   className,
 }: DraggableWidgetGridProps) {
   const [items, setItems] = useState(propItems);
@@ -599,6 +604,7 @@ export function DraggableWidgetGrid({
                 held={held === p.id}
                 raised={raised === p.id}
                 landed={landed === p.id}
+                animateEntrance={animateEntrance}
                 handlers={handlers}
                 hintId={hintId}
                 renderItem={renderItem}

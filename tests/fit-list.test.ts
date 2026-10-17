@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countThatFit } from '@/app/dashboard-tiles/fit';
+import { countThatFit, fitState, footerMode } from '@/app/dashboard-tiles/fit';
 
 describe('countThatFit', () => {
   const reserve = 44; // the "See all" button and the gap above it
@@ -34,5 +34,53 @@ describe('countThatFit', () => {
     expect(countThatFit([50], 8, 50, reserve)).toBe(1);
     expect(countThatFit([50, 50], 8, 108, reserve)).toBe(2);
     expect(countThatFit([50, 50], 8, 107, reserve)).toBe(1);
+  });
+});
+
+describe('fitState', () => {
+  const reserve = 44;
+
+  it('shows everything and hides nothing when the list fits', () => {
+    expect(fitState([100, 100], 8, 300, reserve)).toEqual({ count: 2, hidden: 0, cramped: false });
+  });
+
+  it('hides what does not fit, keeping room for the button', () => {
+    expect(fitState([100, 100, 100], 8, 252, reserve)).toEqual({ count: 2, hidden: 1, cramped: false });
+  });
+
+  it('is cramped when even the first item will not fit beside the button, and then hides nothing', () => {
+    expect(fitState([200, 100], 8, 220, reserve)).toEqual({ count: 1, hidden: 0, cramped: true });
+  });
+
+  it('is cramped for a single item taller than the room', () => {
+    expect(fitState([300], 8, 200, reserve)).toEqual({ count: 1, hidden: 0, cramped: true });
+  });
+
+  it('is not cramped for a single item that fits', () => {
+    expect(fitState([150], 8, 200, reserve)).toEqual({ count: 1, hidden: 0, cramped: false });
+  });
+
+  it('is empty for an empty list', () => {
+    expect(fitState([], 8, 200, reserve)).toEqual({ count: 0, hidden: 0, cramped: false });
+  });
+
+  it('stops hiding anything when a bigger tile makes everything fit (so an open list can close)', () => {
+    const heights = [100, 100, 100];
+    expect(fitState(heights, 8, 252, reserve).hidden).toBe(1);
+    expect(fitState(heights, 8, 316, reserve).hidden).toBe(0);
+  });
+});
+
+describe('footerMode', () => {
+  it('lets the footer follow the list when nothing is hidden', () => {
+    expect(footerMode({ count: 2, hidden: 0, cramped: false })).toBe('flow');
+  });
+
+  it('pins the footer when "See all" is showing', () => {
+    expect(footerMode({ count: 1, hidden: 2, cramped: false })).toBe('pinned');
+  });
+
+  it('pins the footer in a cramped tile, so only the notes scroll', () => {
+    expect(footerMode({ count: 1, hidden: 0, cramped: true })).toBe('pinned');
   });
 });

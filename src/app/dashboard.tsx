@@ -1,7 +1,7 @@
 // Dashboard: a grid of tiles in the style of the 21st.dev draggable widget grid. The injury risk score
 // comes first with the four inputs behind it, then the load chart, movement, advice and fuel notes.
 // The player can rearrange the tiles, and the order is saved to their account.
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, ArrowsOutCardinal, Check, Plus } from '@phosphor-icons/react';
 import { buildRiskModel } from '@shared/risk-model';
@@ -42,19 +42,28 @@ export default function Dashboard() {
   const mode = useTileMode();
 
   const titles = useMemo<Record<TileId, string>>(() => ({ score: scoreTitle(model, hasSessions), ...TILE_TITLES }), [model, hasSessions]);
-  const { order, change, flush, announcement } = useTileOrder({
-    saved: overview.profile?.dashboardOrder ?? [],
-    save: actions.saveDashboardOrder,
-    labelOf: (id) => titles[id as TileId] ?? id,
-  });
-  const items = useMemo(() => tileItems(order, mode, titles), [order, mode, titles]);
 
   // Arranging is a mode of its own, because while tiles can be dragged their links cannot be followed.
   const [arranging, setArranging] = useState(false);
-  // The grid keeps its tab order from when it was drawn. After tiles moved, drawing it again on Done
-  // makes the tab order match what the player now sees.
+  const arrangingNow = useRef(arranging);
+  arrangingNow.current = arranging;
+  // The grid keeps its tab order from when it was drawn. After tiles moved, drawing it again makes the tab
+  // order match what the player now sees: on Done, or at once when a refused save puts the old order back.
   const [gridKey, setGridKey] = useState(0);
   const moved = useRef(false);
+  const hintId = useId();
+
+  const { order, change, flush, announcement, clearAnnouncement } = useTileOrder({
+    saved: overview.profile?.dashboardOrder ?? [],
+    save: actions.saveDashboardOrder,
+    labelOf: (id) => titles[id as TileId] ?? id,
+    onReverted: () => {
+      // Mid-edit the grid takes the order in place and Done redraws it; otherwise redraw it now
+      if (arrangingNow.current) moved.current = true;
+      else setGridKey((key) => key + 1);
+    },
+  });
+  const items = useMemo(() => tileItems(order, mode, titles), [order, mode, titles]);
 
   const toggleArranging = () => {
     if (!arranging) {
@@ -62,6 +71,7 @@ export default function Dashboard() {
       return;
     }
     setArranging(false);
+    clearAnnouncement();
     if (moved.current) {
       moved.current = false;
       setGridKey((key) => key + 1);
@@ -97,7 +107,7 @@ export default function Dashboard() {
         case 'actions':
           return <ActionsTile recommendations={model.recommendations} />;
         case 'fuel':
-          return <FuelTile notes={model.fuel} />;
+          return <FuelTile notes={model.fuel} size={size} />;
         case 'report':
           return <ReportTile model={model} />;
         default:
@@ -124,7 +134,7 @@ export default function Dashboard() {
         description={new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" onClick={toggleArranging}>
+            <Button variant="secondary" onClick={toggleArranging} aria-describedby={arranging ? hintId : undefined}>
               {arranging ? <Check aria-hidden weight="bold" /> : <ArrowsOutCardinal aria-hidden />}
               {arranging ? 'Done' : 'Arrange tiles'}
             </Button>
@@ -140,7 +150,7 @@ export default function Dashboard() {
 
       <div className="flex flex-col gap-6">
         {arranging && (
-          <p className="rounded-[var(--radius-control)] bg-accent-soft px-4 py-3 text-small text-ink">
+          <p id={hintId} className="rounded-[var(--radius-control)] bg-accent-soft px-4 py-3 text-small text-ink">
             Drag tiles to rearrange. On touch, press and hold first. Keyboard: Alt and arrow keys.
           </p>
         )}
@@ -154,6 +164,7 @@ export default function Dashboard() {
           onChange={onChange}
           renderItem={renderTile}
           editable={arranging}
+          animateEntrance={gridKey === 0}
           maxColumns={MAX_COLUMNS}
           cellSize={mode === 'desktop' ? DESKTOP_CELL : PHONE_CELL}
           gap={GRID_GAP}

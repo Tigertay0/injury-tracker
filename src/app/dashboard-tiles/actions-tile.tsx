@@ -25,29 +25,32 @@ function Action({ rec, first }: { rec: Recommendation; first: boolean }) {
   const base = useAppBase();
   const next = NEXT_STEP[rec.category];
   return (
-    // The whole row opens the screen where the player can act on it
-    <Link
-      to={`${base}${next.path}`}
-      className={cn(
-        'group flex gap-3 rounded-[var(--radius-control)] p-2.5 transition-colors duration-150 ease-out hover:bg-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
-        rec.urgent && 'bg-risk-very-high-soft hover:bg-risk-very-high-soft',
-      )}
-    >
-      {rec.urgent && <WarningOctagon aria-hidden weight="fill" className="mt-0.5 size-5 shrink-0 text-risk-very-high" />}
-      <div className="min-w-0 flex-1">
-        <p className={cn('text-label font-semibold', rec.urgent ? 'text-risk-very-high' : 'text-ink-2')}>
-          {first && !rec.urgent && 'Do this first: '}
-          {rec.urgent ? 'Urgent: ' : ''}
-          {rec.category}
-        </p>
-        <p className="mt-0.5 text-small text-ink">{rec.text}</p>
-        {rec.citation && <p className="mt-1 text-caption text-ink-3">Source: {rec.citation}</p>}
-        <p className="mt-2 inline-flex items-center gap-1 text-small font-semibold text-accent-ink">
-          {next.label}
-          <ArrowRight aria-hidden weight="bold" className="size-3.5 transition-transform duration-150 ease-out group-hover:translate-x-0.5" />
-        </p>
-      </div>
-    </Link>
+    <>
+      {/* Plain text above the link, so the link's accessible name stays what it was before */}
+      {first && <p className="px-2.5 pt-1 text-label font-semibold text-ink">Do this first</p>}
+      {/* The whole row opens the screen where the player can act on it */}
+      <Link
+        to={`${base}${next.path}`}
+        className={cn(
+          'group flex gap-3 rounded-[var(--radius-control)] p-2.5 transition-colors duration-150 ease-out hover:bg-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
+          rec.urgent && 'bg-risk-very-high-soft hover:bg-risk-very-high-soft',
+        )}
+      >
+        {rec.urgent && <WarningOctagon aria-hidden weight="fill" className="mt-0.5 size-5 shrink-0 text-risk-very-high" />}
+        <div className="min-w-0 flex-1">
+          <p className={cn('text-label font-semibold', rec.urgent ? 'text-risk-very-high' : 'text-ink-2')}>
+            {rec.urgent ? 'Urgent: ' : ''}
+            {rec.category}
+          </p>
+          <p className="mt-0.5 text-label text-ink @[300px]:text-small">{rec.text}</p>
+          {rec.citation && <p className="mt-1 text-caption text-ink-3">Source: {rec.citation}</p>}
+          <p className="mt-2 inline-flex items-center gap-1 text-small font-semibold text-accent-ink">
+            {next.label}
+            <ArrowRight aria-hidden weight="bold" className="size-3.5 transition-transform duration-150 ease-out group-hover:translate-x-0.5" />
+          </p>
+        </div>
+      </Link>
+    </>
   );
 }
 
@@ -60,6 +63,7 @@ export function ActionsTile({ recommendations }: { recommendations: readonly Rec
           keyOf={(r) => r.text}
           renderItem={(rec, i) => <Action rec={rec} first={i === 0} />}
           noun="actions"
+          scrollLabel="All actions, scrollable"
           listClassName="-mx-2.5 flex flex-col gap-1"
         />
       ) : (

@@ -5,7 +5,8 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { countThatFit } from './fit';
+import { fitState, footerMode, type FitState } from './fit';
+import { ScrollRegion } from './scroll-region';
 
 /** The "See all" button (36px) and the gap above it. */
 const TOGGLE_RESERVE = 44;
@@ -18,25 +19,24 @@ interface FitListProps<T> {
   renderItem: (item: T, index: number) => ReactNode;
   /** What the items are, for the button: "See all 5 actions". */
   noun: string;
+  /** Names the list for screen readers while it scrolls: "All actions, scrollable". */
+  scrollLabel: string;
   /** Hide the list from screen readers, when the tile offers the same information another way. */
   listHidden?: boolean;
   /** Classes for the list itself, which set the space between items. */
   listClassName?: string;
-  /** Always in view under the list, for text that must not be missed. In a cramped tile it scrolls with the list. */
+  /** Always in view under the list. It follows the list when everything fits, and is pinned to the bottom of the tile while "See all" or a scrolling list is there. */
   footer?: ReactNode;
   className?: string;
 }
 
-export function FitList<T>({ items, keyOf, renderItem, noun, listHidden, listClassName = 'flex flex-col gap-2', footer, className }: FitListProps<T>) {
+export function FitList<T>({ items, keyOf, renderItem, noun, scrollLabel, listHidden, listClassName = 'flex flex-col gap-2', footer, className }: FitListProps<T>) {
   const box = useRef<HTMLDivElement>(null);
   const ghost = useRef<HTMLOListElement>(null);
   const ghostFooter = useRef<HTMLDivElement>(null);
   const listId = useId();
-  const [fit, setFit] = useState(items.length);
+  const [fit, setFit] = useState<FitState>({ count: items.length, hidden: 0, cramped: false });
   const [open, setOpen] = useState(false);
-  // The first item alone can be too tall for a small tile, even without the button. Then every item is
-  // shown whole in a list that scrolls, rather than a button that would leave no room to read one.
-  const [cramped, setCramped] = useState(false);
 
   const measure = useCallback(() => {
     const copy = ghost.current;
@@ -45,11 +45,10 @@ export function FitList<T>({ items, keyOf, renderItem, noun, listHidden, listCla
     const room = box.current.clientHeight - (footerHeight > 0 ? footerHeight + BOX_GAP : 0);
     const heights = Array.from(copy.children, (child) => (child as HTMLElement).offsetHeight);
     const gap = Number.parseFloat(getComputedStyle(copy).rowGap) || 0;
-    const count = countThatFit(heights, gap, room, TOGGLE_RESERVE);
-    const total = heights.reduce((sum, h, i) => sum + h + (i > 0 ? gap : 0), 0);
-    const first = (heights[0] ?? 0) + (heights.length > 1 ? TOGGLE_RESERVE : 0);
-    setFit(count);
-    setCramped(total > room && first > room);
+    const next = fitState(heights, gap, room, TOGGLE_RESERVE);
+    setFit((was) => (was.count === next.count && was.hidden === next.hidden && was.cramped === next.cramped ? was : next));
+    // A bigger tile can make everything fit while the list is open: close it, so it is not left open and scrolling
+    if (next.hidden === 0) setOpen(false);
   }, []);
 
   // Measure before the first paint, and again whenever the tile or the text inside it changes size
@@ -60,32 +59,33 @@ export function FitList<T>({ items, keyOf, renderItem, noun, listHidden, listCla
     return () => observer.disconnect();
   }, [measure, items, footer]);
 
-  const hidden = cramped ? 0 : Math.max(0, items.length - fit);
-  const shown = open || cramped ? items : items.slice(0, fit);
-  const scrolls = open || cramped;
+  const { cramped, hidden } = fit;
+  const showAll = open || cramped;
+  const shown = showAll ? items : items.slice(0, fit.count);
+  const list = (
+    <ol id={listId} aria-hidden={listHidden || undefined} className={listClassName}>
+      {shown.map((item, i) => (
+        <li key={keyOf(item)}>{renderItem(item, i)}</li>
+      ))}
+    </ol>
+  );
 
   return (
     <div ref={box} className={cn('relative flex min-h-0 flex-1 flex-col gap-2', className)}>
-      <div
-        // The padding gives a row that bleeds past the text edge (a hover fill) room inside the clip
-        className={cn('-mx-2.5 min-h-0 px-2.5', scrolls ? 'overflow-y-auto' : 'overflow-hidden')}
-        tabIndex={scrolls ? 0 : undefined}
-        role={scrolls ? 'group' : undefined}
-        aria-label={scrolls ? noun : undefined}
-      >
-        <ol id={listId} aria-hidden={listHidden || undefined} className={listClassName}>
-          {shown.map((item, i) => (
-            <li key={keyOf(item)}>{renderItem(item, i)}</li>
-          ))}
-        </ol>
-        {cramped && footer && <div className="mt-2">{footer}</div>}
-      </div>
+      {/* The padding gives a row that bleeds past the text edge (a hover fill) room inside the clip */}
+      {showAll ? (
+        <ScrollRegion label={scrollLabel} className="-mx-2.5 px-2.5">
+          {list}
+        </ScrollRegion>
+      ) : (
+        <div className="-mx-2.5 min-h-0 overflow-hidden px-2.5">{list}</div>
+      )}
       {hidden > 0 && (
         <Button type="button" variant="secondary" size="sm" className="self-start" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((was) => !was)}>
           {open ? 'Show fewer' : `See all ${items.length} ${noun}`}
         </Button>
       )}
-      {!cramped && footer && <div className="mt-auto">{footer}</div>}
+      {footer && <div className={footerMode(fit) === 'pinned' ? 'mt-auto' : undefined}>{footer}</div>}
       {/* The same list and footer, unseen, to read their heights at the tile's width */}
       <div aria-hidden inert className="pointer-events-none invisible absolute inset-x-0 top-0 -z-10">
         <ol ref={ghost} className={listClassName}>

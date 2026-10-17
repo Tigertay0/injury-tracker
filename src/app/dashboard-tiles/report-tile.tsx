@@ -5,7 +5,10 @@ import type { RiskModel } from '@shared/risk-model';
 import { Button } from '@/components/ui/button';
 import { useOverview } from '@/lib/player-data';
 import { TILE_TITLES } from '../dashboard-order';
-import { TileShell } from './tile-shell';
+import { BIG_NUMBER, TileShell } from './tile-shell';
+
+/** What the PDF has on its page (see downloadCoachReport in report-pdf.ts). */
+const CONTENTS = ['Score', 'Load trend', 'Recovery', 'Cleats', 'Top actions'] as const;
 
 export function ReportTile({ model }: { model: RiskModel }) {
   const overview = useOverview();
@@ -27,8 +30,25 @@ export function ReportTile({ model }: { model: RiskModel }) {
   };
 
   return (
-    <TileShell title={TILE_TITLES.report} titleId="report-title">
-      <div className="flex min-h-0 flex-1 flex-col justify-end gap-3">
+    <TileShell
+      title={TILE_TITLES.report}
+      titleId="report-title"
+      className="gap-2"
+      meta={<span className="tnum text-label text-ink-2 @[440px]:hidden">1 page PDF</span>}
+    >
+      <p className="hidden items-baseline gap-2 @[440px]:flex">
+        <span className={BIG_NUMBER}>1</span>
+        <span className="text-label text-ink-2">page PDF</span>
+      </p>
+      {/* The same list as the sentence below, as small tags, once the tile is wide enough to hold them in one row */}
+      <ul aria-hidden className="hidden flex-wrap gap-1.5 @[440px]:flex">
+        {CONTENTS.map((item) => (
+          <li key={item} className="rounded-[var(--radius-chip)] bg-sunken px-2.5 py-0.5 text-caption text-ink-2">
+            {item}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-auto flex flex-col gap-2">
         {failed ? (
           <p role="alert" className="text-label text-risk-very-high">
             The report could not be built. Try again.

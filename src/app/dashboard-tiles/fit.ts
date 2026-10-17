@@ -24,3 +24,26 @@ export function countThatFit(heights: readonly number[], gap: number, room: numb
   }
   return Math.max(1, shown);
 }
+
+export interface FitState {
+  /** How many leading items to show. */
+  count: number;
+  /** How many items sit behind "See all". Zero when everything fits, and in a cramped tile. */
+  hidden: number;
+  /** Even the first item is too tall for the tile, so every item is shown in a list that scrolls. */
+  cramped: boolean;
+}
+
+/** `countThatFit`, plus what the tile needs to know to lay itself out. */
+export function fitState(heights: readonly number[], gap: number, room: number, reserve: number): FitState {
+  const count = countThatFit(heights, gap, room, reserve);
+  const total = heights.reduce((sum, h, i) => sum + h + (i > 0 ? gap : 0), 0);
+  const first = (heights[0] ?? 0) + (heights.length > 1 ? reserve : 0);
+  const cramped = total > room && first > room;
+  return { count, hidden: cramped ? 0 : heights.length - count, cramped };
+}
+
+/** The footer follows the list; it is pinned to the bottom of the tile only while "See all" or a scrolling list is there. */
+export function footerMode({ hidden, cramped }: FitState): 'flow' | 'pinned' {
+  return hidden > 0 || cramped ? 'pinned' : 'flow';
+}

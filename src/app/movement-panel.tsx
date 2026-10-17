@@ -113,6 +113,7 @@ export function MovementTile({ movement }: { movement: MovementSummary }) {
             keyOf={(r) => r.status.type}
             renderItem={(r) => <MovementRow {...r} max={max} />}
             noun="movements"
+            scrollLabel="All movements, scrollable"
             listHidden
             listClassName="flex flex-col gap-3"
           />
