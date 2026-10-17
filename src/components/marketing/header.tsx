@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { List } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Wordmark } from '@/components/wordmark';
 import { useAppAuth } from '@/lib/auth';
@@ -44,9 +45,9 @@ export function MarketingHeader() {
               Sign in
             </Link>
           )}
-          <Link to={primary.to} className="inline-flex h-10 items-center rounded-[var(--radius-control)] bg-white px-4 text-small font-semibold text-[#060a1a] transition-colors hover:bg-[#dfe9ff]">
-            {primary.label}
-          </Link>
+          <Button asChild variant="inverse" size="sm" className="h-10 px-4">
+            <Link to={primary.to}>{primary.label}</Link>
+          </Button>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger className="grid size-10 place-items-center rounded-[var(--radius-control)] text-white/80 hover:bg-white/10 hover:text-white md:hidden" aria-label="Open menu">
               <List aria-hidden className="size-5" />

@@ -73,7 +73,7 @@ Hairline borders instead of shadows; `shadow-lift` for the use-app card, the sli
 
 ## Motion
 
-Easing tokens `--ease-out`, `--ease-in-out`, `--ease-drawer`. Press scale 0.97 (`.press`). From the transitions-dev skill (verbatim, with reduced-motion guards): text swap (zone label), tabs sliding (segmented control), error shake (form fields; message persists until edited instead of auto-reverting), accordion (FAQ), skeleton pulse (app loading), success check (save buttons). Drawers and dialogs: 320ms in / 200ms out on `--ease-drawer`; dialog uses modal timings (250/150ms, scale 0.96). Chart and ruler move with `transform`/`opacity` only.
+Easing tokens `--ease-out`, `--ease-in-out`, `--ease-drawer`. Press scale 0.97 on plain pressables (`.press`); buttons press to 0.98 through Motion's `whileTap`. Buttons also have the origin fill (see Components): a circle grows from the pointer over 500ms on `cubic-bezier(0.16,1,0.3,1)`, from the centre for keyboard focus. Hover fills only where the device can hover; touch fills on press. Reduced motion: the fill fades in over 120ms and nothing scales. From the transitions-dev skill (verbatim, with reduced-motion guards): text swap (zone label), tabs sliding (segmented control), error shake (form fields; message persists until edited instead of auto-reverting), accordion (FAQ), skeleton pulse (app loading), success check (save buttons). Drawers and dialogs: 320ms in / 200ms out on `--ease-drawer`; dialog uses modal timings (250/150ms, scale 0.96). Chart and ruler move with `transform`/`opacity` only.
 
 ## Components (21st.dev)
 
@@ -85,7 +85,8 @@ Easing tokens `--ease-out`, `--ease-in-out`, `--ease-drawer`. Press scale 0.97 (
 | Radio rows | [sean0205/c-radio-group-8](https://21st.dev/@sean0205/components/c-radio-group-8) | Added explainer line and trailing slot (risk chip), selected tint, 56px rows |
 | Load chart | [bklitai/bar-chart](https://21st.dev/@bklitai/components/bar-chart) | Mechanisms only (faded neighbours, value-first tooltip; columns have a 4px rounded top); rebuilt as plain SVG without visx/Motion for hero performance; keyboard navigation and table view added |
 | FAQ | [shadcnblockscom/faq3](https://21st.dev/@shadcnblockscom/components/faq3) | Single-column stacked questions; transitions.dev accordion motion |
-| Button, sheet, slider, alert dialog | shadcn/ui (Radix) | Rewritten to tokens, 44px targets, exact transition properties |
+| Button | [OriginButton](https://21st.dev) (the owner's pick) | Behaviour in `origin-button.tsx`, looks in `button.tsx`. Five variants, each with a fill and the text colour that reads over it: primary floods to a darker accent (accent mixed 35% toward ink, in oklab), secondary to ink, ghost to sunken, danger to a darker red, inverse (the opposite of the ground: the white header button on the night pages) to surface. Disabled, busy and `aria-disabled` buttons get no fill and no press scale. `asChild` makes a Link the button; alert dialog Action and Cancel wrap it too. Text contrast is 6:1 or better at rest and 9:1 or better filled, in light, dark and night |
+| Sheet, slider, alert dialog | shadcn/ui (Radix) | Rewritten to tokens, 44px targets, exact transition properties |
 
 The shadcn CLI could not resolve 21st.dev's `shadcn/button` registry dependency, so component code was placed by hand from `get_component` output.
 

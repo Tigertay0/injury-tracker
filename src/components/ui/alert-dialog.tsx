@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { AlertDialog as Primitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
-import { buttonVariants } from './button';
+import { Button } from './button';
 
 const AlertDialog = Primitive.Root;
 const AlertDialogTrigger = Primitive.Trigger;
@@ -37,12 +37,25 @@ function AlertDialogFooter({ className, ...props }: React.ComponentProps<'div'>)
   return <div className={cn('mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)} {...props} />;
 }
 
-function AlertDialogCancel({ className, ...props }: React.ComponentProps<typeof Primitive.Cancel>) {
-  return <Primitive.Cancel className={cn(buttonVariants({ variant: 'secondary' }), className)} {...props} />;
+// Radix owns the behaviour (close, focus the safe button first); Button, as its child, owns the look
+function AlertDialogCancel({ className, children, ...props }: Omit<React.ComponentProps<typeof Primitive.Cancel>, 'asChild'>) {
+  return (
+    <Primitive.Cancel asChild {...props}>
+      <Button variant="secondary" className={className}>
+        {children}
+      </Button>
+    </Primitive.Cancel>
+  );
 }
 
-function AlertDialogAction({ className, ...props }: React.ComponentProps<typeof Primitive.Action>) {
-  return <Primitive.Action className={cn(buttonVariants({ variant: 'danger' }), className)} {...props} />;
+function AlertDialogAction({ className, children, ...props }: Omit<React.ComponentProps<typeof Primitive.Action>, 'asChild'>) {
+  return (
+    <Primitive.Action asChild {...props}>
+      <Button variant="danger" className={className}>
+        {children}
+      </Button>
+    </Primitive.Action>
+  );
 }
 
 export { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction };
