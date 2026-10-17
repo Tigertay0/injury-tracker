@@ -52,7 +52,7 @@ export function Faq() {
   // One answer open at a time, like faq3
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   return (
-    <section id="faq" className="mx-auto max-w-[1200px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-24">
+    <section id="faq" className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 lg:py-24">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
         <h2 className="font-display text-[2.25rem] leading-[1] font-bold tracking-[-0.04em] text-ink sm:text-display-s">Questions players ask</h2>
         <div className="border-t border-line">

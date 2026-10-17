@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Dialog as SheetPrimitive } from 'radix-ui';
 import { X } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
-import { Button } from './button';
+import { Button, GHOST_WASH } from './button';
 
 const Sheet = SheetPrimitive.Root;
 const SheetTrigger = SheetPrimitive.Trigger;
@@ -32,7 +32,7 @@ function SheetContent({
       >
         {children}
         <SheetPrimitive.Close asChild>
-          <Button variant="ghost" size="icon" className="absolute top-3 right-3 text-ink-2">
+          <Button variant="ghost" size="icon" fillClassName={GHOST_WASH} className="absolute top-3 right-3 text-ink-2">
             <X aria-hidden />
             <span className="sr-only">Close</span>
           </Button>

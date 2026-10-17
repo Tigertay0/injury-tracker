@@ -61,7 +61,7 @@ function Formula({ children }: { children: React.ReactNode }) {
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-24 border-t border-line pt-10 pb-12 first:border-t-0 first:pt-0">
+    <section id={id} aria-labelledby={`${id}-h`} className="border-t border-line pt-10 pb-12 first:border-t-0 first:pt-0">
       <h2 id={`${id}-h`} className="font-display text-h2 font-bold text-ink">
         {title}
       </h2>

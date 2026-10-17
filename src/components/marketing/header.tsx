@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { List } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/button';
+import { Button, GHOST_WASH } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Wordmark } from '@/components/wordmark';
 import { useAppAuth } from '@/lib/auth';
@@ -50,7 +50,7 @@ export function MarketingHeader() {
           </Button>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-10 md:hidden" aria-label="Open menu">
+              <Button variant="ghost" size="icon" fillClassName={GHOST_WASH} className="size-10 md:hidden" aria-label="Open menu">
                 <List aria-hidden />
               </Button>
             </SheetTrigger>

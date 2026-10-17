@@ -11,8 +11,10 @@ function Root() {
       {/* Installed app: a night strip behind the status bar so its white text always reads */}
       <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[env(safe-area-inset-top)] bg-[#050810]" />
       <Outlet />
+      {/* app-scope puts the toasts on the app's theme tokens: the Toaster sits outside the app shell, so without it they stay light in dark mode */}
       <Toaster
         position="top-center"
+        className="app-scope"
         toastOptions={{
           classNames: {
             toast: '!rounded-[var(--radius-control)] !border !border-line !bg-surface !text-ink !shadow-overlay !font-sans',

@@ -23,7 +23,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { MotionConfig, motion, useDragControls, useReducedMotion } from 'motion/react';
+import { MotionConfig, motion, useDragControls } from 'motion/react';
+import { usePrefersReducedMotion } from '@/lib/use-prefers-reduced-motion';
 import { cn } from '@/lib/utils';
 import {
   candidatesFor,
@@ -171,7 +172,7 @@ const Widget = memo(function Widget({
   renderItem,
 }: WidgetProps) {
   const controls = useDragControls();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const node = useRef<HTMLDivElement>(null);
   const press = useRef<Press | null>(null);
   const lifted = useRef(false);

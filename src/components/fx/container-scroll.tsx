@@ -4,13 +4,14 @@
 // instead of framer-motion, typed props, the frame colors as props, and a flat
 // card when the visitor prefers reduced motion.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
+import { motion, useScroll, useTransform, type MotionValue } from 'motion/react';
+import { usePrefersReducedMotion } from '@/lib/use-prefers-reduced-motion';
 import { cn } from '@/lib/utils';
 
 export function ContainerScroll({ titleComponent, children, frameClassName }: { titleComponent: ReactNode; children: ReactNode; frameClassName?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: containerRef });
-  const reduce = useReducedMotion();
+  const reduce = usePrefersReducedMotion();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {

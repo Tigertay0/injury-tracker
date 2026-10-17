@@ -89,7 +89,7 @@ function ProductReveal() {
 function PhoneReveal() {
   const [paused, setPaused] = useState(false);
   return (
-    <section id="score" className="scroll-mt-24 px-5 pt-20 pb-16" aria-labelledby="score-title">
+    <section id="score" className="px-5 pt-20 pb-16" aria-labelledby="score-title">
       <h2 id="score-title" className="mx-auto max-w-[16ch] text-center font-display text-[2.25rem] leading-[1] font-bold tracking-[-0.04em] text-balance text-white">
         {SCORE_TITLE}
       </h2>
@@ -100,8 +100,8 @@ function PhoneReveal() {
           <img
             src="/screens/dashboard-mobile-full.webp"
             width={780}
-            height={6868}
-            alt="The full PitchSafe dashboard for a sample player on a phone: risk score 66 out of 100, the top action, workload ratio, recovery, cleats, injury history, the 28-day load chart, movement this week with sprinting rising, five actions and the coach report"
+            height={5862}
+            alt="The full PitchSafe dashboard for a sample player on a phone: risk score 66 out of 100 with its zone gauge, workload ratio, recovery, cleats, injury history, the 28-day load chart, movement this week with sprinting rising, what to do now, fuel and recovery notes and the coach report"
             loading="lazy"
             decoding="async"
             className="dash-scroll block w-full"
@@ -125,7 +125,7 @@ function PhoneReveal() {
 
 function DesktopReveal() {
   return (
-    <section id="score" className="scroll-mt-24 overflow-hidden" aria-labelledby="score-title">
+    <section id="score" className="overflow-hidden" aria-labelledby="score-title">
       <ContainerScroll
         frameClassName="border-white/15 bg-[#0b1020]"
         titleComponent={
@@ -211,7 +211,7 @@ function InputCard({ input, className, children }: { input: (typeof INPUTS)[numb
 function Inputs() {
   const [load, recovery, cleats, injuries] = INPUTS;
   return (
-    <section id="how" className="scroll-mt-24 px-5 pt-8 pb-24 sm:px-8 lg:pb-32">
+    <section id="how" className="px-5 pt-8 pb-24 sm:px-8 lg:pb-32">
       <div className="mx-auto max-w-[1200px]">
         <div className="grid grid-cols-[minmax(0,1fr)] items-end gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
           <h2 className="max-w-[14ch] font-display text-[clamp(2.4rem,5.5vw,4.5rem)] leading-[1] font-bold tracking-[-0.04em] text-balance text-white">

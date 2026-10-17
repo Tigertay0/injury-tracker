@@ -107,8 +107,7 @@
   z-index: 1;
   transition:
     color            var(--tabs-dur) var(--tabs-ease),
-    background-color 120ms ease,
-    border-color     var(--tabs-dur) var(--tabs-ease);
+    background-color 120ms ease;
 }
 /* Dividers are short hairlines on the seam, not borders: a border on a rounded segment would
    curve round its corners. */
@@ -162,6 +161,16 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .t-tabs-pill, .t-tab, .t-tab::before { transition: none !important; }
+}
+/* Windows high contrast: the browser repaints every background in the Canvas colour, which erases the
+   hairlines and the selected fill, and puts a Canvas backplate behind the text of the selected segment.
+   The hairlines use CanvasText, and the selected segment opts out of the forced repaint and paints its own
+   Highlight background (the sliding fill is hidden, since it cannot show through). */
+@media (forced-colors: active) {
+  .t-tab + .t-tab::before { background: CanvasText; }
+  .t-tabs-pill { display: none; }
+  .t-tab[aria-selected="true"],
+  .t-tab[aria-checked="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }
 
 /* ---------- Error state shake ---------- */

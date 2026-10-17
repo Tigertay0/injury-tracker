@@ -44,19 +44,29 @@ const FILL: Record<Variant, { fill: string; filled?: string }> = {
   inverse: { fill: 'bg-surface', filled: 'text-ink' },
 };
 
-export interface ButtonProps extends Omit<OriginButtonProps, 'fillClassName' | 'filledClassName'>, VariantProps<typeof buttonVariants> {}
+/**
+ * A veil of the ink colour, for a ghost button over a glass bar or a dark sheet. The ghost's own fill (--sunken)
+ * is darker than those grounds in the dark themes, so it reads there as a dark pad; a veil of ink lifts instead.
+ * Pass it as `fillClassName`.
+ */
+const GHOST_WASH = 'bg-[color-mix(in_oklab,var(--ink)_12%,transparent)]';
 
-function Button({ className, variant, size, ...props }: ButtonProps) {
+export interface ButtonProps extends Omit<OriginButtonProps, 'fillClassName' | 'filledClassName'>, VariantProps<typeof buttonVariants> {
+  /** Replaces the variant's fill (a Tailwind `bg-*` class). The text colour that reads over it stays the variant's. */
+  fillClassName?: string;
+}
+
+function Button({ className, variant, size, fillClassName, ...props }: ButtonProps) {
   const { fill, filled } = FILL[variant ?? 'primary'];
   return (
     <OriginButton
       data-slot="button"
       className={cn(buttonVariants({ variant, size }), className)}
-      fillClassName={fill}
+      fillClassName={fillClassName ?? fill}
       filledClassName={filled}
       {...props}
     />
   );
 }
 
-export { Button, buttonVariants };
+export { Button, buttonVariants, GHOST_WASH };

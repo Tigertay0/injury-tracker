@@ -4,9 +4,10 @@
 // screen, on keyboard focus and with the Pause button; reduced motion
 // shows a still, numbered version instead.
 import { useEffect, useId, useRef, useState, type CSSProperties, type FocusEvent } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import { motion } from 'motion/react';
 import { Pause, Play } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
+import { usePrefersReducedMotion } from '@/lib/use-prefers-reduced-motion';
 import { cn } from '@/lib/utils';
 
 type Target = { label: string; x: number; y: number };
@@ -77,7 +78,7 @@ function useInView<T extends Element>(ref: React.RefObject<T | null>) {
 }
 
 export function Walkthrough() {
-  const reduce = useReducedMotion();
+  const reduce = usePrefersReducedMotion();
   const uid = useId();
   const phoneRef = useRef<HTMLDivElement>(null);
   const inView = useInView(phoneRef);
@@ -150,7 +151,7 @@ export function Walkthrough() {
     <section
       id="walkthrough"
       aria-labelledby="walkthrough-title"
-      className="scroll-mt-24 px-5 py-24 sm:px-8 lg:py-32"
+      className="px-5 py-24 sm:px-8 lg:py-32"
       onFocus={onFocus}
       onBlur={onBlur}
     >
@@ -230,7 +231,7 @@ export function Walkthrough() {
                         </span>
                       </span>
                     </span>
-                    <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-white/10">
+                    <span aria-hidden className="absolute inset-x-5 bottom-2.5 h-0.5 overflow-hidden rounded-[var(--radius-chip)] bg-white/10 sm:inset-x-6">
                       {active && bar(s)}
                     </span>
                   </button>
@@ -272,7 +273,7 @@ export function Walkthrough() {
                   <span
                     key={t.label}
                     aria-hidden
-                    className="absolute z-10 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white bg-[#2346e0] text-label font-bold text-white"
+                    className="absolute z-10 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[var(--radius-chip)] border-2 border-white bg-[#2346e0] text-label font-bold text-white"
                     style={{ left: `${t.x}%`, top: `${t.y}%` }}
                   >
                     {i + 1}
@@ -286,8 +287,8 @@ export function Walkthrough() {
                   animate={{ left: `${target.x}%`, top: `${target.y}%` }}
                   transition={{ type: 'spring', stiffness: 170, damping: 24 }}
                 >
-                  <span key={`${step.id}-${tapIndex}-${runId}`} className="walk-ripple absolute size-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#a6d8ff]" />
-                  <span className="absolute size-9 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-white/25 shadow-[0_0_24px_rgb(166_216_255/0.8)] backdrop-blur-[1px]" />
+                  <span key={`${step.id}-${tapIndex}-${runId}`} className="walk-ripple absolute size-14 -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-chip)] border-2 border-[#a6d8ff]" />
+                  <span className="absolute size-9 -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-chip)] border-2 border-white bg-white/25 shadow-[0_0_24px_rgb(166_216_255/0.8)] backdrop-blur-[1px]" />
                   <span
                     key={`label-${step.id}-${tapIndex}-${runId}`}
                     className={cn(

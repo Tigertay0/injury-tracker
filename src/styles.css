@@ -241,6 +241,10 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+    /* Keeps what scrolls into view (a focused control, an anchor target) clear of the bars on the screen
+       edges: the floating header and the phone top bar above, the phone tab bar below, and room for the
+       focus ring either way. Replaces a scroll-margin on each anchor target. */
+    scroll-padding-block: 6rem;
   }
   body {
     background: var(--ground);
@@ -327,4 +331,11 @@
   --sunken: oklch(0.115 0.02 268);
   --line: oklch(0.29 0.02 268);
   --accent-soft: oklch(0.27 0.07 263);
+}
+
+/* Clerk's own focus halo is a 15% white box-shadow, about 1.5:1 on the dark card. Give its controls the same
+   2px ring as the rest of the app. Unlayered on purpose: Clerk injects unlayered styles, which beat anything in a layer. */
+.cl-rootBox :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
