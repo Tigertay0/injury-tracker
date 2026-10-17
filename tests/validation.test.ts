@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DRILLS } from '../shared/drills';
 import {
   ValidationError,
   validateSession,
@@ -12,11 +13,21 @@ import {
 
 const TODAY = '2026-10-12';
 
+function thrown(fn: () => unknown): ValidationError {
+  try {
+    fn();
+  } catch (err) {
+    if (err instanceof ValidationError) return err;
+    throw err;
+  }
+  throw new Error('Expected a ValidationError, but nothing was thrown.');
+}
+
 describe('validateSession', () => {
   const ok = { date: '2026-10-11', type: 'match', duration: '90', rpe: 7, notes: ' felt fine ' };
 
   it('accepts a valid session and coerces numbers', () => {
-    expect(validateSession(ok, TODAY)).toEqual({ date: '2026-10-11', type: 'match', duration: 90, rpe: 7, notes: 'felt fine' });
+    expect(validateSession(ok, TODAY)).toEqual({ date: '2026-10-11', type: 'match', duration: 90, rpe: 7, notes: 'felt fine', drills: [] });
   });
 
   it('rejects unknown session types', () => {
@@ -51,6 +62,72 @@ describe('validateSession', () => {
 
   it('rejects non-object input', () => {
     expect(() => validateSession(null, TODAY)).toThrow(ValidationError);
+  });
+});
+
+describe('validateSession drills', () => {
+  const ok = { date: '2026-10-11', type: 'training', duration: 90, rpe: 6 };
+
+  it('accepts built-in drills and coerces minutes', () => {
+    const s = validateSession({ ...ok, drills: [{ drillId: 'rondo_4v2', minutes: '15' }, { drillId: 'ssg_5v5', minutes: 30 }] }, TODAY);
+    expect(s.drills).toEqual([{ drillId: 'rondo_4v2', minutes: 15 }, { drillId: 'ssg_5v5', minutes: 30 }]);
+  });
+
+  it('rejects unknown drills', () => {
+    const err = thrown(() => validateSession({ ...ok, drills: [{ drillId: 'made_up', minutes: 10 }] }, TODAY));
+    expect(err.message).toMatch(/from the list/);
+    expect(err.field).toBe('drills');
+  });
+
+  it('rejects drill minutes that add up to more than the session', () => {
+    const err = thrown(() => validateSession({ ...ok, drills: [{ drillId: 'rondo_4v2', minutes: 60 }, { drillId: 'ssg_5v5', minutes: 31 }] }, TODAY));
+    expect(err.message).toMatch(/more than the session/);
+    expect(err.field).toBe('drills');
+  });
+
+  it('rejects the same drill twice, too many drills, and non-lists', () => {
+    expect(() => validateSession({ ...ok, drills: [{ drillId: 'rondo_4v2', minutes: 5 }, { drillId: 'rondo_4v2', minutes: 5 }] }, TODAY)).toThrow(/once/);
+    const thirteen = Array.from({ length: 13 }, (_, i) => ({ drillId: ['rondo_4v2', 'ssg_5v5', 'passing_pairs', 'heading', 'set_pieces', 'cool_down', 'steady_run', 'core_balance', 'nordic_curls', 'first_touch', 'finishing_drill', 'warmup_dynamic', 'sprints_short'][i], minutes: 1 }));
+    expect(() => validateSession({ ...ok, drills: thirteen }, TODAY)).toThrow(/12/);
+    expect(() => validateSession({ ...ok, drills: 'rondo' }, TODAY)).toThrow(ValidationError);
+  });
+
+  it('rejects more than 12 drills and reports the drills field', () => {
+    const err = thrown(() => validateSession({ ...ok, drills: DRILLS.slice(0, 13).map((d) => ({ drillId: d.id, minutes: 1 })) }, TODAY));
+    expect(err.message).toMatch(/12/);
+    expect(err.field).toBe('drills');
+  });
+
+  it('accepts exactly 12 drills', () => {
+    const twelve = DRILLS.slice(0, 12).map((d) => ({ drillId: d.id, minutes: 1 }));
+    expect(validateSession({ ...ok, drills: twelve }, TODAY).drills).toEqual(twelve);
+  });
+
+  it('accepts drill minutes that equal the session duration', () => {
+    const drills = [{ drillId: 'rondo_4v2', minutes: 60 }, { drillId: 'ssg_5v5', minutes: 30 }];
+    expect(validateSession({ ...ok, drills }, TODAY).drills).toEqual(drills);
+  });
+
+  it('treats null drills as none', () => {
+    expect(validateSession({ ...ok, drills: null }, TODAY).drills).toEqual([]);
+  });
+
+  it.each([0, 301, 7.5])('rejects %s drill minutes', (minutes) => {
+    const err = thrown(() => validateSession({ ...ok, drills: [{ drillId: 'rondo_4v2', minutes }] }, TODAY));
+    expect(err.message).toMatch(/whole number from 1 to 300/);
+    expect(err.field).toBe('drills');
+  });
+
+  it.each([[null], ['x']])('rejects the non-object drill item %j', (item) => {
+    const err = thrown(() => validateSession({ ...ok, drills: [item] }, TODAY));
+    expect(err.message).toMatch(/from the list/);
+    expect(err.field).toBe('drills');
+  });
+
+  it('rejects __proto__ as a drill id', () => {
+    const err = thrown(() => validateSession({ ...ok, drills: [{ drillId: '__proto__', minutes: 5 }] }, TODAY));
+    expect(err.message).toMatch(/from the list/);
+    expect(err.field).toBe('drills');
   });
 });
 

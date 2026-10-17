@@ -39,6 +39,7 @@ function call(user: string, method: string, path: string, body?: unknown) {
 
 run('Player journey through the API on Neon', () => {
   let sessionId = '';
+  let matchId = '';
   let injuryId = '';
 
   afterAll(async () => {
@@ -75,14 +76,17 @@ run('Player journey through the API on Neon', () => {
   });
 
   it('logs sessions with the load worked out by the database', async () => {
-    const res = await call(A, 'POST', '/sessions', { date: today, type: 'training', duration: 60, rpe: 7, notes: '' });
+    const res = await call(A, 'POST', '/sessions', { date: today, type: 'training', duration: 60, rpe: 7, notes: '', drills: [{ drillId: 'ssg_5v5', minutes: 25 }] });
     expect(res.status).toBe(201);
     const session = await res.json();
-    expect(session).toMatchObject({ date: today, load: 420 });
+    expect(session).toMatchObject({ date: today, load: 420, drills: [{ drillId: 'ssg_5v5', minutes: 25 }] });
     sessionId = session.id;
 
     const match = await call(A, 'POST', '/sessions', { date: addDays(today, -2), type: 'match', duration: 90, rpe: 8, notes: 'league' });
     expect(match.status).toBe(201);
+    const matchSession = await match.json();
+    expect(matchSession).toMatchObject({ type: 'match', load: 720, drills: [] });
+    matchId = matchSession.id;
 
     const invalid = await call(A, 'POST', '/sessions', { date: today, type: 'training', duration: 60, rpe: 11 });
     expect(invalid.status).toBe(400);
@@ -113,6 +117,8 @@ run('Player journey through the API on Neon', () => {
     const o = await (await call(A, 'GET', '/overview')).json();
     expect(o.profile).toMatchObject({ position: 'MID', cleatType: 'FG_BLADED' });
     expect(o.sessions).toHaveLength(2);
+    expect(o.sessions.find((s: { id: string }) => s.id === sessionId).drills).toEqual([{ drillId: 'ssg_5v5', minutes: 25 }]);
+    expect(o.sessions.find((s: { id: string }) => s.id === matchId).drills).toEqual([]);
     expect(o.injuries).toHaveLength(1);
   });
 
@@ -130,6 +136,8 @@ run('Player journey through the API on Neon', () => {
     const data = await res.json();
     expect(data.profile).toMatchObject({ consentVersion: expect.any(String) });
     expect(data.sessions).toHaveLength(2);
+    expect(data.sessions.find((s: { id: string }) => s.id === sessionId).drills).toEqual([{ drillId: 'ssg_5v5', minutes: 25 }]);
+    expect(data.sessions.find((s: { id: string }) => s.id === matchId).drills).toEqual([]);
   });
 
   it('deletes a session', async () => {

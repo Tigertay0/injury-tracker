@@ -3,7 +3,7 @@
 // so row-level security limits every query to that player's rows even if a query
 // below forgot its user_id filter.
 import pg from 'pg';
-import type { Injury, Profile, RecoveryLog, TrainingSession } from '../shared/types';
+import type { Injury, Overview, Profile, RecoveryLog, SessionDrill, TrainingSession } from '../shared/types';
 import type { EquipmentInput, InjuryInput, ProfileInput, RecoveryCheckIn, SessionInput } from '../shared/validation';
 
 export const CONSENT_VERSION = '2026-10';
@@ -11,12 +11,7 @@ const MAX_SESSIONS = 500;
 const MAX_CHECKINS = 104;
 const MAX_INJURIES = 200;
 
-export interface Overview {
-  profile: Profile | null;
-  sessions: TrainingSession[];
-  recovery: RecoveryLog[];
-  injuries: Injury[];
-}
+export type { Overview };
 
 export interface PlayerRepo {
   overview(): Promise<Overview>;
@@ -66,7 +61,7 @@ const toProfile = (r: Row): Profile => ({
   createdAt: new Date(r.created_at as string).toISOString(),
 });
 
-const toSession = (r: Row): TrainingSession => ({
+const toSession = (r: Row, drills: SessionDrill[] = []): TrainingSession => ({
   id: r.id as string,
   date: r.session_date as string,
   type: r.session_type as TrainingSession['type'],
@@ -74,6 +69,7 @@ const toSession = (r: Row): TrainingSession => ({
   rpe: Number(r.rpe),
   load: Number(r.load),
   notes: (r.notes as string) ?? '',
+  drills,
 });
 
 const toCheckIn = (r: Row): RecoveryLog => ({
@@ -133,13 +129,17 @@ export async function asPlayer<T>(connectionString: string, userId: string, fn: 
   }
 }
 
-/** Connects as the worker role and runs `select 1`; touches no tables. */
+/**
+ * Connects as the worker role and checks that the schema this release needs is there. It only
+ * looks the table up in the catalog, so it reads no player data. `session_drills` comes from
+ * migration 0002: if that has not run, the health check fails instead of the drills feature.
+ */
 export async function pingDatabase(connectionString: string): Promise<boolean> {
   const client = new pg.Client({ connectionString, ...TIMEOUTS });
   try {
     await client.connect();
-    const { rows } = await client.query('select 1 as ok');
-    return rows[0]?.ok === 1;
+    const { rows } = await client.query("select to_regclass('public.session_drills') is not null as ok");
+    return rows[0]?.ok === true;
   } finally {
     await client.end().catch(() => undefined);
   }
@@ -170,11 +170,21 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
       `select ${SESSION_COLUMNS} from public.training_sessions where user_id = $1 order by session_date desc, created_at desc ${limit(caps.sessions)}`,
       [userId],
     );
+    const sessionIds = sessions.map((r) => r.id as string);
+    const drillRows = sessionIds.length
+      ? await q('select session_id, drill_id, minutes from public.session_drills where user_id = $1 and session_id = any($2::uuid[]) order by created_at, drill_id', [userId, sessionIds])
+      : [];
+    const drillsBySession = new Map<string, SessionDrill[]>();
+    for (const d of drillRows) {
+      const list = drillsBySession.get(d.session_id as string) ?? [];
+      list.push({ drillId: d.drill_id as string, minutes: Number(d.minutes) });
+      drillsBySession.set(d.session_id as string, list);
+    }
     const recovery = await q(`select ${CHECKIN_COLUMNS} from public.recovery_checkins where user_id = $1 order by week_start desc ${limit(caps.recovery)}`, [userId]);
     const injuries = await q(`select ${INJURY_COLUMNS} from public.injuries where user_id = $1 order by injury_date desc ${limit(caps.injuries)}`, [userId]);
     return {
       profile: profile[0] ? toProfile(profile[0]) : null,
-      sessions: sessions.map(toSession),
+      sessions: sessions.map((r) => toSession(r, drillsBySession.get(r.id as string) ?? [])),
       recovery: recovery.map(toCheckIn),
       injuries: injuries.map(toInjury),
     };
@@ -223,16 +233,25 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
       }),
 
     addSession: (input) =>
-      run(async (q) =>
-        one(
+      run(async (q) => {
+        const session = one(
           await q(
             `insert into public.training_sessions (session_date, session_type, duration_min, rpe, notes)
              values ($1, $2, $3, $4, $5) returning ${SESSION_COLUMNS}`,
             [input.date, input.type, input.duration, input.rpe, input.notes],
           ),
-          toSession,
-        ),
-      ),
+          (r) => r,
+        );
+        const drills = input.drills ?? [];
+        if (drills.length > 0) {
+          await q(
+            `insert into public.session_drills (session_id, drill_id, minutes)
+             select $1::uuid, d.drill_id, d.minutes from unnest($2::text[], $3::int[]) as d(drill_id, minutes)`,
+            [session.id, drills.map((d) => d.drillId), drills.map((d) => d.minutes)],
+          );
+        }
+        return toSession(session, drills);
+      }),
 
     deleteSession: (id) => run(async (q) => (await q('delete from public.training_sessions where user_id = $1 and id = $2 returning id', [userId, id])).length > 0),
 

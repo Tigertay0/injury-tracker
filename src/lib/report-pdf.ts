@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import { calculateACWR } from '@shared/calculations';
 import { addDays } from '@shared/dates';
 import { cleatName, surfaceName } from '@shared/equipment';
+import { MOVEMENT_LABEL, type MovementSummary } from '@shared/movement';
 import type { RiskModel } from '@shared/risk-model';
 import type { Overview } from './player-data';
 import { ACWR_LABEL, COMPOSITE_LABEL, EQUIPMENT_LABEL, POSITION_LABEL, RECOVERY_LABEL, fmtDate } from './labels';
@@ -32,7 +33,13 @@ const DISCLAIMER =
   'PitchSafe is an educational awareness tool, not a medical device or diagnostic service. Scores are based on self-reported data and published sports science models: they are indicators, not guarantees. If the player feels pain or may be injured, they should stop training and see a qualified medical professional or physiotherapist.';
 
 const METHOD =
-  'Method: session load = minutes x effort (1-10). ACWR = last 7 days of load / average weekly load over 28 days (Hulin et al., 2016; Gabbett, 2016). Recovery = average of sleep, soreness, stress and nutrition scores (0-10). Composite = 45% load + 30% recovery + 25% equipment, multiplied by injury-history factors (max 2x).';
+  'Method: session load = minutes x effort (1-10). ACWR = last 7 days of load / average weekly load over 28 days (Hulin et al., 2016; Gabbett, 2016). Recovery = average of sleep, soreness, stress and nutrition scores (0-10). Composite = 45% load + 30% recovery + 25% equipment, multiplied by injury-history factors (max 2x). The load part uses the higher of the workload-ratio points and the biggest movement spike from logged drills.';
+
+function movementLoadText(movement: MovementSummary): string {
+  if (!movement.ready) return 'No drill baseline yet';
+  if (!movement.worst) return 'No spikes';
+  return `${MOVEMENT_LABEL[movement.worst.type]} ${movement.worst.level === 'DANGER' ? 'spike' : 'rising'}`;
+}
 
 export async function downloadCoachReport(overview: Overview, model: RiskModel): Promise<void> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -88,6 +95,7 @@ export async function downloadCoachReport(overview: Overview, model: RiskModel):
   const rows: [string, string][] = [
     ['Workload ratio (ACWR)', model.acwr === null ? 'Not enough data yet' : `${model.acwr.toFixed(2)} (${ACWR_LABEL[model.acwrZone]})`],
     ['Load this week / average week', `${model.acute.toLocaleString('en-US')} / ${model.chronic.toLocaleString('en-US')}`],
+    ['Movement load', movementLoadText(model.movement)],
     ['Recovery score', model.recovery ? `${model.recovery.score.toFixed(1)} / 10 (${RECOVERY_LABEL[model.recoveryZone!]}), week of ${fmtDate(model.recovery.weekStart)}` : 'No check-in in the last two weeks'],
     ['Cleats and surface', profile?.cleatType ? `${cleatName(profile.cleatType)} on ${surfaceName(profile.surfaceType).toLowerCase()}` : 'Not set'],
     ['Equipment risk', model.equipmentRisk ? EQUIPMENT_LABEL[model.equipmentRisk] : 'Not set'],

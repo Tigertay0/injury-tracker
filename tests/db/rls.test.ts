@@ -80,6 +80,30 @@ run('Neon schema and row-level security', () => {
     expect(o.recovery[0].sleep).toBe(5);
   });
 
+  it('stores drills with a session and keeps them per player', async () => {
+    const s = await a.addSession({ date: today, type: 'training', duration: 60, rpe: 6, notes: '', drills: [{ drillId: 'rondo_4v2', minutes: 20 }] });
+    expect(s.drills).toEqual([{ drillId: 'rondo_4v2', minutes: 20 }]);
+    const own = (await a.overview()).sessions.find((x) => x.id === s.id);
+    expect(own?.drills).toEqual([{ drillId: 'rondo_4v2', minutes: 20 }]);
+    const theirs = await asPlayer(url!, B, (q) => q('select id from public.session_drills'));
+    expect(theirs).toHaveLength(0);
+  });
+
+  it('removes the drills when their session is deleted', async () => {
+    const s = await a.addSession({ date: today, type: 'training', duration: 60, rpe: 5, notes: '', drills: [{ drillId: 'rondo_4v2', minutes: 10 }] });
+    const before = await asPlayer(url!, A, (q) => q('select id from public.session_drills where session_id = $1', [s.id]));
+    expect(before).toHaveLength(1);
+    expect(await a.deleteSession(s.id)).toBe(true);
+    const after = await asPlayer(url!, A, (q) => q('select id from public.session_drills where session_id = $1', [s.id]));
+    expect(after).toHaveLength(0);
+  });
+
+  it("cannot attach drills to another player's session", async () => {
+    await expect(
+      asPlayer(url!, B, (q) => q("insert into public.session_drills (session_id, drill_id, minutes) values ($1, 'rondo_4v2', 10)", [aSessionId])),
+    ).rejects.toMatchObject({ code: '23503' });
+  });
+
   it('cannot move a check-in to another week (no week_start update grant)', async () => {
     await expect(
       asPlayer(url!, A, (q) => q('update public.recovery_checkins set week_start = $1 where user_id = $2', [addDays(mondayOf(today), -7), A])),
@@ -87,10 +111,16 @@ run('Neon schema and row-level security', () => {
   });
 
   it('deleting the profile removes every record (cascade)', async () => {
+    // Make sure there are drills to remove, so the check below cannot pass on an empty table
+    await a.addSession({ date: today, type: 'training', duration: 60, rpe: 5, notes: '', drills: [{ drillId: 'rondo_4v2', minutes: 10 }] });
+    const before = await asPlayer(url!, A, (q) => q('select id from public.session_drills'));
+    expect(before.length).toBeGreaterThan(0);
     await a.deleteAllData();
     const o = await a.overview();
     expect(o.profile).toBeNull();
     expect(o.sessions).toHaveLength(0);
     expect(o.injuries).toHaveLength(0);
+    const after = await asPlayer(url!, A, (q) => q('select id from public.session_drills'));
+    expect(after).toHaveLength(0);
   });
 });

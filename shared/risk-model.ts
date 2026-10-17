@@ -17,6 +17,7 @@ import {
 } from './calculations';
 import { dayNumber } from './dates';
 import { equipmentRisk } from './equipment';
+import { movementLoad, type MovementSummary } from './movement';
 import { fuelNotes, recommendations, type FuelNote, type Recommendation } from './recommendations';
 import type { AcwrZone, CompositeZone, EquipmentRisk, Injury, InjuryFactor, Profile, RecoveryLog, RecoveryZone, TrainingSession } from './types';
 
@@ -43,6 +44,9 @@ export interface RiskModel {
   acute: number;
   chronic: number;
   days: { date: string; load: number }[];
+  movement: MovementSummary;
+  /** The 45% training part of the score: the points used, and whether workload or a movement spike set them. */
+  trainingInput: { points: number; source: 'workload' | 'movement' };
   recovery: RecoveryLog | null;
   recoveryZone: RecoveryZone | null;
   equipmentRisk: EquipmentRisk | null;
@@ -51,6 +55,14 @@ export interface RiskModel {
   assumptions: Assumption[];
   recommendations: Recommendation[];
   fuel: FuelNote[];
+}
+
+// Training input: the worse of the workload ratio and the biggest movement spike. Movement is only
+// credited when it is strictly higher. With no workload baseline (zone NA) nothing is scored yet.
+function trainingInputFor(zone: AcwrZone, movement: MovementSummary): RiskModel['trainingInput'] {
+  if (zone === 'NA') return { points: 0, source: 'workload' };
+  const workloadPoints = acwrRiskScore(zone);
+  return movement.maxPoints > workloadPoints ? { points: movement.maxPoints, source: 'movement' } : { points: workloadPoints, source: 'workload' };
 }
 
 function latestRecentCheckIn(logs: readonly RecoveryLog[], today: string): RecoveryLog | null {
@@ -64,6 +76,8 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
   const baseline = baselineProgress(sessions, today);
   const acwr = calculateACWR(sessions, today);
   const zone = acwrZone(acwr);
+  const movement = movementLoad(sessions, today);
+  const trainingInput = trainingInputFor(zone, movement);
 
   const recovery = latestRecentCheckIn(input.recovery, today);
   const recZone = recovery ? recoveryZone(recovery.score) : null;
@@ -80,7 +94,7 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
       ? null
       : (() => {
           const score = compositeScore({
-            acwrRisk: acwrRiskScore(zone),
+            acwrRisk: trainingInput.points,
             recoveryRisk: recZone ? recoveryRiskScore(recZone) : MISSING_RECOVERY_RISK,
             equipmentRisk: equip ? equipmentRiskScore(equip) : MISSING_EQUIPMENT_RISK,
             multiplier: injury.value,
@@ -102,6 +116,8 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
     acute: acuteLoad(sessions, today),
     chronic: Math.round(chronicLoad(sessions, today)),
     days: dailyLoads(sessions, today, CHRONIC_DAYS),
+    movement,
+    trainingInput,
     recovery,
     recoveryZone: recZone,
     equipmentRisk: equip,
@@ -114,6 +130,7 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
       equipmentRisk: equip,
       position: profile?.position ?? null,
       injuryFactors: injury.factors,
+      movementSpike: movement.worst && (movement.worst.level === 'CAUTION' || movement.worst.level === 'DANGER') ? { type: movement.worst.type, level: movement.worst.level } : null,
     }),
     fuel: fuelNotes({ acwr, recoveryScore: recovery?.score ?? null, hadHardSessionRecently }),
   };

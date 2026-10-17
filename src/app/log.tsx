@@ -3,7 +3,8 @@
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { sessionLoad } from '@shared/calculations';
-import type { SessionType } from '@shared/types';
+import { drillById } from '@shared/drills';
+import type { SessionDrill, SessionType } from '@shared/types';
 import { ValidationError, validateSession } from '@shared/validation';
 import { ConfirmDelete } from '@/components/confirm-delete';
 import { Field, inputClass } from '@/components/field';
@@ -16,6 +17,7 @@ import { SESSION_LABEL, fmtDate, fmtWeekday } from '@/lib/labels';
 import { useOverview, usePlayerData } from '@/lib/player-data';
 import { useLocalToday } from '@/lib/use-local-today';
 import { cn } from '@/lib/utils';
+import { DrillPicker } from './drill-picker';
 import { PageHeader } from './page-header';
 
 const EFFORT_LABEL = ['', 'Very easy', 'Easy', 'Moderate', 'Somewhat hard', 'Hard', 'Hard', 'Very hard', 'Very hard', 'Close to max', 'All-out'];
@@ -26,9 +28,9 @@ const TYPES: { value: SessionType; label: string }[] = [
   { value: 'gym', label: 'Gym' },
 ];
 
-const LOG_FIELDS = new Set(['date', 'duration', 'notes']);
+const LOG_FIELDS = new Set(['date', 'duration', 'notes', 'drills']);
 
-type Errors = Partial<Record<'date' | 'duration' | 'rpe' | 'notes' | 'form', string>>;
+type Errors = Partial<Record<'date' | 'duration' | 'rpe' | 'notes' | 'drills' | 'form', string>>;
 
 export default function LogSession() {
   const { sessions } = useOverview();
@@ -42,6 +44,7 @@ export default function LogSession() {
   const [duration, setDuration] = useState('');
   const [rpe, setRpe] = useState(5);
   const [notes, setNotes] = useState('');
+  const [drills, setDrills] = useState<SessionDrill[]>([]);
   const [errors, setErrors] = useState<Errors>({});
   const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -51,11 +54,17 @@ export default function LogSession() {
   const load = Number.isInteger(minutes) && minutes > 0 && minutes <= 300 ? sessionLoad(minutes, rpe) : null;
   const previous = sessions.find((s) => s.type === type);
 
+  // The drill total is checked against the session's minutes, so a new duration clears both errors.
+  function changeDuration(next: string) {
+    setDuration(next);
+    if (errors.duration || errors.drills) setErrors((x) => ({ ...x, duration: undefined, drills: undefined }));
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     let input;
     try {
-      input = validateSession({ date, type, duration, rpe, notes }, today);
+      input = validateSession({ date, type, duration, rpe, notes, drills }, today);
     } catch (err) {
       if (err instanceof ValidationError) {
         setErrors({ [err.field && LOG_FIELDS.has(err.field) ? err.field : 'form']: err.message });
@@ -71,6 +80,7 @@ export default function LogSession() {
       setSaved(true);
       setDuration('');
       setNotes('');
+      setDrills([]);
       toast.success(`${SESSION_LABEL[input.type]} saved: load ${sessionLoad(input.duration, input.rpe)}`);
       setTimeout(() => setSaved(false), 1600);
     } catch (err) {
@@ -111,17 +121,14 @@ export default function LogSession() {
                   placeholder="75"
                   className={cn(inputClass, 'tnum h-11 w-28')}
                   value={duration}
-                  onChange={(e) => {
-                    setDuration(e.target.value);
-                    if (errors.duration) setErrors((x) => ({ ...x, duration: undefined }));
-                  }}
+                  onChange={(e) => changeDuration(e.target.value)}
                   required
                 />
                 {QUICK_MINUTES.map((m) => (
                   <button
                     key={m}
                     type="button"
-                    onClick={() => setDuration(String(m))}
+                    onClick={() => changeDuration(String(m))}
                     aria-label={`${m} minutes`}
                     className={cn(
                       'press tnum h-11 min-w-12 rounded-[var(--radius-control)] border px-3 text-small font-semibold',
@@ -156,6 +163,16 @@ export default function LogSession() {
               <textarea {...p} rows={2} maxLength={500} className={`${inputClass} py-2.5`} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything worth remembering, like a tight hamstring" />
             )}
           </Field>
+
+          <DrillPicker
+            value={drills}
+            onChange={(next) => {
+              setDrills(next);
+              if (errors.drills) setErrors((x) => ({ ...x, drills: undefined }));
+            }}
+            sessionMinutes={Number.isInteger(minutes) && minutes > 0 ? minutes : null}
+            error={errors.drills}
+          />
 
           {errors.form && (
             <p role="alert" className="rounded-[var(--radius-control)] bg-risk-very-high-soft px-4 py-3 text-small font-medium text-risk-very-high">
@@ -219,6 +236,9 @@ export default function LogSession() {
                         {s.duration} min × {s.rpe}
                         {s.notes ? `, ${s.notes}` : ''}
                       </p>
+                      {s.drills && s.drills.length > 0 && (
+                        <p className="tnum text-label text-ink-3">{s.drills.map((d) => `${drillById(d.drillId)?.name ?? 'Removed drill'} ${d.minutes} min`).join('; ')}</p>
+                      )}
                     </div>
                     <span className="tnum text-body font-semibold text-ink">{s.load}</span>
                     <ConfirmDelete

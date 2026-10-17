@@ -40,7 +40,7 @@ function memoryStore() {
       },
       addSession: async (input) => {
         requireProfile(o);
-        const s: TrainingSession = { id: uuid(), ...input, load: input.duration * input.rpe };
+        const s: TrainingSession = { id: uuid(), ...input, drills: input.drills ?? [], load: input.duration * input.rpe };
         o.sessions.unshift(s);
         return s;
       },
@@ -198,6 +198,22 @@ describe('sessions', () => {
     const res = await call('POST', '/sessions', { body: valid });
     expect(res.status).toBe(201);
     expect(await res.json()).toMatchObject({ load: 450, notes: '' });
+  });
+
+  it('stores drills with a session and returns them in the overview', async () => {
+    await onboard();
+    const res = await call('POST', '/sessions', { body: { date: TODAY, type: 'training', duration: 90, rpe: 6, drills: [{ drillId: 'rondo_4v2', minutes: 15 }] } });
+    expect(res.status).toBe(201);
+    expect((await res.json()).drills).toEqual([{ drillId: 'rondo_4v2', minutes: 15 }]);
+    const overview = await (await call('GET', '/overview')).json();
+    expect(overview.sessions[0].drills).toEqual([{ drillId: 'rondo_4v2', minutes: 15 }]);
+  });
+
+  it('rejects drills that do not fit the session', async () => {
+    await onboard();
+    const res = await call('POST', '/sessions', { body: { date: TODAY, type: 'training', duration: 20, rpe: 6, drills: [{ drillId: 'rondo_4v2', minutes: 30 }] } });
+    expect(res.status).toBe(400);
+    expect((await res.json()).field).toBe('drills');
   });
 
   it('returns field-level validation errors', async () => {

@@ -21,7 +21,7 @@ export default function Privacy() {
             <strong>Profile:</strong> your position, an optional display name, your cleat type and usual surface, and when you agreed to these terms.
           </li>
           <li>
-            <strong>Training sessions:</strong> date, type, duration, effort and any notes you add.
+            <strong>Training sessions:</strong> date, type, duration, effort, any notes and any drills you add.
           </li>
           <li>
             <strong>Weekly check-ins:</strong> sleep, soreness, stress and nutrition answers.
