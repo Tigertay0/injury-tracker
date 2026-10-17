@@ -367,7 +367,7 @@ describe('dashboard order', () => {
 });
 
 describe('sessions', () => {
-  const valid ={ date: '2026-10-11', type: 'training', duration: 75, rpe: 6 };
+  const valid = { date: '2026-10-11', type: 'training', duration: 75, rpe: 6 };
 
   it('asks for onboarding before logging', async () => {
     const res = await call('POST', '/sessions', { body: valid });
