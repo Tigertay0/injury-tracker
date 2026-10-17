@@ -1,0 +1,112 @@
+// The My drills editor: the profile as the player sees and types it (whole percents), and the
+// rule for when a saved drill still counts as "estimated by AI".
+import type { DrillEstimate } from '@shared/custom-drills';
+import type { DrillCategory } from '@shared/drills';
+import { MOVEMENT_TYPES } from '@shared/movement';
+import type { MovementProfile, MovementType } from '@shared/types';
+import { ValidationError } from '@shared/validation';
+
+/** What the player typed in each share box: whole percents, kept as text so a box can be empty. */
+export type ShareInputs = Record<MovementType, string>;
+
+export interface ProfileDraft {
+  category: DrillCategory | '';
+  intensity: number;
+  shares: ShareInputs;
+  /** What the AI suggested, when the player asked for an estimate. Decides `aiEstimated` and shows the reason. */
+  estimate: DrillEstimate | null;
+  /**
+   * True once the player edits the drill's name or description after the estimate arrived: the
+   * estimate was made for different text. Putting the text back does not undo it; only a new estimate does.
+   */
+  stale: boolean;
+}
+
+export const DEFAULT_INTENSITY = 5;
+export const SHARES_ERROR = 'Enter a whole number from 0 to 100 for each kind of movement.';
+
+const WHOLE_PERCENT = /^\d{1,3}$/;
+
+const toPercentText = (share: number) => String(Math.round(share * 100));
+
+const mapShares = (fn: (type: MovementType) => string): ShareInputs => ({
+  sprint: fn('sprint'),
+  hsr: fn('hsr'),
+  cod: fn('cod'),
+  jump: fn('jump'),
+  contact: fn('contact'),
+  strength: fn('strength'),
+});
+
+/** The editor for a player who fills in the values themselves. */
+export function blankProfile(): ProfileDraft {
+  return { category: '', intensity: DEFAULT_INTENSITY, shares: mapShares(() => '0'), estimate: null, stale: false };
+}
+
+/** The editor filled in from an AI estimate. */
+export function profileFromEstimate(estimate: DrillEstimate): ProfileDraft {
+  return {
+    category: estimate.category,
+    intensity: estimate.profile.intensity,
+    shares: mapShares((type) => toPercentText(estimate.profile[type])),
+    estimate,
+    stale: false,
+  };
+}
+
+/** The draft after the name or description changed: the estimate stays on screen as a starting point, but no longer counts as the AI's. Drafts without an estimate are returned as they are. */
+export function markEstimateStale(draft: ProfileDraft): ProfileDraft {
+  return draft.estimate === null || draft.stale ? draft : { ...draft, stale: true };
+}
+
+export function isWholePercent(text: string): boolean {
+  const trimmed = text.trim();
+  return WHOLE_PERCENT.test(trimmed) && Number(trimmed) <= 100;
+}
+
+/** The first share box (in display order) that is not a whole number from 0 to 100. */
+export function firstInvalidShare(shares: ShareInputs): MovementType | null {
+  return MOVEMENT_TYPES.find((type) => !isWholePercent(shares[type])) ?? null;
+}
+
+export interface DraftValues {
+  category: DrillCategory;
+  profile: MovementProfile;
+  aiEstimated: boolean;
+}
+
+/** The profile the draft would save, or null while a share box is not a whole percent. Percents become shares with two decimals. */
+function toProfile(draft: ProfileDraft): MovementProfile | null {
+  if (firstInvalidShare(draft.shares) !== null) return null;
+  const share = (type: MovementType) => Math.round(Number(draft.shares[type].trim())) / 100;
+  return {
+    intensity: draft.intensity,
+    sprint: share('sprint'),
+    hsr: share('hsr'),
+    cod: share('cod'),
+    jump: share('jump'),
+    contact: share('contact'),
+    strength: share('strength'),
+  };
+}
+
+/**
+ * Whether the draft still holds exactly what the AI suggested: the same category, intensity and all
+ * six shares, for the text it was asked about. It is the one rule behind both the editor's
+ * "Estimated by AI" tag and the saved `aiEstimated` flag. False without an estimate, once the text
+ * changed after it, and while a box is empty or not a whole percent.
+ */
+export function matchesEstimate(draft: ProfileDraft): boolean {
+  const { estimate, category, stale } = draft;
+  if (estimate === null || stale || category === '') return false;
+  const profile = toProfile(draft);
+  return profile !== null && category === estimate.category && profile.intensity === estimate.profile.intensity && MOVEMENT_TYPES.every((type) => profile[type] === estimate.profile[type]);
+}
+
+/** The values to save. `aiEstimated` is `matchesEstimate`: true only for the model's exact values. */
+export function draftToValues(draft: ProfileDraft): DraftValues {
+  if (draft.category === '') throw new ValidationError('Choose a category.', 'category');
+  const profile = toProfile(draft);
+  if (profile === null) throw new ValidationError(SHARES_ERROR, 'shares');
+  return { category: draft.category, profile, aiEstimated: matchesEstimate(draft) };
+}

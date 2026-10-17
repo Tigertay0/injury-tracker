@@ -1,7 +1,8 @@
 // Settings: profile, appearance, and the player's data rights (export, delete).
-import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
-import { useClerk } from '@clerk/react';
+import { Component, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useLocation, useNavigate } from 'react-router';
+import { PricingTable, useClerk } from '@clerk/react';
+import { SubscriptionDetailsButton } from '@clerk/react/experimental';
 import { toast } from 'sonner';
 import { DownloadSimple } from '@phosphor-icons/react';
 import type { Position } from '@shared/types';
@@ -20,9 +21,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { RadioRows } from '@/components/ui/radio-rows';
+import { CONTACT_EMAIL } from '@/config';
 import { errorMessage } from '@/lib/api';
+import { clerkAppearance } from '@/lib/clerk-root';
 import { POSITION_LABEL } from '@/lib/labels';
-import { useAppBase, useOverview, usePlayerData } from '@/lib/player-data';
+import { useAccount, useAppBase, useOverview, usePlayerData } from '@/lib/player-data';
+import { PLUS_RETURN_URL } from '@/lib/plus-status';
+import { usePlusStatus } from '@/lib/use-plus-status';
 import { cn } from '@/lib/utils';
 import { PageHeader } from './page-header';
 
@@ -48,9 +53,9 @@ function applyTheme(t: Theme) {
   }
 }
 
-function Card({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function Card({ id, title, description, children }: { id?: string; title: string; description?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-[var(--radius-panel)] border border-line bg-surface p-5 md:p-6">
+    <section id={id} className="scroll-mt-20 rounded-[var(--radius-panel)] border border-line bg-surface p-5 md:p-6">
       <h2 className="text-lead font-semibold text-ink">{title}</h2>
       {description && <p className="mt-1 max-w-xl text-body text-ink-2">{description}</p>}
       <div className="mt-5">{children}</div>
@@ -122,7 +127,7 @@ function DeleteAccount() {
       <AlertDialogContent className="app-scope">
         <AlertDialogTitle>Delete everything?</AlertDialogTitle>
         <AlertDialogDescription>
-          This permanently deletes your profile, sessions, check-ins, injuries and your login. It cannot be undone. Download your data first if you want a copy.
+          This permanently deletes your profile, sessions, check-ins, injuries, custom drills and your login. It cannot be undone. Download your data first if you want a copy. If you have PitchSafe Plus, cancel it first in Settings.
         </AlertDialogDescription>
         <label htmlFor="confirm-delete" className="mt-5 block text-small font-semibold text-ink">
           Type <span className="font-mono">delete</span> to confirm
@@ -171,8 +176,81 @@ function ManageLogin() {
   );
 }
 
+// A text-style button with a full 44px touch target, lined up with the text above it
+const TEXT_BUTTON = '-mx-2 inline-flex h-11 items-center self-start px-2 text-small font-semibold text-accent-ink underline underline-offset-2 hover:text-ink disabled:opacity-55';
+
+// The pricing table throws in development when billing is off in Clerk. That must not take the
+// rest of Settings down with it, because export and delete live on the same page.
+class CheckoutBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error('[plus] pricing table failed', error);
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="flex flex-col items-start">
+        <p className="text-small text-ink-2">Checkout can't load right now.</p>
+        <button type="button" className={TEXT_BUTTON} onClick={() => this.setState({ failed: false })}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+}
+
+function PlusCard({ plus }: { plus: boolean }) {
+  const { hash } = useLocation();
+  const { checking, checkAgain, refreshNow } = usePlusStatus(plus);
+
+  // The lazy page appears after the browser has looked for the #plus anchor, so scroll to it here
+  useEffect(() => {
+    if (hash === '#plus') document.getElementById('plus')?.scrollIntoView();
+  }, [hash]);
+
+  return (
+    <Card id="plus" title="PitchSafe Plus" description={plus ? 'You have PitchSafe Plus.' : '$60 a year. Create your own drills and personal workouts, and AI works out how each one loads your body.'}>
+      {plus ? (
+        <div className="flex flex-col items-start gap-4">
+          <SubscriptionDetailsButton onSubscriptionCancel={() => void refreshNow()} subscriptionDetailsProps={{ appearance: clerkAppearance }}>
+            <Button variant="secondary">Manage or cancel</Button>
+          </SubscriptionDetailsButton>
+          {CONTACT_EMAIL && (
+            <p className="text-small text-ink-2">
+              For a refund, email{' '}
+              <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-accent-ink underline underline-offset-2">
+                {CONTACT_EMAIL}
+              </a>
+              .
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <CheckoutBoundary>
+            <PricingTable appearance={clerkAppearance} checkoutProps={{ appearance: clerkAppearance }} newSubscriptionRedirectUrl={PLUS_RETURN_URL} />
+          </CheckoutBoundary>
+          <p className="text-small text-ink-2">Under 18? Ask a parent or guardian to pay.</p>
+          <p className="text-small text-ink-2">Cancel any time here. When Plus ends, your saved drills stay, but you can't add new ones.</p>
+          {/* Clerk gives no signal when its checkout is closed with the X, so this covers that case */}
+          <button type="button" className={TEXT_BUTTON} disabled={checking} onClick={checkAgain}>
+            {checking ? 'Checking…' : 'Already subscribed? Check again'}
+          </button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function Settings() {
   const { actions } = usePlayerData();
+  const { plusAvailable, plus } = useAccount();
   const isDemo = useAppBase() === '/demo';
   const [theme, setTheme] = useState<Theme>(readTheme);
   const [exporting, setExporting] = useState(false);
@@ -206,7 +284,9 @@ export default function Settings() {
           </Card>
         )}
 
-        <Card title="Your data" description="Download a copy of everything PitchSafe stores about you, or delete it all.">
+        {!isDemo && plusAvailable && <PlusCard plus={plus} />}
+
+        <Card title="Your data" description="Download a copy of your PitchSafe data, or delete it.">
           <div className="flex flex-wrap gap-3">
             <Button
               variant="secondary"

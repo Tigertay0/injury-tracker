@@ -4,10 +4,10 @@
 import { useId, useState } from 'react';
 
 const QUESTIONS = [
-  { q: 'Is it really free?', a: 'Yes. There are no ads, no paid tier and nothing to buy. PitchSafe exists so players without a sports scientist still get the basics of load monitoring.' },
+  { q: 'Is it really free?', a: 'Yes. The core app is free, with no ads. PitchSafe Plus, an optional paid plan for custom drills with AI estimates, is coming soon. PitchSafe exists so players without a sports scientist still get the basics of load monitoring.' },
   { q: 'What is ACWR?', a: 'The acute:chronic workload ratio. It compares the load of your last 7 days with your average week over the last 28. Sudden jumps above your usual level are linked to more soft-tissue injuries.' },
   { q: 'Why do I wait four weeks for a score?', a: 'The ratio needs a month of history to know what "normal" means for you. Until then, the app still checks your cleats and recovery and shows how many days of baseline you have.' },
-  { q: 'Who can see my data?', a: 'Only you. Your data is tied to your login and locked to your account in the database. There are no ad trackers. You can download or delete everything from Settings at any time.' },
+  { q: 'Who can see my data?', a: 'Only you. Your data is tied to your login and locked to your account in the database. There are no ad trackers. You can download or delete your data from Settings at any time.' },
   { q: 'Can my coach use it?', a: 'Each player can download a one-page PDF report from their dashboard and send it to a coach or physio.' },
   { q: 'How old do I need to be?', a: 'You need to be 13 or older to create an account.' },
 ];

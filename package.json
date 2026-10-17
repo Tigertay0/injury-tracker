@@ -17,6 +17,7 @@
     "test:db": "vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
     "@clerk/backend": "^3.23.2",
     "@clerk/react": "^6.17.8",
     "@phosphor-icons/react": "^2.1.10",

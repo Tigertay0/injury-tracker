@@ -1,17 +1,22 @@
 // Optional "What did you do?" step on Log session: pick drills from the built-in library
 // and give each its minutes. Sessions without drills work exactly as before.
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { Link } from 'react-router';
 import { Plus, X } from '@phosphor-icons/react';
-import { DRILL_CATEGORIES, DRILL_CATEGORY_LABEL, DRILLS, drillById } from '@shared/drills';
+import { customDrillKey } from '@shared/custom-drills';
+import { DRILL_CATEGORIES, DRILL_CATEGORY_LABEL, DRILLS } from '@shared/drills';
 import { MAX_DRILLS_PER_SESSION, MAX_DRILL_MINUTES } from '@shared/validation';
-import type { SessionDrill } from '@shared/types';
+import type { CustomDrill, SessionDrill } from '@shared/types';
 import { Button } from '@/components/ui/button';
 import { inputClass } from '@/components/field';
+import { useAccount, useAppBase, useDrillLookup } from '@/lib/player-data';
 import { cn } from '@/lib/utils';
 
 interface Props {
   value: SessionDrill[];
   onChange: (next: SessionDrill[]) => void;
+  /** The player's own drills; archived ones are not offered. */
+  customDrills: readonly CustomDrill[];
   /** The session's minutes, when valid; drill minutes must fit inside it. */
   sessionMinutes: number | null;
   error?: string;
@@ -20,8 +25,11 @@ interface Props {
 /** Where focus goes once the next `value` has rendered: the drill select, or a row's Remove button. */
 type FocusTarget = { kind: 'select' } | { kind: 'remove'; drillId: string };
 
-export function DrillPicker({ value, onChange, sessionMinutes, error }: Props) {
+export function DrillPicker({ value, onChange, customDrills, sessionMinutes, error }: Props) {
   const id = useId();
+  const lookup = useDrillLookup();
+  const base = useAppBase();
+  const { plus, plusAvailable } = useAccount();
   const selectRef = useRef<HTMLSelectElement>(null);
   const removeRefs = useRef(new Map<string, HTMLButtonElement>());
   const pendingFocus = useRef<FocusTarget | null>(null);
@@ -34,7 +42,10 @@ export function DrillPicker({ value, onChange, sessionMinutes, error }: Props) {
     value.length === 0
       ? ''
       : `${used}${sessionMinutes !== null ? ` of ${sessionMinutes}` : ''} minutes in drills${over ? `, ${used - sessionMinutes} over` : ''}`;
-  const available = DRILLS.filter((d) => !value.some((v) => v.drillId === d.id));
+  const picked = (key: string) => value.some((v) => v.drillId === key);
+  const available = DRILLS.filter((d) => !picked(d.id));
+  const mine = customDrills.filter((d) => !d.archived && !picked(customDrillKey(d.id)));
+  const nameOf = (key: string) => lookup(key)?.name;
   const canAdd = drillId !== '' && Number.isInteger(Number(minutes)) && Number(minutes) >= 1 && Number(minutes) <= MAX_DRILL_MINUTES && value.length < MAX_DRILLS_PER_SESSION;
 
   // Add disables itself once the drill resets, and Remove unmounts the focused button, so the
@@ -86,6 +97,15 @@ export function DrillPicker({ value, onChange, sessionMinutes, error }: Props) {
           </label>
           <select id={`${id}-drill`} ref={selectRef} value={drillId} onChange={(e) => setDrillId(e.target.value)} onKeyDown={addOnEnter} className={cn(inputClass, 'h-11')}>
             <option value="">Choose a drill</option>
+            {mine.length > 0 && (
+              <optgroup label="My drills">
+                {mine.map((d) => (
+                  <option key={d.id} value={customDrillKey(d.id)}>
+                    {d.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
             {DRILL_CATEGORIES.map((c) => {
               const options = available.filter((d) => d.category === c);
               return options.length === 0 ? null : (
@@ -112,11 +132,17 @@ export function DrillPicker({ value, onChange, sessionMinutes, error }: Props) {
         </Button>
       </div>
 
+      {plusAvailable && (
+        <Link to={`${base}/drills`} className="inline-flex min-h-11 items-center self-start text-label font-semibold text-accent-ink underline underline-offset-2">
+          {plus ? 'Create a custom drill' : 'Create a custom drill (Plus)'}
+        </Link>
+      )}
+
       {value.length > 0 && (
         <ul className="border border-line">
           {value.map((d) => (
             <li key={d.drillId} className="flex items-center gap-3 border-b border-line pr-1 pl-3 last:border-b-0">
-              <span className="min-w-0 flex-1 py-2 text-body text-ink">{drillById(d.drillId)?.name ?? 'Removed drill'}</span>
+              <span className="min-w-0 flex-1 py-2 text-body text-ink wrap-anywhere">{nameOf(d.drillId) ?? 'Removed drill'}</span>
               <span className="tnum text-small text-ink-2">{d.minutes} min</span>
               <button
                 type="button"
@@ -125,7 +151,7 @@ export function DrillPicker({ value, onChange, sessionMinutes, error }: Props) {
                   else removeRefs.current.delete(d.drillId);
                 }}
                 onClick={() => remove(d.drillId)}
-                aria-label={`Remove ${drillById(d.drillId)?.name ?? 'drill'}`}
+                aria-label={`Remove ${nameOf(d.drillId) ?? 'drill'}`}
                 className="grid size-11 place-items-center text-ink-2 hover:bg-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"
               >
                 <X aria-hidden className="size-4" />

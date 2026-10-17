@@ -4,7 +4,7 @@ import { addDays } from '../shared/dates';
 import { DRILL_IDS } from '../shared/drills';
 import { validateSession } from '../shared/validation';
 import { sampleOverview } from '../src/lib/sample-data';
-import type { Profile, RecoveryLog, TrainingSession } from '../shared/types';
+import type { CustomDrill, Profile, RecoveryLog, TrainingSession } from '../shared/types';
 
 const TODAY = '2026-10-12'; // a Monday
 
@@ -104,6 +104,29 @@ describe('movement load in the risk model', () => {
     expect(spiky.composite).toEqual({ score: 43, zone: 'MODERATE' });
     expect(spiky.trainingInput).toEqual({ points: 85, source: 'movement' });
     expect(spiky.recommendations.some((r) => r.text.includes('hamstring'))).toBe(true);
+  });
+
+  it('reads custom drills from the list passed in', () => {
+    // Same weeks as the spike test, but every session logs one custom, sprint-heavy drill: 60 min
+    // this week against 20 min in each earlier week
+    const custom: CustomDrill = {
+      id: '3f2a8c1e-9b4d-4e6f-8a2b-1c3d5e7f9a0b',
+      name: 'Flying 30s',
+      description: '',
+      category: 'speed',
+      profile: { intensity: 9, sprint: 0.3, hsr: 0, cod: 0, jump: 0, contact: 0, strength: 0 },
+      aiEstimated: false,
+      archived: false,
+      createdAt: '2026-10-01T00:00:00.000Z',
+    };
+    const key = `custom:${custom.id}`;
+    const thisWeek = addDays(TODAY, -6);
+    const sessions = evenWeeks().map((s) => ({ ...s, drills: [{ drillId: key, minutes: s.date === thisWeek ? 60 : 20 }] }));
+    const withList = buildRiskModel({ profile, sessions, recovery, injuries: [], customDrills: [custom] }, TODAY);
+    expect(withList.movement.worst?.type).toBe('sprint');
+    expect(withList.movement.maxPoints).toBe(85);
+    const withoutList = buildRiskModel({ profile, sessions, recovery, injuries: [] }, TODAY);
+    expect(withoutList.movement.ready).toBe(false);
   });
 
   it('still holds back the composite when the workload baseline is not ready', () => {

@@ -4,6 +4,8 @@
 import { createClerkClient, verifyToken } from '@clerk/backend';
 import { createApp } from './app';
 import { canonicalRedirect } from './canonical';
+import { PLUS_FEATURE, hasUserFeature } from './entitlements';
+import { lazyDrillEstimator } from './lazy-estimator';
 import { pingDatabase, postgresRepo } from './repo';
 
 export interface Env {
@@ -18,6 +20,12 @@ export interface Env {
   SITE_HOST?: string;
   READ_LIMITER: RateLimit;
   WRITE_LIMITER: RateLimit;
+  /** Caps AI drill estimates per player, tighter than the read and write limits. */
+  AI_LIMITER: RateLimit;
+  /** The string 'true' switches PitchSafe Plus on; anything else leaves it off. */
+  PLUS_ENABLED?: string;
+  /** Secret (`wrangler secret put ANTHROPIC_API_KEY`) for AI drill estimates. */
+  ANTHROPIC_API_KEY?: string;
 }
 
 const REQUIRED: (keyof Env)[] = ['HYPERDRIVE', 'CLERK_PUBLISHABLE_KEY', 'CLERK_SECRET_KEY', 'ALLOWED_ORIGINS'];
@@ -34,7 +42,8 @@ function buildApp(env: Env) {
     async verifyToken(token) {
       try {
         const payload = await verifyToken(token, { secretKey: env.CLERK_SECRET_KEY, authorizedParties });
-        return typeof payload.sub === 'string' && payload.sub ? payload.sub : null;
+        if (typeof payload.sub !== 'string' || !payload.sub) return null;
+        return { userId: payload.sub, plus: hasUserFeature(payload.fea, PLUS_FEATURE) };
       } catch (err) {
         console.warn('[auth] token rejected', { reason: err instanceof Error ? err.message : 'unknown' });
         return null;
@@ -42,7 +51,7 @@ function buildApp(env: Env) {
     },
     repoFor: (_token, userId) => postgresRepo(env.HYPERDRIVE.connectionString, userId),
     async allow(bucket, userId) {
-      const limiter = bucket === 'read' ? env.READ_LIMITER : env.WRITE_LIMITER;
+      const limiter = { read: env.READ_LIMITER, write: env.WRITE_LIMITER, ai: env.AI_LIMITER }[bucket];
       const { success } = await limiter.limit({ key: `${bucket}:${userId}` });
       return success;
     },
@@ -50,6 +59,10 @@ function buildApp(env: Env) {
       await clerk.users.deleteUser(userId);
     },
     pingDatabase: () => pingDatabase(env.HYPERDRIVE.connectionString),
+    plusEnabled: env.PLUS_ENABLED === 'true',
+    // Without the secret the estimate route answers 503 and players enter the values by hand.
+    // With it, the SDK and its client load on the first estimate, not on every API request
+    estimateDrill: env.ANTHROPIC_API_KEY ? lazyDrillEstimator(env.ANTHROPIC_API_KEY) : undefined,
   });
 }
 

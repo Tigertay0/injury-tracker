@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { DRILLS } from '../shared/drills';
 import {
   ValidationError,
+  clampMovementProfile,
   validateSession,
   validateRecovery,
   validateInjury,
   validateInjuryReturn,
   validateProfile,
   validateEquipment,
+  validateCustomDrill,
+  validateEstimateRequest,
+  validateMovementProfile,
   requireId,
 } from '../shared/validation';
 
@@ -128,6 +132,71 @@ describe('validateSession drills', () => {
     const err = thrown(() => validateSession({ ...ok, drills: [{ drillId: '__proto__', minutes: 5 }] }, TODAY));
     expect(err.message).toMatch(/from the list/);
     expect(err.field).toBe('drills');
+  });
+});
+
+describe('custom drills', () => {
+  const ID = '3f2a8c1e-9b4d-4e6f-8a2b-1c3d5e7f9a0b';
+  const profile = { intensity: 6, sprint: 0.1, hsr: 0.2, cod: 0.3, jump: 0, contact: 0.15, strength: 0 };
+
+  it('accepts a valid custom drill and trims text', () => {
+    expect(validateCustomDrill({ name: '  4v4 grid ', description: 'two-touch', category: 'small_sided', profile, aiEstimated: true }))
+      .toEqual({ name: '4v4 grid', description: 'two-touch', category: 'small_sided', profile, aiEstimated: true });
+  });
+
+  it('treats a missing aiEstimated as false and rejects non-boolean values', () => {
+    expect(validateCustomDrill({ name: 'a', category: 'small_sided', profile }).aiEstimated).toBe(false);
+    for (const bad of ['true', 1, null]) {
+      const err = thrown(() => validateCustomDrill({ name: 'a', category: 'small_sided', profile, aiEstimated: bad }));
+      expect(err.field).toBe('aiEstimated');
+    }
+  });
+
+  it('rejects bad names, categories and profiles', () => {
+    expect(() => validateCustomDrill({ name: '', category: 'small_sided', profile })).toThrow('Give the drill a name.');
+    expect(() => validateCustomDrill({ name: 'x'.repeat(61), category: 'small_sided', profile })).toThrow('60 characters');
+    expect(() => validateCustomDrill({ name: 'a', description: 'x'.repeat(501), category: 'small_sided', profile })).toThrow('500 characters');
+    expect(() => validateCustomDrill({ name: 'a', category: 'yoga', profile })).toThrow('Choose a category.');
+    expect(() => validateMovementProfile({ ...profile, intensity: 11 })).toThrow('Intensity must be a whole number from 1 to 10.');
+    expect(() => validateMovementProfile({ ...profile, sprint: 1.2 })).toThrow('Each share must be between 0 and 1.');
+    expect(validateMovementProfile({ ...profile, cod: 0.333 }).cod).toBe(0.33);
+  });
+
+  it('reports the field for each problem', () => {
+    expect(thrown(() => validateCustomDrill({ name: '  ', category: 'small_sided', profile })).field).toBe('name');
+    expect(thrown(() => validateCustomDrill({ name: 'a', category: 'yoga', profile })).field).toBe('category');
+    expect(thrown(() => validateCustomDrill({ name: 'a', category: 'small_sided', profile: { ...profile, hsr: -0.1 } })).field).toBe('profile');
+    expect(thrown(() => validateCustomDrill({ name: 'a', description: 'x'.repeat(501), category: 'small_sided', profile })).field).toBe('description');
+  });
+
+  it('rejects a missing profile and shares that are not numbers', () => {
+    expect(() => validateCustomDrill({ name: 'a', category: 'small_sided' })).toThrow(ValidationError);
+    expect(() => validateMovementProfile({ ...profile, jump: 'lots' })).toThrow('Each share must be between 0 and 1.');
+    expect(() => validateMovementProfile({ ...profile, contact: Number.NaN })).toThrow('Each share must be between 0 and 1.');
+  });
+
+  it('clamps model output and rejects non-numbers', () => {
+    expect(clampMovementProfile({ intensity: 14.6, sprint: -0.2, hsr: 1.7, cod: 0.456, jump: 0, contact: 0, strength: 0 }))
+      .toEqual({ intensity: 10, sprint: 0, hsr: 1, cod: 0.46, jump: 0, contact: 0, strength: 0 });
+    expect(clampMovementProfile({ ...profile, intensity: 0.2 })?.intensity).toBe(1);
+    expect(clampMovementProfile({ ...profile, jump: 'lots' })).toBeNull();
+    expect(clampMovementProfile({ ...profile, jump: Number.POSITIVE_INFINITY })).toBeNull();
+    expect(clampMovementProfile({ intensity: 5 })).toBeNull();
+    expect(clampMovementProfile(null)).toBeNull();
+  });
+
+  it('validates estimate requests', () => {
+    expect(validateEstimateRequest({ name: 'Grid', description: '4v4' })).toEqual({ name: 'Grid', description: '4v4' });
+    expect(validateEstimateRequest({ name: 'Grid' })).toEqual({ name: 'Grid', description: '' });
+    expect(() => validateEstimateRequest({ name: ' ', description: '4v4' })).toThrow('Give the drill a name.');
+    expect(() => validateEstimateRequest({ name: 'x'.repeat(61), description: '' })).toThrow('60 characters');
+    expect(() => validateEstimateRequest({ name: 'a', description: 'x'.repeat(501) })).toThrow('500 characters');
+  });
+
+  it('accepts custom keys on sessions', () => {
+    const s = validateSession({ date: '2026-10-12', type: 'training', duration: 60, rpe: 6, drills: [{ drillId: `custom:${ID}`, minutes: 20 }] }, '2026-10-12');
+    expect(s.drills).toEqual([{ drillId: `custom:${ID}`, minutes: 20 }]);
+    expect(() => validateSession({ date: '2026-10-12', type: 'training', duration: 60, rpe: 6, drills: [{ drillId: 'custom:nope', minutes: 20 }] }, '2026-10-12')).toThrow('Choose drills from the list.');
   });
 });
 

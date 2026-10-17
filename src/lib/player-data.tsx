@@ -1,9 +1,12 @@
 // The signed-in player's data, loaded once per app visit and updated in place after
 // each change, so every screen reads the same copy.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Injury, Overview, Profile, RecoveryLog, TrainingSession } from '@shared/types';
-import type { EquipmentInput, InjuryInput, ProfileInput, RecoveryCheckIn, SessionInput } from '@shared/validation';
+import { useLocation } from 'react-router';
+import type { AccountStatus, CustomDrill, Injury, Overview, Profile, RecoveryLog, TrainingSession } from '@shared/types';
+import type { CustomDrillInput, EquipmentInput, EstimateRequest, InjuryInput, ProfileInput, RecoveryCheckIn, SessionInput } from '@shared/validation';
 import { recoveryScore } from '@shared/calculations';
+import { MAX_CUSTOM_DRILLS, makeDrillLookup, type DrillEstimate, type DrillInfoLookup } from '@shared/custom-drills';
+import { drillById } from '@shared/drills';
 import { ApiError, useApi, errorMessage } from './api';
 
 // Overview lives in shared/types.ts; re-exported so screens keep importing it from here
@@ -100,6 +103,17 @@ function usePlayerDataState() {
         await api.del(`/injuries/${id}`);
         update((d) => ({ ...d, injuries: d.injuries.filter((i) => i.id !== id) }));
       },
+      estimateDrill: (input: EstimateRequest) => api.post<DrillEstimate>('/drills/custom/estimate', input),
+      async addCustomDrill(input: CustomDrillInput) {
+        const drill = await api.post<CustomDrill>('/drills/custom', input);
+        update((d) => ({ ...d, customDrills: [...(d.customDrills ?? []), drill] }));
+        return drill;
+      },
+      async archiveCustomDrill(id: string) {
+        await api.del(`/drills/custom/${id}`);
+        // Archived, not removed: sessions that used the drill keep its name and movement load
+        update((d) => ({ ...d, customDrills: d.customDrills?.map((x) => (x.id === id ? { ...x, archived: true } : x)) }));
+      },
       exportData: () => api.download('/me/export', 'pitchsafe-export.json'),
       deleteAccount: () => api.del('/me'),
     }),
@@ -119,9 +133,44 @@ export function PlayerDataProvider({ children }: { children: ReactNode }) {
   return <PlayerDataContext.Provider value={value}>{children}</PlayerDataContext.Provider>;
 }
 
+const DEMO_PLUS_KEY = 'pitchsafe-demo-plus';
+const DEMO_ESTIMATE_DELAY_MS = 600;
+const DEMO_ESTIMATE_FAILED = "We couldn't estimate this drill. Enter the values yourself.";
+const PLUS_PREVIEW_ACCOUNT: AccountStatus = { plusAvailable: true, plus: true };
+
+// Storage can be blocked (private modes, embedded views); the preview then follows the URL alone
+function readDemoPlus(): string | null {
+  try {
+    return sessionStorage.getItem(DEMO_PLUS_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeDemoPlus(value: '0' | '1') {
+  try {
+    sessionStorage.setItem(DEMO_PLUS_KEY, value);
+  } catch {
+    // Not remembered for the tab; the preview then follows the URL alone
+  }
+}
+
+/** Dev builds only: ?plus=1 on a demo URL previews PitchSafe Plus for this tab, ?plus=0 turns it off. */
+function useDemoPlusPreview(): boolean {
+  const { search } = useLocation();
+  const param = import.meta.env.DEV ? new URLSearchParams(search).get('plus') : null;
+  const flag = param === '1' || param === '0' ? param : null;
+  useEffect(() => {
+    if (flag !== null) writeDemoPlus(flag);
+  }, [flag]);
+  if (!import.meta.env.DEV) return false;
+  return (flag ?? readDemoPlus()) === '1';
+}
+
 // Demo mode: the same actions, applied to local state only. Nothing is sent anywhere.
 function useDemoState(initial: () => Overview): PlayerData {
   const [data, setData] = useState<Overview>(initial);
+  const plusPreview = useDemoPlusPreview();
   const dataRef = useRef(data);
   dataRef.current = data;
   const update = useCallback((fn: (d: Overview) => Overview) => setData((d) => fn(d)), []);
@@ -160,6 +209,26 @@ function useDemoState(initial: () => Overview): PlayerData {
       async deleteInjury(id) {
         update((d) => ({ ...d, injuries: d.injuries.filter((i) => i.id !== id) }));
       },
+      async estimateDrill(input) {
+        await new Promise((resolve) => setTimeout(resolve, DEMO_ESTIMATE_DELAY_MS));
+        if (input.name.toLowerCase().includes('fail')) throw new ApiError(DEMO_ESTIMATE_FAILED, 502);
+        // Always the 3v3 profile: the demo shows the flow without calling an AI
+        const sample = drillById('ssg_3v3');
+        if (!sample) throw new ApiError(DEMO_ESTIMATE_FAILED, 502);
+        return { category: sample.category, profile: { ...sample.profile }, reason: 'Sample estimate in the demo.' };
+      },
+      async addCustomDrill(input) {
+        // Like the server, only active drills count towards the limit
+        if ((dataRef.current.customDrills ?? []).filter((x) => !x.archived).length >= MAX_CUSTOM_DRILLS) {
+          throw new ApiError(`You can keep up to ${MAX_CUSTOM_DRILLS} custom drills. Remove one first.`, 409);
+        }
+        const drill: CustomDrill = { id: crypto.randomUUID(), ...input, archived: false, createdAt: new Date().toISOString() };
+        update((d) => ({ ...d, customDrills: [...(d.customDrills ?? []), drill] }));
+        return drill;
+      },
+      async archiveCustomDrill(id) {
+        update((d) => ({ ...d, customDrills: d.customDrills?.map((x) => (x.id === id ? { ...x, archived: true } : x)) }));
+      },
       async exportData() {
         const blob = new Blob([JSON.stringify({ sample: true, ...dataRef.current }, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -173,7 +242,9 @@ function useDemoState(initial: () => Overview): PlayerData {
     }),
     [update],
   );
-  return useMemo(() => ({ state: { status: 'ready' as const, data }, actions }), [data, actions]);
+  // The preview swaps in a Plus account for display only; the held sample data stays as it was
+  const shown = useMemo(() => (plusPreview ? { ...data, account: PLUS_PREVIEW_ACCOUNT } : data), [data, plusPreview]);
+  return useMemo(() => ({ state: { status: 'ready' as const, data: shown }, actions }), [shown, actions]);
 }
 
 export function DemoPlayerDataProvider({ initial, children }: { initial: () => Overview; children: ReactNode }) {
@@ -192,6 +263,21 @@ export function useOverview(): Overview {
   const { state } = usePlayerData();
   if (state.status !== 'ready') throw new Error('useOverview used before data loaded');
   return state.data;
+}
+
+const FREE_ACCOUNT: AccountStatus = { plusAvailable: false, plus: false };
+
+/** Whether PitchSafe Plus is on sale and whether this player has it. Free until the data has loaded. */
+export function useAccount(): AccountStatus {
+  const { state } = usePlayerData();
+  return (state.status === 'ready' && state.data.account) || FREE_ACCOUNT;
+}
+
+/** Names and movement profiles for built-in and custom drills, archived ones included. */
+export function useDrillLookup(): DrillInfoLookup {
+  const { state } = usePlayerData();
+  const customDrills = state.status === 'ready' ? state.data.customDrills : undefined;
+  return useMemo(() => makeDrillLookup(customDrills), [customDrills]);
 }
 
 /** "/app" for signed-in players, "/demo" for the public sample. */

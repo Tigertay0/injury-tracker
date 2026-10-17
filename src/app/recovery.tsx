@@ -70,8 +70,9 @@ export default function Recovery() {
   return (
     <>
       <PageHeader title="Weekly check-in" description="Four questions about the past week. Your answers set your recovery score." />
-      {/* Re-mount the form per week (and per saved record) so answers never leak between weeks */}
-      <CheckInForm key={`${week}:${existing?.id ?? 'new'}`} week={week} onWeekChange={setWeek} thisWeek={thisWeek} existing={existing} today={today} />
+      {/* Not keyed per week: the form resets its own answers (below), so the week control stays mounted,
+          keeps keyboard focus and plays its slide */}
+      <CheckInForm week={week} onWeekChange={setWeek} thisWeek={thisWeek} existing={existing} today={today} />
     </>
   );
 }
@@ -99,6 +100,18 @@ function CheckInForm({
   const [nutrition, setNutrition] = useState(initial.nutrition);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // A different week (or the record just saved) starts from its own answers, so nothing leaks between weeks.
+  // Adjusting state during render, rather than re-keying the form, keeps the week control mounted.
+  const formKey = `${week}:${existing?.id ?? 'new'}`;
+  const [loadedKey, setLoadedKey] = useState(formKey);
+  if (loadedKey !== formKey) {
+    setLoadedKey(formKey);
+    setSleep(initial.sleep);
+    setSoreness(initial.soreness);
+    setStress(initial.stress);
+    setNutrition(initial.nutrition);
+    setError(null);
+  }
   const score = recoveryScore({ sleep, soreness, stress, nutrition });
   const zone = recoveryZone(score);
 
@@ -125,7 +138,8 @@ function CheckInForm({
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+      {/* grid-cols-1 is minmax(0, 1fr): without it the single column grows to its widest unbreakable content */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6 rounded-[var(--radius-panel)] border border-line bg-surface p-5 md:p-6">
           <div className="flex flex-col gap-2">
             <span className="text-small font-semibold text-ink">Which week?</span>
@@ -135,8 +149,16 @@ function CheckInForm({
               value={week}
               onChange={onWeekChange}
               options={[
-                { value: thisWeek, label: `This week (${fmtDate(thisWeek)})` },
-                { value: lastWeek, label: `Last week` },
+                // The date drops out below 368px so both segments fit a 320px phone without truncating
+                {
+                  value: thisWeek,
+                  label: (
+                    <>
+                      This week<span className="max-[23rem]:hidden"> ({fmtDate(thisWeek)})</span>
+                    </>
+                  ),
+                },
+                { value: lastWeek, label: 'Last week' },
               ]}
               className="self-start"
             />

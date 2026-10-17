@@ -75,7 +75,7 @@ export default function Science() {
     <div className="mx-auto max-w-[1200px] px-5 pt-10 pb-20 sm:px-8 md:pt-16">
       <h1 className="max-w-3xl font-display text-[2.75rem] leading-[0.98] font-bold tracking-[-0.035em] text-ink sm:text-display-m">How PitchSafe works out your risk</h1>
       <p className="mt-5 max-w-2xl text-lead text-ink-2">
-        Every number in the app comes from the rules on this page. Nothing is guessed by AI. The formulas come from published sports science; the weighting that combines them is PitchSafe's own and has not been clinically validated.
+        Every number in the app comes from the rules on this page. Built-in drill profiles are our estimates from published research. The formulas come from published sports science; the weighting that combines them is PitchSafe's own and has not been clinically validated.
       </p>
 
       <div className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-16">
@@ -128,7 +128,7 @@ export default function Science() {
               ]}
             />
             <p>The training part of your score uses whichever is higher: your workload-ratio points or your biggest movement spike. Strength work is shown but never scored. Spikes in sprinting and high-speed running are linked to hamstring strains (Duhig et al., 2016).</p>
-            <p>Limits: drill profiles are estimates, and the minutes are what you enter. Sessions without drills count as zero, so log drills consistently.</p>
+            <p>Limits: drill profiles are estimates, and the minutes are what you enter. AI-estimated custom drill profiles can be wrong. Check and adjust them. Sessions without drills count as zero, so log drills consistently.</p>
           </Section>
 
           <Section id="recovery" title="Recovery">

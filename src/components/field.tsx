@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export const inputClass =
-  'w-full rounded-[var(--radius-control)] border border-line-strong bg-surface px-3.5 text-body text-ink placeholder:text-ink-3 outline-none focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-focus aria-[invalid=true]:border-risk-very-high';
+  'w-full rounded-[var(--radius-control)] border border-line-strong bg-surface px-3.5 text-body text-ink placeholder:text-ink-3 focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-focus aria-[invalid=true]:border-risk-very-high';
 
 const SHAKE_MS = 80 * 2 + 60 * 2 + 20;
 

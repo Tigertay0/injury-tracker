@@ -57,5 +57,8 @@ export function sampleOverview(today: string): Overview {
     sessions,
     recovery,
     injuries,
+    customDrills: [],
+    // The demo never sells Plus. Dev builds can preview it with ?plus=1 (see the demo provider).
+    account: { plusAvailable: false, plus: false },
   };
 }

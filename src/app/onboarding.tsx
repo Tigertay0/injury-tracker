@@ -104,7 +104,7 @@ export function Onboarding() {
         >
           <h1 className="font-display text-h1 font-bold text-ink">Your data, your call</h1>
           <p className="mt-2 text-body text-ink-2">
-            PitchSafe stores your sessions, recovery check-ins, cleats and injuries so it can work out your risk. Only you can see them. You can download or delete everything in Settings.
+            PitchSafe stores your sessions, recovery check-ins, cleats and injuries so it can work out your risk. Only you can see them. You can download or delete your data in Settings.
           </p>
 
           <div className="mt-6 flex flex-col gap-3">

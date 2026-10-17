@@ -3,11 +3,11 @@ import { LegalPage } from './legal-page';
 
 export default function Terms() {
   return (
-    <LegalPage title="Terms of use" updated="October 12, 2026">
+    <LegalPage title="Terms of use" updated="October 17, 2026">
       <section>
         <h2>What PitchSafe is</h2>
         <p className="mt-3">
-          PitchSafe is a free educational tool that estimates training-related injury risk from the information you enter. It is <strong>not a medical device</strong> and does not diagnose, treat or prevent any condition. Its scores are indicators, not guarantees.
+          PitchSafe is an educational tool that estimates training-related injury risk from the information you enter. It is <strong>not a medical device</strong> and does not diagnose, treat or prevent any condition. Its scores are indicators, not guarantees. The core app is free; PitchSafe Plus is an optional paid plan.
         </p>
       </section>
 
@@ -33,15 +33,40 @@ export default function Terms() {
       </section>
 
       <section>
+        <h2>PitchSafe Plus</h2>
+        <p className="mt-3">PitchSafe Plus is a paid plan that lets you create your own drills.</p>
+        <ul>
+          <li>Plus costs $60 a year, in US dollars. You are charged when you subscribe, and it renews every year until you cancel.</li>
+          <li>Payments are run by Clerk (Clerk Billing) and Stripe. PitchSafe never sees your full card number.</li>
+          <li>You can cancel any time in Settings. Plus stays active until the end of the year you paid for.</li>
+          <li>
+            Refunds are available on request and are issued through Stripe.
+            {CONTACT_EMAIL ? (
+              <>
+                {' '}
+                To ask for one, email{' '}
+                <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-accent-ink underline underline-offset-2">
+                  {CONTACT_EMAIL}
+                </a>
+                .
+              </>
+            ) : null}
+          </li>
+          <li>If you are under 18, a parent or guardian needs to pay for Plus.</li>
+          <li>Prices may change. We will tell you before your next renewal.</li>
+        </ul>
+      </section>
+
+      <section>
         <h2>No warranty</h2>
         <p className="mt-3">
-          PitchSafe is provided as it is, free of charge, without any warranty. We work to keep it accurate and available but cannot promise it will be error-free or always online. To the extent the law allows, we are not liable for injuries, losses or decisions based on its scores.
+          PitchSafe, including PitchSafe Plus, is provided as it is, without any warranty. We work to keep it accurate and available but cannot promise it will be error-free or always online. To the extent the law allows, we are not liable for injuries, losses or decisions based on its scores.
         </p>
       </section>
 
       <section>
         <h2>Ending your account</h2>
-        <p className="mt-3">You can delete your account and all your data at any time from Settings.</p>
+        <p className="mt-3">You can delete your account and your PitchSafe data at any time from Settings. If you have PitchSafe Plus, cancel it in Settings before you delete your account.</p>
       </section>
 
       <section>

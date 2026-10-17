@@ -36,13 +36,9 @@
   --reveal-dur: 400ms;
   --reveal-blur: 2px;
   --reveal-ease: ease-in-out;
-  /* Tabs sliding (colors come from the theme tokens) */
+  /* Tabs sliding (timing only; the colors are scoped to .t-tabs below so they follow the theme) */
   --tabs-dur: 250ms;
   --tabs-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --tabs-text-muted: var(--ink-2);
-  --tabs-text-active: var(--ink);
-  --tabs-bar-bg: var(--sunken);
-  --tabs-pill-bg: var(--surface);
   /* Accordion expand */
   --acc-expand: 250ms;
   --acc-collapse: 250ms;
@@ -78,12 +74,21 @@
 }
 
 /* ---------- Tabs sliding (segmented control) ---------- */
+/* A joined, bordered button group: 1px line-strong outer border, hairline dividers, square.
+   The selected segment is a solid accent block that slides between options. Colors are
+   declared here (not on :root) so they resolve against the themed .app-scope. */
 .t-tabs {
+  --tabs-line: var(--line-strong);
+  --tabs-bar-bg: var(--surface);
+  --tabs-hover-bg: var(--sunken);
+  --tabs-pill-bg: var(--accent);
+  --tabs-text-muted: var(--ink-2);
+  --tabs-text-hover: var(--ink);
+  --tabs-text-active: var(--on-accent);
   position: relative;
   display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px;
+  align-items: stretch;
+  border: 1px solid var(--tabs-line);
   border-radius: 0;
   background: var(--tabs-bar-bg);
 }
@@ -92,24 +97,44 @@
   appearance: none;
   border: 0;
   background: transparent;
-  height: 30px;
-  padding: 4px 12px;
   color: var(--tabs-text-muted);
   cursor: pointer;
   border-radius: 0;
   z-index: 1;
-  transition: color var(--tabs-dur) var(--tabs-ease);
+  transition:
+    color            var(--tabs-dur) var(--tabs-ease),
+    background-color 120ms ease,
+    border-color     var(--tabs-dur) var(--tabs-ease);
 }
-.t-tab:not([aria-selected="true"]):not([aria-checked="true"]):hover,
+.t-tab + .t-tab {
+  border-left: 1px solid var(--tabs-line);
+}
+/* The fill is the edge of the selected segment, so the hairlines beside it fade out as it slides in */
+.t-tab[aria-selected="true"],
+.t-tab[aria-checked="true"],
+.t-tab[aria-selected="true"] + .t-tab,
+.t-tab[aria-checked="true"] + .t-tab {
+  border-left-color: transparent;
+}
 .t-tab[aria-selected="true"],
 .t-tab[aria-checked="true"] {
   color: var(--tabs-text-active);
 }
+@media (hover: hover) and (pointer: fine) {
+  .t-tab:not([aria-selected="true"]):not([aria-checked="true"]):hover {
+    background: var(--tabs-hover-bg);
+    color: var(--tabs-text-hover);
+  }
+}
+/* Keep the focus ring above the neighbouring segments and the sliding fill */
+.t-tab:focus-visible {
+  z-index: 2;
+}
 .t-tabs-pill {
   position: absolute;
-  top: 3px;
+  top: 0;
+  bottom: 0;
   left: 0;
-  height: 30px;
   width: 0;
   background: var(--tabs-pill-bg);
   border-radius: 0;

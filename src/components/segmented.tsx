@@ -1,11 +1,12 @@
-// Segmented control: transitions.dev "Tabs sliding" (16) as a radio group.
-// The pill is measured from the selected option and snaps on first paint and resize.
-import { useCallback, useLayoutEffect, useRef, type KeyboardEvent } from 'react';
+// Segmented control: transitions.dev "Tabs sliding" (16) as a radio group, styled as a joined,
+// bordered button group. The accent fill slides to the selected option; it is measured from that
+// option and snaps on first paint and resize.
+import { useCallback, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface Option<T extends string> {
   value: T;
-  label: string;
+  label: ReactNode;
 }
 
 interface SegmentedProps<T extends string> {
@@ -27,16 +28,25 @@ export function Segmented<T extends string>({ label, options, value, onChange, c
     const pill = pillRef.current;
     const tab = bar?.querySelector<HTMLButtonElement>('[aria-checked="true"]');
     if (!bar || !pill || !tab) return;
+    // The fill now sits flush against the border, so measure fractional layout rects (offsetLeft and
+    // offsetWidth round to whole pixels and would leave a sliver). Dividing by the bar's scale keeps
+    // the maths right if an ancestor is mid-transform (a dialog opening).
+    const barRect = bar.getBoundingClientRect();
+    const tabRect = tab.getBoundingClientRect();
+    const style = getComputedStyle(bar);
+    const scale = barRect.width / (parseFloat(style.width) || barRect.width) || 1;
+    const x = (tabRect.left - barRect.left) / scale - (parseFloat(style.borderLeftWidth) || 0);
+    const width = tabRect.width / scale;
     if (!animate) {
       const prev = pill.style.transition;
       pill.style.transition = 'none';
-      pill.style.transform = `translateX(${tab.offsetLeft}px)`;
-      pill.style.width = `${tab.offsetWidth}px`;
+      pill.style.transform = `translateX(${x}px)`;
+      pill.style.width = `${width}px`;
       void pill.offsetWidth;
       pill.style.transition = prev;
     } else {
-      pill.style.transform = `translateX(${tab.offsetLeft}px)`;
-      pill.style.width = `${tab.offsetWidth}px`;
+      pill.style.transform = `translateX(${x}px)`;
+      pill.style.width = `${width}px`;
     }
   }, []);
 
@@ -68,11 +78,13 @@ export function Segmented<T extends string>({ label, options, value, onChange, c
     barRef.current?.querySelector<HTMLButtonElement>(`[data-value="${next.value}"]`)?.focus();
   }
 
-  const tabHeight = size === 'lg' ? 'h-10 px-4 text-body' : 'h-[34px] px-3.5 text-small';
+  // 44px touch target for lg, 40px for md; labels never wrap. In a container too narrow for them the
+  // segments shrink and truncate (min-w-0 + truncate) instead of overflowing it.
+  const tabSize = size === 'lg' ? 'h-11 px-4 text-body' : 'h-10 px-3.5 text-small';
 
   return (
     <div ref={barRef} role="radiogroup" aria-label={label} onKeyDown={onKeyDown} className={cn('t-tabs max-w-full', className)}>
-      <span ref={pillRef} aria-hidden className={cn('t-tabs-pill shadow-lift', size === 'lg' ? '!h-10' : '!h-[34px]')} />
+      <span ref={pillRef} aria-hidden className="t-tabs-pill" />
       {options.map((o) => {
         const selected = o.value === value;
         return (
@@ -84,9 +96,12 @@ export function Segmented<T extends string>({ label, options, value, onChange, c
             data-value={o.value}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(o.value)}
-            className={cn('t-tab !h-auto font-semibold whitespace-nowrap', tabHeight)}
+            className={cn(
+              't-tab inline-flex min-w-0 items-center justify-center font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+              tabSize,
+            )}
           >
-            {o.label}
+            <span className="truncate">{o.label}</span>
           </button>
         );
       })}
