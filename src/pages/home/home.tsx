@@ -110,7 +110,7 @@ function PhoneReveal() {
         </div>
       </div>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-        <Button type="button" variant="secondary" size="sm" onClick={() => setPaused((p) => !p)} className="dash-toggle h-10 px-4">
+        <Button type="button" variant="secondary" size="sm" onClick={() => setPaused((p) => !p)} className="h-10 px-4">
           {paused ? <Play aria-hidden weight="fill" /> : <Pause aria-hidden weight="fill" />}
           {paused ? 'Play' : 'Pause'}
         </Button>

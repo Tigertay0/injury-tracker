@@ -22,7 +22,8 @@ function subscribe(listener: () => void) {
   };
 }
 
-const getSnapshot = () => window.matchMedia(QUERY).matches;
+// Reuses the subscribed query so a render never allocates a new MediaQueryList
+const getSnapshot = () => (query ??= window.matchMedia(QUERY)).matches;
 
 // Nothing renders on a server here, but the argument is required: assume motion is fine
 const getServerSnapshot = () => false;

@@ -71,6 +71,7 @@ describe('reducedMotionStore', () => {
     const offA = store.subscribe(a);
     const offB = store.subscribe(b);
     expect(media.mql.addEventListener).toHaveBeenCalledTimes(1);
+    expect(media.mql.addEventListener).toHaveBeenCalledWith('change', expect.any(Function));
     media.flip(true);
     expect(a).toHaveBeenCalledTimes(1);
     expect(b).toHaveBeenCalledTimes(1);
@@ -81,6 +82,7 @@ describe('reducedMotionStore', () => {
     expect(b).toHaveBeenCalledTimes(2);
     offB();
     expect(media.mql.removeEventListener).toHaveBeenCalledTimes(1);
+    expect(media.mql.removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
     expect(media.handlers.size).toBe(0);
   });
 
