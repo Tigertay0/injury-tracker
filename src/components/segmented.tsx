@@ -1,12 +1,12 @@
 // Segmented control: transitions.dev "Tabs sliding" (16) as a radio group, styled as a joined,
 // bordered button group. The accent fill slides to the selected option; it is measured from that
 // option and snaps on first paint and resize.
-import { useCallback, useLayoutEffect, useRef, type KeyboardEvent } from 'react';
+import { useCallback, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface Option<T extends string> {
   value: T;
-  label: string;
+  label: ReactNode;
 }
 
 interface SegmentedProps<T extends string> {
@@ -78,7 +78,8 @@ export function Segmented<T extends string>({ label, options, value, onChange, c
     barRef.current?.querySelector<HTMLButtonElement>(`[data-value="${next.value}"]`)?.focus();
   }
 
-  // 44px touch target for lg, 40px for md; labels never wrap.
+  // 44px touch target for lg, 40px for md; labels never wrap. In a container too narrow for them the
+  // segments shrink and truncate (min-w-0 + truncate) instead of overflowing it.
   const tabSize = size === 'lg' ? 'h-11 px-4 text-body' : 'h-10 px-3.5 text-small';
 
   return (
@@ -96,11 +97,11 @@ export function Segmented<T extends string>({ label, options, value, onChange, c
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(o.value)}
             className={cn(
-              't-tab inline-flex items-center justify-center font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+              't-tab inline-flex min-w-0 items-center justify-center font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
               tabSize,
             )}
           >
-            {o.label}
+            <span className="truncate">{o.label}</span>
           </button>
         );
       })}
