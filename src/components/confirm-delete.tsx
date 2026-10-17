@@ -17,10 +17,13 @@ interface ConfirmDeleteProps {
   label: string; // accessible name, e.g. "Delete session on Oct 4"
   title: string;
   description: string;
+  /** The action button; "Delete" unless the record is archived or removed some other way. */
+  confirmLabel?: string;
+  busyLabel?: string;
   onConfirm: () => Promise<void>;
 }
 
-export function ConfirmDelete({ label, title, description, onConfirm }: ConfirmDeleteProps) {
+export function ConfirmDelete({ label, title, description, confirmLabel = 'Delete', busyLabel = 'Deleting…', onConfirm }: ConfirmDeleteProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   return (
@@ -48,7 +51,7 @@ export function ConfirmDelete({ label, title, description, onConfirm }: ConfirmD
               }
             }}
           >
-            {busy ? 'Deleting…' : 'Delete'}
+            {busy ? busyLabel : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

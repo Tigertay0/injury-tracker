@@ -3,11 +3,11 @@
 // No Clerk imports here, so the public demo can use it without the Clerk SDK.
 import { useState, type ReactNode } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
-import { Bed, DotsThreeOutline, FirstAidKit, Flask, GearSix, House, Plus, SneakerMove, type Icon } from '@phosphor-icons/react';
+import { Bed, DotsThreeOutline, FirstAidKit, Flask, GearSix, House, ListPlus, Plus, SneakerMove, type Icon } from '@phosphor-icons/react';
 import { Wordmark } from '@/components/wordmark';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
-import { useAppBase, usePlayerData } from '@/lib/player-data';
+import { useAccount, useAppBase, usePlayerData } from '@/lib/player-data';
 import { cn } from '@/lib/utils';
 import { Onboarding } from './onboarding';
 import { AppSkeleton } from './skeleton';
@@ -19,9 +19,11 @@ interface NavItem {
   end?: boolean;
 }
 
-const nav = (base: string): NavItem[] => [
+// My drills is part of PitchSafe Plus, so it only appears once Plus is on sale
+const nav = (base: string, plusAvailable: boolean): NavItem[] => [
   { to: base, label: 'Dashboard', icon: House, end: true },
   { to: `${base}/log`, label: 'Log session', icon: Plus },
+  ...(plusAvailable ? [{ to: `${base}/drills`, label: 'My drills', icon: ListPlus }] : []),
   { to: `${base}/recovery`, label: 'Recovery', icon: Bed },
   { to: `${base}/equipment`, label: 'Equipment', icon: SneakerMove },
   { to: `${base}/injuries`, label: 'Injuries', icon: FirstAidKit },
@@ -30,13 +32,14 @@ const nav = (base: string): NavItem[] => [
 
 function Sidebar({ user }: { user?: ReactNode }) {
   const base = useAppBase();
+  const { plusAvailable } = useAccount();
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 lg:flex">
       <Link to="/" className="mb-8 px-3" aria-label="PitchSafe home">
         <Wordmark />
       </Link>
       <nav aria-label="App" className="flex flex-col gap-1">
-        {nav(base).map(({ to, label, icon: Icon, end }) => (
+        {nav(base, plusAvailable).map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -79,7 +82,8 @@ function BottomBar() {
   const [moreOpen, setMoreOpen] = useState(false);
   const base = useAppBase();
   const { pathname } = useLocation();
-  const moreActive = pathname.startsWith(`${base}/equipment`) || pathname.startsWith(`${base}/settings`);
+  const { plusAvailable } = useAccount();
+  const moreActive = pathname.startsWith(`${base}/equipment`) || pathname.startsWith(`${base}/settings`) || (plusAvailable && pathname.startsWith(`${base}/drills`));
 
   return (
     <>
@@ -127,6 +131,7 @@ function BottomBar() {
           <div className="mt-3 flex flex-col">
             {[
               { to: `${base}/equipment`, label: 'Equipment', icon: SneakerMove },
+              ...(plusAvailable ? [{ to: `${base}/drills`, label: 'My drills', icon: ListPlus }] : []),
               { to: `${base}/settings`, label: 'Settings', icon: GearSix },
               { to: '/science', label: 'How scores work', icon: Flask },
             ].map(({ to, label, icon: Icon }) => (

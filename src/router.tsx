@@ -29,6 +29,7 @@ const page = (load: () => Promise<{ default: React.ComponentType }>) => async ()
 const appPages = [
   { index: true, lazy: page(() => import('@/app/dashboard')) },
   { path: 'log', lazy: page(() => import('@/app/log')) },
+  { path: 'drills', lazy: page(() => import('@/app/custom-drills')) },
   { path: 'recovery', lazy: page(() => import('@/app/recovery')) },
   { path: 'equipment', lazy: page(() => import('@/app/equipment')) },
   { path: 'injuries', lazy: page(() => import('@/app/injuries')) },
