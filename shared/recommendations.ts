@@ -45,7 +45,7 @@ function positionAdvice(position: Position | null, zone: AcwrZone): Recommendati
     case 'MID':
       return spike
         ? { priority: 2, category: 'Position', text: 'Midfielders cover the most ground. Swap one high-intensity session for low-intensity technical work and leave 48 hours between hard sessions.', citation: 'Malone et al., 2019' }
-        : { priority: 3, category: 'Position', text: 'Midfielders build fatigue through sheer distance. Keep at least one genuinely easy day between hard sessions.', citation: 'Malone et al., 2019' };
+        : { priority: 3, category: 'Position', text: 'Midfielders build fatigue through sheer distance. Keep at least one easy day between hard sessions.', citation: 'Malone et al., 2019' };
     case 'FWD':
       return spike
         ? { priority: 2, category: 'Position', text: 'Your sprint load is up. Cut sprint-heavy drills by about a quarter this week and add hamstring work to your warm-up.', citation: 'Malone et al., 2019' }
