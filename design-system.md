@@ -56,7 +56,7 @@ Scale (role tokens): caption 12, label 13, small 14, body 16, lead 18, h3 22, h2
 
 ## Shape and depth
 
-Shape lock: square corners everywhere (`--radius-control`, `--radius-panel` and `--radius-chip` are all 0, Clerk `borderRadius` 0, square chart columns). Only radio buttons stay round, because that is what people expect a radio to look like. Hairline borders instead of shadows; `shadow-lift` for the demo card and selected pills, `shadow-overlay` for dialogs, both tinted to the ground hue.
+Shape lock: square corners everywhere (`--radius-control`, `--radius-panel` and `--radius-chip` are all 0, Clerk `borderRadius` 0, square chart columns). Only radio buttons stay round, because that is what people expect a radio to look like. Hairline borders instead of shadows; `shadow-lift` for the use-app card, the slider thumb and the mobile log button, `shadow-overlay` for dialogs, both tinted to the ground hue. The segmented control uses a solid accent fill and no shadow.
 
 ## Motion
 
@@ -82,7 +82,7 @@ Phosphor (`@phosphor-icons/react`), regular weight, fill for active nav. Imagery
 
 ## Browser surfaces
 
-Themed `::selection`, caret, 2px focus outline (`--focus`), `color-scheme` per theme, theme-color meta, PWA manifest and icons (`public/manifest.webmanifest`).
+Themed `::selection`, caret, 2px focus outline (`--focus`, set once on `:focus-visible` in the base layer; never add `outline-none` or `outline-hidden` to a focusable control, because in Tailwind 4 both set `outline-style: none` and beat that rule), `color-scheme` per theme, theme-color meta, PWA manifest and icons (`public/manifest.webmanifest`).
 
 ## Project-specific bans
 

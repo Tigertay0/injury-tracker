@@ -18,6 +18,8 @@ function SheetContent({
   return (
     <SheetPrimitive.Portal>
       <SheetPrimitive.Overlay className="sheet-overlay fixed inset-0 z-40 bg-[oklch(0.2_0.02_255/0.45)]" />
+      {/* outline-none is deliberate here: this tabIndex=-1 panel is never a tab stop, and Radix moves
+          focus to the first control inside, which carries its own ring. */}
       <SheetPrimitive.Content
         data-side={side}
         className={cn(

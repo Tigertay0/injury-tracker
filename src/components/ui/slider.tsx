@@ -26,7 +26,7 @@ function Slider({
           aria-label={ariaLabel}
           aria-labelledby={ariaLabelledBy}
           aria-valuetext={ariaValueText}
-          className="block size-6 border-2 border-accent bg-surface shadow-lift outline-none transition-[transform,box-shadow] duration-150 ease-out hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-95"
+          className="block size-6 border-2 border-accent bg-surface shadow-lift transition-[transform,box-shadow] duration-150 ease-out hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-95"
         />
       ))}
     </SliderPrimitive.Root>

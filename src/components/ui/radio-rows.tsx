@@ -42,7 +42,7 @@ export function RadioRows<T extends string>({ value, onValueChange, options, dis
         >
           <Primitive.Item
             value={o.value}
-            className="grid size-5 shrink-0 place-items-center rounded-full border-2 border-line-strong bg-surface outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-[state=checked]:border-accent"
+            className="grid size-5 shrink-0 place-items-center rounded-full border-2 border-line-strong bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-[state=checked]:border-accent"
           >
             <Primitive.Indicator className="size-2.5 rounded-full bg-accent" />
           </Primitive.Item>
