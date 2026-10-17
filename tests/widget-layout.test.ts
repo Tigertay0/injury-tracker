@@ -191,6 +191,69 @@ describe('pack', () => {
   });
 });
 
+// Exact results, worked out by hand from the 21st source algorithms. They pin the port: the
+// invariant tests above would still pass if tile or pack produced a different valid layout.
+describe('golden placements', () => {
+  const named = (sizes: Array<[string, WidgetSize]>): WidgetItem[] => sizes.map(([id, size]) => ({ id, size }));
+  const at = (id: string, col: number, row: number, w: number, h: number): Placement => ({ id, col, row, w, h });
+
+  it('tile fills the first empty cell in reading order with the earliest widget that fits', () => {
+    // 3 columns, area 9. A takes the top left 2x2, B and C stack in the third column,
+    // D takes the wide gap on the last row, E takes the last cell.
+    const items = named([
+      ['A', 'lg'],
+      ['B', 'sm'],
+      ['C', 'sm'],
+      ['D', 'wide'],
+      ['E', 'sm'],
+    ]);
+    const expected = [at('A', 0, 0, 2, 2), at('B', 2, 0, 1, 1), at('C', 2, 1, 1, 1), at('D', 0, 2, 2, 1), at('E', 2, 2, 1, 1)];
+    expect(tile(items, 3)).toEqual(expected);
+    expect(layout(items, 3)).toEqual(expected);
+  });
+
+  it('tile may take a later widget when an earlier one does not fit the cell', () => {
+    // 2 columns. At (row 0, col 1) the wide B does not fit, so C goes there and B drops to row 1.
+    const items = named([
+      ['A', 'sm'],
+      ['B', 'wide'],
+      ['C', 'sm'],
+    ]);
+    expect(tile(items, 2)).toEqual([at('A', 0, 0, 1, 1), at('C', 1, 0, 1, 1), at('B', 0, 1, 2, 1)]);
+  });
+
+  it('pack grows a widget to the right to close a gap in its row', () => {
+    // 3 columns cannot tile two wide widgets (no tiling), so layout falls back to pack.
+    // Each row is closed by widening the wide widget to all three columns.
+    const items = named([
+      ['A', 'wide'],
+      ['B', 'wide'],
+    ]);
+    expect(tile(items, 3)).toBeNull();
+    const expected = [at('A', 0, 0, 3, 1), at('B', 0, 1, 3, 1)];
+    expect(pack(items, 3)).toEqual(expected);
+    expect(layout(items, 3)).toEqual(expected);
+  });
+
+  it('pack grows a one column widget downwards to close a gap under it', () => {
+    // Band height 2: the tall A fills column 0, the small B sits on top of column 1 and grows down.
+    const items = named([
+      ['A', 'tall'],
+      ['B', 'sm'],
+    ]);
+    expect(pack(items, 2)).toEqual([at('A', 0, 0, 1, 2), at('B', 1, 0, 1, 2)]);
+  });
+
+  it('pack leaves a gap it cannot close and starts a new band', () => {
+    // A 2x2 widget cannot grow right (it is two rows tall) or down (it is two columns wide).
+    const items = named([
+      ['A', 'lg'],
+      ['B', 'lg'],
+    ]);
+    expect(pack(items, 3)).toEqual([at('A', 0, 0, 2, 2), at('B', 0, 2, 2, 2)]);
+  });
+});
+
 describe('moveTo', () => {
   const items = make(['sm', 'wide', 'tall', 'lg', 'sm']);
 

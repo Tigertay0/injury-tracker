@@ -97,6 +97,16 @@ const SHADOW_CLASSES =
   'transition-shadow duration-300 motion-reduce:transition-none ' +
   'data-[lifted=true]:shadow-[0_28px_60px_-16px_hsl(var(--shadow-color)/0.45),0_10px_24px_-8px_hsl(var(--shadow-color)/0.3)]';
 
+// The inner wrapper clips its content (overflow-hidden and a rounded clip-path), which also cuts
+// off the global focus outline of a link or button near the tile edge, and a whole-tile link in
+// non-editable mode would show no ring at all. So the unclipped outer element draws the ring:
+// `focus-visible` covers the tile itself (editable mode, where it takes focus) and
+// `has-[:focus-visible]` covers anything inside it. A focused element is either the tile or a
+// descendant, never both, and both rules set identical values, so the tile never gets two rings.
+const FOCUS_CLASSES =
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ' +
+  'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus';
+
 /* ------------------------------ Widget ------------------------------ */
 
 interface Press {
@@ -172,6 +182,11 @@ const Widget = memo(function Widget({
     cleanup.current = null;
     setPhase('idle');
   }, []);
+
+  // Editing switched off mid-press or mid-lift: put the widget back to rest.
+  useEffect(() => {
+    if (!editable) release();
+  }, [editable, release]);
 
   useEffect(() => {
     const el = node.current;
@@ -274,7 +289,8 @@ const Widget = memo(function Widget({
       whileDrag={{ scale: LIFT_SCALE, transition: LIFT }}
       transition={SPRING}
       className={cn(
-        'relative min-w-0 rounded-[var(--widget-radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus [&_a]:[-webkit-user-drag:none] [&_img]:[-webkit-user-drag:none]',
+        'relative min-w-0 rounded-[var(--widget-radius)] [&_a]:[-webkit-user-drag:none] [&_img]:[-webkit-user-drag:none]',
+        FOCUS_CLASSES,
         SHADOW_CLASSES,
         editable && 'cursor-grab touch-pan-y touch-pinch-zoom select-none [-webkit-touch-callout:none] active:cursor-grabbing',
       )}
@@ -391,6 +407,25 @@ export function DraggableWidgetGrid({
     seen.current = next.seen;
     if (next.items !== latest.current.items) commit(next.items);
   }, [propItems, held, commit]);
+
+  // Editing switched off mid-drag: the drag can end without onDragEnd running, which would leave
+  // the widget raised and lifted and block adopting a new `items` prop. Clear that state here. The
+  // widget stays where it was dropped, so a changed order is reported as if the drag had ended.
+  useIsoLayoutEffect(() => {
+    if (editable) return;
+    cancelAnimationFrame(frame.current);
+    frame.current = 0;
+    window.clearTimeout(ring.current);
+    const wasDragging = dragging.current !== null;
+    const before = startOrder.current;
+    dragging.current = null;
+    startOrder.current = null;
+    setHeld(null);
+    setRaised(null);
+    setLanded(null);
+    const after = latest.current.items;
+    if (wasDragging && before && !sameOrder(before, after)) latest.current.onChange?.(after);
+  }, [editable]);
 
   const step = useCallback(
     (force = false): void => {
