@@ -31,7 +31,7 @@ browser ──► Cloudflare Worker ──► /api/* (worker/app.ts)
                 └─► static React app (dist/client)
 ```
 
-Server secrets: the Clerk secret key, and the Neon connection string held inside the Hyperdrive config.
+Server secrets: the Clerk secret key, the Anthropic API key (AI drill estimates), and the Neon connection string held inside the Hyperdrive config.
 
 The risk maths lives in `shared/` and is used by the app, the API, the coach PDF and the landing demo. It is covered by tests in `tests/`.
 
@@ -48,9 +48,9 @@ npm run typecheck
 Local configuration (both files are git-ignored):
 
 - `.env`: `VITE_CLERK_PUBLISHABLE_KEY`, optional `VITE_CONTACT_EMAIL`, and `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` (a Neon dev branch); see `.env.example`
-- `.dev.vars`: `CLERK_SECRET_KEY` and `DATABASE_URL` (Neon owner URL, for migrations); see `.dev.vars.example`
+- `.dev.vars`: `CLERK_SECRET_KEY` and `DATABASE_URL` (Neon owner URL, for migrations), plus `PLUS_ENABLED=true` to switch PitchSafe Plus on locally and `ANTHROPIC_API_KEY` for AI drill estimates (blank, the estimate route answers 503); see `.dev.vars.example`
 
-Public Worker variables (`CLERK_PUBLISHABLE_KEY`, `ALLOWED_ORIGINS`) and the Hyperdrive id live in `wrangler.jsonc`.
+Public Worker variables (`CLERK_PUBLISHABLE_KEY`, `ALLOWED_ORIGINS`, `PLUS_ENABLED`), the Hyperdrive id and the rate limiters (`READ_LIMITER`, `WRITE_LIMITER`, `AI_LIMITER`) live in `wrangler.jsonc`.
 
 ## Deploying
 
@@ -59,7 +59,11 @@ npm run db:migrate # apply db/migrations to Neon (DATABASE_URL = owner URL)
 npm run deploy     # build and publish the Worker
 ```
 
+**Apply new migrations to production before merging to main.** CI deploys the Worker on every merge, and a Worker that expects a table that is not there yet fails its health check.
+
 The Clerk secret is set once with `npx wrangler secret put CLERK_SECRET_KEY`. The Hyperdrive config is created once with `npx wrangler hyperdrive create pitchsafe --connection-string=<neon url> --caching-disabled`.
+
+PitchSafe Plus (custom drills with AI estimates) is hidden until `PLUS_ENABLED` is `"true"` in `wrangler.jsonc`; leave it `"false"` until Clerk production and Stripe are live. AI estimates need the Worker secret `npx wrangler secret put ANTHROPIC_API_KEY`. `AI_LIMITER` allows 5 estimates a minute per player, and the daily cap of 20 is counted in the `ai_usage` table.
 
 ## Ownership and running costs
 
