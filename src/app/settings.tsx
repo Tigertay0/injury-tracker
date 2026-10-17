@@ -1,7 +1,7 @@
 // Settings: profile, appearance, and the player's data rights (export, delete).
-import { Component, useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { Component, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { PricingTable, useAuth, useClerk } from '@clerk/react';
+import { PricingTable, useClerk } from '@clerk/react';
 import { SubscriptionDetailsButton } from '@clerk/react/experimental';
 import { toast } from 'sonner';
 import { DownloadSimple } from '@phosphor-icons/react';
@@ -26,6 +26,8 @@ import { errorMessage } from '@/lib/api';
 import { clerkAppearance } from '@/lib/clerk-root';
 import { POSITION_LABEL } from '@/lib/labels';
 import { useAccount, useAppBase, useOverview, usePlayerData } from '@/lib/player-data';
+import { PLUS_RETURN_URL } from '@/lib/plus-status';
+import { usePlusStatus } from '@/lib/use-plus-status';
 import { cn } from '@/lib/utils';
 import { PageHeader } from './page-header';
 
@@ -174,12 +176,8 @@ function ManageLogin() {
   );
 }
 
-// Clerk sends the player back here after checkout. The history state then carries the welcome
-// across the page remount that reloading the account causes.
-const WELCOME_PARAM = 'plus';
-const WELCOME_VALUE = 'welcome';
-const WELCOME_REDIRECT_URL = `/app/settings?${WELCOME_PARAM}=${WELCOME_VALUE}`;
-const REFRESH_FAILED = "We couldn't refresh your plan. Reload the page to see it.";
+// A text-style button with a full 44px touch target, lined up with the text above it
+const TEXT_BUTTON = '-mx-2 inline-flex h-11 items-center self-start px-2 text-small font-semibold text-accent-ink underline underline-offset-2 hover:text-ink disabled:opacity-55';
 
 // The pricing table throws in development when billing is off in Clerk. That must not take the
 // rest of Settings down with it, because export and delete live on the same page.
@@ -195,46 +193,21 @@ class CheckoutBoundary extends Component<{ children: ReactNode }, { failed: bool
   }
 
   render() {
-    return this.state.failed ? <p className="text-small text-ink-2">Checkout can't load right now. Try again later.</p> : this.props.children;
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="flex flex-col items-start">
+        <p className="text-small text-ink-2">Checkout can't load right now.</p>
+        <button type="button" className={TEXT_BUTTON} onClick={() => this.setState({ failed: false })}>
+          Try again
+        </button>
+      </div>
+    );
   }
 }
 
-function hasWelcomeState(state: unknown): boolean {
-  return typeof state === 'object' && state !== null && 'plusWelcome' in state && state.plusWelcome === true;
-}
-
 function PlusCard({ plus }: { plus: boolean }) {
-  const { getToken } = useAuth();
-  const { actions } = usePlayerData();
-  const { pathname, search, hash, state } = useLocation();
-  const navigate = useNavigate();
-  const handledRef = useRef(false);
-
-  // The cached session token can be a minute old, so ask for a new one: it carries the changed `fea` claim
-  const refreshPlan = useCallback(async () => {
-    try {
-      await getToken({ skipCache: true });
-    } catch {
-      toast.error(REFRESH_FAILED);
-      return;
-    }
-    await actions.reload();
-  }, [getToken, actions]);
-
-  // Reloading the account swaps the page for a skeleton, so the card mounts again once Plus has loaded
-  useEffect(() => {
-    if (handledRef.current) return;
-    if (hasWelcomeState(state)) {
-      if (!plus) return;
-      handledRef.current = true;
-      toast.success('Welcome to PitchSafe Plus');
-      navigate({ pathname, hash }, { replace: true, state: null });
-    } else if (new URLSearchParams(search).get(WELCOME_PARAM) === WELCOME_VALUE) {
-      handledRef.current = true;
-      navigate({ pathname, hash }, { replace: true, state: { plusWelcome: true } });
-      void refreshPlan();
-    }
-  }, [plus, state, search, pathname, hash, navigate, refreshPlan]);
+  const { hash } = useLocation();
+  const { checking, checkAgain, refreshNow } = usePlusStatus(plus);
 
   // The lazy page appears after the browser has looked for the #plus anchor, so scroll to it here
   useEffect(() => {
@@ -245,7 +218,7 @@ function PlusCard({ plus }: { plus: boolean }) {
     <Card id="plus" title="PitchSafe Plus" description={plus ? 'You have PitchSafe Plus.' : '$60 a year. Create your own drills and personal workouts, and AI works out how each one loads your body.'}>
       {plus ? (
         <div className="flex flex-col items-start gap-4">
-          <SubscriptionDetailsButton onSubscriptionCancel={() => void refreshPlan()} subscriptionDetailsProps={{ appearance: clerkAppearance }}>
+          <SubscriptionDetailsButton onSubscriptionCancel={() => void refreshNow()} subscriptionDetailsProps={{ appearance: clerkAppearance }}>
             <Button variant="secondary">Manage or cancel</Button>
           </SubscriptionDetailsButton>
           {CONTACT_EMAIL && (
@@ -261,10 +234,14 @@ function PlusCard({ plus }: { plus: boolean }) {
       ) : (
         <div className="flex flex-col gap-4">
           <CheckoutBoundary>
-            <PricingTable appearance={clerkAppearance} checkoutProps={{ appearance: clerkAppearance }} newSubscriptionRedirectUrl={WELCOME_REDIRECT_URL} />
+            <PricingTable appearance={clerkAppearance} checkoutProps={{ appearance: clerkAppearance }} newSubscriptionRedirectUrl={PLUS_RETURN_URL} />
           </CheckoutBoundary>
           <p className="text-small text-ink-2">Under 18? Ask a parent or guardian to pay.</p>
           <p className="text-small text-ink-2">Cancel any time here. When Plus ends, your saved drills stay, but you can't add new ones.</p>
+          {/* Clerk gives no signal when its checkout is closed with the X, so this covers that case */}
+          <button type="button" className={TEXT_BUTTON} disabled={checking} onClick={checkAgain}>
+            {checking ? 'Checking…' : 'Already subscribed? Check again'}
+          </button>
         </div>
       )}
     </Card>
