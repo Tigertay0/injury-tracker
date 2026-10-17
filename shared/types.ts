@@ -1,4 +1,5 @@
 // Domain types shared by the browser app and the Worker API
+import type { DrillCategory } from './drills';
 
 export type Position = 'GK' | 'DEF' | 'MID' | 'FWD';
 export type SessionType = 'training' | 'match' | 'gym';
@@ -69,10 +70,29 @@ export interface SessionDrill {
   minutes: number;
 }
 
+/** A drill a Plus player made. Archived drills stay resolvable so old sessions keep their movement load. */
+export interface CustomDrill {
+  id: string; // uuid
+  name: string;
+  description: string;
+  category: DrillCategory;
+  profile: MovementProfile;
+  aiEstimated: boolean;
+  archived: boolean;
+  createdAt: string;
+}
+
+export interface AccountStatus {
+  plusAvailable: boolean;
+  plus: boolean;
+}
+
 // One player's data as the app holds it: what GET /overview returns, and what the demo builds
 export interface Overview {
   profile: Profile | null;
   sessions: TrainingSession[];
   recovery: RecoveryLog[];
   injuries: Injury[];
+  customDrills?: CustomDrill[];
+  account?: AccountStatus;
 }

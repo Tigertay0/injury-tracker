@@ -1,8 +1,9 @@
 // Input validation shared by the browser forms and the Worker API.
 // Reject-on-invalid: values are coerced only where the form sends strings.
+import { CUSTOM_DESCRIPTION_MAX, CUSTOM_NAME_MAX, customDrillIdFromKey } from './custom-drills';
 import { addDays, isIsoDate, isMonday } from './dates';
-import { DRILL_IDS } from './drills';
-import type { CleatType, Position, SessionDrill, SessionType, Severity, SurfaceType } from './types';
+import { DRILL_CATEGORIES, DRILL_IDS, type DrillCategory } from './drills';
+import type { CleatType, MovementProfile, Position, SessionDrill, SessionType, Severity, SurfaceType } from './types';
 
 export class ValidationError extends Error {
   constructor(
@@ -92,7 +93,8 @@ function drills(value: unknown, sessionMinutes: number): SessionDrill[] {
     if (item === null || typeof item !== 'object' || Array.isArray(item)) throw new ValidationError('Choose drills from the list.', 'drills');
     const r = item as Raw;
     const drillId = typeof r.drillId === 'string' ? r.drillId : '';
-    if (!DRILL_IDS.has(drillId)) throw new ValidationError('Choose drills from the list.', 'drills');
+    // Custom keys only need the right shape here; the repository checks the player owns them
+    if (!DRILL_IDS.has(drillId) && customDrillIdFromKey(drillId) === null) throw new ValidationError('Choose drills from the list.', 'drills');
     if (seen.has(drillId)) throw new ValidationError('Add each drill once, with its total minutes.', 'drills');
     seen.add(drillId);
     return { drillId, minutes: integer(r.minutes, 1, MAX_DRILL_MINUTES, 'drills', 'Drill minutes') };
@@ -113,6 +115,85 @@ export function validateSession(raw: unknown, today: string): SessionInput {
     notes: text(r.notes, 500, 'notes', 'Notes'),
     drills: drills(r.drills, duration),
   };
+}
+
+const SHARE_KEYS = ['sprint', 'hsr', 'cod', 'jump', 'contact', 'strength'] as const;
+const roundShare = (n: number) => Math.round(n * 100) / 100;
+
+function share(value: unknown, field: string): number {
+  const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+  if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || n > 1) throw new ValidationError('Each share must be between 0 and 1.', field);
+  return roundShare(n);
+}
+
+export function validateMovementProfile(raw: unknown, field = 'profile'): MovementProfile {
+  const r = asObject(raw);
+  return {
+    intensity: integer(r.intensity, 1, 10, field, 'Intensity'),
+    sprint: share(r.sprint, field),
+    hsr: share(r.hsr, field),
+    cod: share(r.cod, field),
+    jump: share(r.jump, field),
+    contact: share(r.contact, field),
+    strength: share(r.strength, field),
+  };
+}
+
+/** Forces a model's profile into range. Null when it is not an object of finite numbers. */
+export function clampMovementProfile(raw: unknown): MovementProfile | null {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const r = raw as Raw;
+  const isFiniteNumber = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
+  if (![r.intensity, ...SHARE_KEYS.map((k) => r[k])].every(isFiniteNumber)) return null;
+  const num = (key: string) => r[key] as number; // checked above
+  const clampShare = (key: string) => roundShare(Math.min(1, Math.max(0, num(key))));
+  return {
+    intensity: Math.min(10, Math.max(1, Math.round(num('intensity')))),
+    sprint: clampShare('sprint'),
+    hsr: clampShare('hsr'),
+    cod: clampShare('cod'),
+    jump: clampShare('jump'),
+    contact: clampShare('contact'),
+    strength: clampShare('strength'),
+  };
+}
+
+function drillName(value: unknown): string {
+  const name = text(value, CUSTOM_NAME_MAX, 'name', 'Name');
+  if (name === '') throw new ValidationError('Give the drill a name.', 'name');
+  return name;
+}
+
+export interface CustomDrillInput {
+  name: string;
+  description: string;
+  category: DrillCategory;
+  profile: MovementProfile;
+  aiEstimated: boolean;
+}
+
+export function validateCustomDrill(raw: unknown): CustomDrillInput {
+  const r = asObject(raw);
+  const name = drillName(r.name);
+  const description = text(r.description, CUSTOM_DESCRIPTION_MAX, 'description', 'Description');
+  if (typeof r.category !== 'string' || !(DRILL_CATEGORIES as readonly string[]).includes(r.category)) {
+    throw new ValidationError('Choose a category.', 'category');
+  }
+  const profile = validateMovementProfile(r.profile);
+  if (r.aiEstimated !== undefined && typeof r.aiEstimated !== 'boolean') {
+    throw new ValidationError('The AI estimate flag must be true or false.', 'aiEstimated');
+  }
+  return { name, description, category: r.category as DrillCategory, profile, aiEstimated: r.aiEstimated ?? false };
+}
+
+export interface EstimateRequest {
+  name: string;
+  description: string;
+}
+
+export function validateEstimateRequest(raw: unknown): EstimateRequest {
+  const r = asObject(raw);
+  return { name: drillName(r.name), description: text(r.description, CUSTOM_DESCRIPTION_MAX, 'description', 'Description') };
 }
 
 export interface RecoveryCheckIn {

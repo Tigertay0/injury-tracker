@@ -15,11 +15,12 @@ import {
   recoveryRiskScore,
   recoveryZone,
 } from './calculations';
+import { makeDrillLookup } from './custom-drills';
 import { dayNumber } from './dates';
 import { equipmentRisk } from './equipment';
 import { movementLoad, type MovementSummary } from './movement';
 import { fuelNotes, recommendations, type FuelNote, type Recommendation } from './recommendations';
-import type { AcwrZone, CompositeZone, EquipmentRisk, Injury, InjuryFactor, Profile, RecoveryLog, RecoveryZone, TrainingSession } from './types';
+import type { AcwrZone, CompositeZone, CustomDrill, EquipmentRisk, Injury, InjuryFactor, Profile, RecoveryLog, RecoveryZone, TrainingSession } from './types';
 
 const RECENT_CHECKIN_DAYS = 14;
 const HARD_SESSION_DAYS = 2;
@@ -34,6 +35,8 @@ export interface RiskInput {
   sessions: readonly TrainingSession[];
   recovery: readonly RecoveryLog[];
   injuries: readonly Injury[];
+  /** The player's own drills, so sessions that log them count toward movement load. */
+  customDrills?: readonly CustomDrill[];
 }
 
 export interface RiskModel {
@@ -76,7 +79,7 @@ export function buildRiskModel(input: RiskInput, today: string): RiskModel {
   const baseline = baselineProgress(sessions, today);
   const acwr = calculateACWR(sessions, today);
   const zone = acwrZone(acwr);
-  const movement = movementLoad(sessions, today);
+  const movement = movementLoad(sessions, today, makeDrillLookup(input.customDrills));
   const trainingInput = trainingInputFor(zone, movement);
 
   const recovery = latestRecentCheckIn(input.recovery, today);
