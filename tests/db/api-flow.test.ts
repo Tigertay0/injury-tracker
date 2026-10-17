@@ -146,6 +146,31 @@ run('Player journey through the API on Neon', () => {
     expect(o.sessions).toHaveLength(1);
   });
 
+  it('logs a custom drill on a session and still lists it after it is archived', async () => {
+    // The API has no custom drill routes yet, so the drill is made through the repository
+    const repo = postgresRepo(url!, A);
+    const drill = await repo.addCustomDrill({
+      name: 'Grid 4v4',
+      description: 'two-touch',
+      category: 'small_sided',
+      profile: { intensity: 7, sprint: 0.05, hsr: 0.1, cod: 0.4, jump: 0, contact: 0.2, strength: 0 },
+      aiEstimated: true,
+    });
+    const logged = await call(A, 'POST', '/sessions', { date: today, type: 'training', duration: 50, rpe: 6, notes: '', drills: [{ drillId: `custom:${drill.id}`, minutes: 20 }] });
+    expect(logged.status).toBe(201);
+    const session = await logged.json();
+    expect(session.drills).toEqual([{ drillId: `custom:${drill.id}`, minutes: 20 }]);
+
+    expect(await repo.archiveCustomDrill(drill.id)).toBe(true);
+    const o = await (await call(A, 'GET', '/overview')).json();
+    expect(o.customDrills).toContainEqual(expect.objectContaining({ id: drill.id, name: 'Grid 4v4', aiEstimated: true, archived: true }));
+    expect(o.sessions.find((s: { id: string }) => s.id === session.id).drills).toEqual([{ drillId: `custom:${drill.id}`, minutes: 20 }]);
+
+    const exported = await (await call(A, 'GET', '/me/export')).json();
+    expect(exported.customDrills).toContainEqual(expect.objectContaining({ id: drill.id, archived: true }));
+    expect((await (await call(B, 'GET', '/overview')).json()).customDrills).toEqual([]);
+  });
+
   it('deletes the account: data first, then the login', async () => {
     const res = await call(A, 'DELETE', '/me');
     expect(res.status).toBe(204);

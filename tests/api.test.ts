@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, type Deps } from '../worker/app';
-import { NO_ROWS, RepoError, type Overview, type PlayerRepo } from '../worker/repo';
+import { CUSTOM_DRILL_LIMIT, NO_ROWS, RepoError, UNKNOWN_DRILL, type Overview, type PlayerRepo } from '../worker/repo';
 import { recoveryScore } from '../shared/calculations';
-import type { Injury, Profile, RecoveryLog, TrainingSession } from '../shared/types';
+import { MAX_CUSTOM_DRILLS, customDrillIdFromKey } from '../shared/custom-drills';
+import type { CustomDrill, Injury, Profile, RecoveryLog, TrainingSession } from '../shared/types';
 
 const TODAY = '2026-10-12';
 const TOKENS: Record<string, string> = { 'token-a': 'user_a', 'token-b': 'user_b' };
@@ -10,10 +11,12 @@ const TOKENS: Record<string, string> = { 'token-a': 'user_a', 'token-b': 'user_b
 // In-memory stand-in for Supabase, keyed by user like RLS would be
 function memoryStore() {
   const data = new Map<string, Overview>();
+  // AI estimates counted per player per day, like the ai_usage table
+  const estimates = new Map<string, number>();
   let seq = 0;
   const uuid = () => `00000000-0000-4000-8000-${String(++seq).padStart(12, '0')}`;
   const forUser = (userId: string) => {
-    if (!data.has(userId)) data.set(userId, { profile: null, sessions: [], recovery: [], injuries: [] });
+    if (!data.has(userId)) data.set(userId, { profile: null, sessions: [], recovery: [], injuries: [], customDrills: [] });
     return data.get(userId)!;
   };
   const requireProfile = (o: Overview) => {
@@ -37,9 +40,13 @@ function memoryStore() {
       },
       deleteAllData: async () => {
         data.delete(userId);
+        for (const key of [...estimates.keys()]) if (key.startsWith(`${userId}|`)) estimates.delete(key);
       },
       addSession: async (input) => {
         requireProfile(o);
+        const customIds = (input.drills ?? []).filter((d) => d.drillId.startsWith('custom:')).map((d) => customDrillIdFromKey(d.drillId));
+        const active = new Set((o.customDrills ?? []).filter((d) => !d.archived).map((d) => d.id));
+        if (customIds.some((id) => id === null || !active.has(id))) throw new RepoError('Unknown or archived custom drill', UNKNOWN_DRILL);
         const s: TrainingSession = { id: uuid(), ...input, drills: input.drills ?? [], load: input.duration * input.rpe };
         o.sessions.unshift(s);
         return s;
@@ -78,6 +85,25 @@ function memoryStore() {
         const before = o.injuries.length;
         o.injuries = o.injuries.filter((i) => i.id !== id);
         return o.injuries.length < before;
+      },
+      addCustomDrill: async (input) => {
+        requireProfile(o);
+        const drills = (o.customDrills ??= []);
+        if (drills.filter((d) => !d.archived).length >= MAX_CUSTOM_DRILLS) throw new RepoError('Too many drills', CUSTOM_DRILL_LIMIT);
+        const d: CustomDrill = { id: uuid(), ...input, archived: false, createdAt: '2026-10-12T00:00:00Z' };
+        drills.push(d);
+        return structuredClone(d);
+      },
+      archiveCustomDrill: async (id) => {
+        const d = o.customDrills?.find((x) => x.id === id);
+        if (d) d.archived = true;
+        return d !== undefined;
+      },
+      countEstimate: async (day) => {
+        const key = `${userId}|${day}`;
+        const n = (estimates.get(key) ?? 0) + 1;
+        estimates.set(key, n);
+        return n;
       },
     };
   };

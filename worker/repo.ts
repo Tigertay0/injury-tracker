@@ -3,8 +3,10 @@
 // so row-level security limits every query to that player's rows even if a query
 // below forgot its user_id filter.
 import pg from 'pg';
-import type { Injury, Overview, Profile, RecoveryLog, SessionDrill, TrainingSession } from '../shared/types';
-import type { EquipmentInput, InjuryInput, ProfileInput, RecoveryCheckIn, SessionInput } from '../shared/validation';
+import type { DrillCategory } from '../shared/drills';
+import { CUSTOM_DRILL_PREFIX, MAX_CUSTOM_DRILLS, customDrillIdFromKey, customDrillKey } from '../shared/custom-drills';
+import type { CustomDrill, Injury, Overview, Profile, RecoveryLog, SessionDrill, TrainingSession } from '../shared/types';
+import type { CustomDrillInput, EquipmentInput, InjuryInput, ProfileInput, RecoveryCheckIn, SessionInput } from '../shared/validation';
 
 export const CONSENT_VERSION = '2026-10';
 const MAX_SESSIONS = 500;
@@ -29,6 +31,12 @@ export interface PlayerRepo {
   getInjury(id: string): Promise<Injury | null>;
   setInjuryReturn(id: string, returnDate: string | null): Promise<Injury | null>;
   deleteInjury(id: string): Promise<boolean>;
+  /** Throws CUSTOM_DRILL_LIMIT when the player already has MAX_CUSTOM_DRILLS active drills. */
+  addCustomDrill(input: CustomDrillInput): Promise<CustomDrill>;
+  /** Idempotent: true for any drill the player owns (archived already or not), false for unknown ids. */
+  archiveCustomDrill(id: string): Promise<boolean>;
+  /** Counts one AI estimate against `day` (YYYY-MM-DD) and returns that day's new total. */
+  countEstimate(day: string): Promise<number>;
 }
 
 /** Thrown for database failures; `code` is the Postgres SQLSTATE when there is one. */
@@ -43,6 +51,10 @@ export class RepoError extends Error {
 }
 
 export const NO_ROWS = 'NO_ROWS';
+/** addCustomDrill: the player already has MAX_CUSTOM_DRILLS active drills. */
+export const CUSTOM_DRILL_LIMIT = 'CUSTOM_DRILL_LIMIT';
+/** addSession: a `custom:` drill is not an active drill of this player. Nothing is saved. */
+export const UNKNOWN_DRILL = 'UNKNOWN_DRILL';
 
 // --- Row mapping (snake_case in Postgres, camelCase in the app) ---
 
@@ -52,6 +64,7 @@ const PROFILE_COLUMNS = 'position, display_name, cleat_type, surface_type, creat
 const SESSION_COLUMNS = 'id, session_date, session_type, duration_min, rpe, load, notes';
 const CHECKIN_COLUMNS = 'id, week_start, sleep_hours, soreness, stress, nutrition, score';
 const INJURY_COLUMNS = 'id, body_part, injury_type, severity, injury_date, return_date';
+const CUSTOM_DRILL_COLUMNS = 'id, name, description, category, intensity, sprint, hsr, cod, jump, contact, strength, ai_estimated, archived_at, created_at';
 
 const toProfile = (r: Row): Profile => ({
   position: (r.position as Profile['position']) ?? null,
@@ -89,6 +102,26 @@ const toInjury = (r: Row): Injury => ({
   severity: r.severity as Injury['severity'],
   injuryDate: r.injury_date as string,
   returnDate: (r.return_date as string | null) ?? null,
+});
+
+// numeric columns come back from pg as strings, hence Number()
+const toCustomDrill = (r: Row): CustomDrill => ({
+  id: r.id as string,
+  name: r.name as string,
+  description: (r.description as string) ?? '',
+  category: r.category as DrillCategory,
+  profile: {
+    intensity: Number(r.intensity),
+    sprint: Number(r.sprint),
+    hsr: Number(r.hsr),
+    cod: Number(r.cod),
+    jump: Number(r.jump),
+    contact: Number(r.contact),
+    strength: Number(r.strength),
+  },
+  aiEstimated: r.ai_estimated === true,
+  archived: r.archived_at !== null && r.archived_at !== undefined,
+  createdAt: new Date(r.created_at as string).toISOString(),
 });
 
 // Keep DATE columns as YYYY-MM-DD strings; pg would otherwise build local-time Dates
@@ -131,14 +164,19 @@ export async function asPlayer<T>(connectionString: string, userId: string, fn: 
 
 /**
  * Connects as the worker role and checks that the schema this release needs is there. It only
- * looks the table up in the catalog, so it reads no player data. `session_drills` comes from
- * migration 0002: if that has not run, the health check fails instead of the drills feature.
+ * looks the tables up in the catalog, so it reads no player data. `session_drills` comes from
+ * migration 0002 and `custom_drills` and `ai_usage` from 0003: if one has not run, the health
+ * check fails instead of the drills feature.
  */
 export async function pingDatabase(connectionString: string): Promise<boolean> {
   const client = new pg.Client({ connectionString, ...TIMEOUTS });
   try {
     await client.connect();
-    const { rows } = await client.query("select to_regclass('public.session_drills') is not null as ok");
+    const { rows } = await client.query(
+      `select to_regclass('public.session_drills') is not null
+          and to_regclass('public.custom_drills') is not null
+          and to_regclass('public.ai_usage') is not null as ok`,
+    );
     return rows[0]?.ok === true;
   } finally {
     await client.end().catch(() => undefined);
@@ -172,14 +210,20 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
     );
     const sessionIds = sessions.map((r) => r.id as string);
     const drillRows = sessionIds.length
-      ? await q('select session_id, drill_id, minutes from public.session_drills where user_id = $1 and session_id = any($2::uuid[]) order by created_at, drill_id', [userId, sessionIds])
+      ? await q(
+          'select session_id, drill_id, custom_drill_id, minutes from public.session_drills where user_id = $1 and session_id = any($2::uuid[]) order by created_at, drill_id, custom_drill_id',
+          [userId, sessionIds],
+        )
       : [];
     const drillsBySession = new Map<string, SessionDrill[]>();
     for (const d of drillRows) {
       const list = drillsBySession.get(d.session_id as string) ?? [];
-      list.push({ drillId: d.drill_id as string, minutes: Number(d.minutes) });
+      // Exactly one of the two columns is set (a check constraint guarantees it)
+      const drillId = (d.drill_id as string | null) ?? customDrillKey(d.custom_drill_id as string);
+      list.push({ drillId, minutes: Number(d.minutes) });
       drillsBySession.set(d.session_id as string, list);
     }
+    const customDrills = await q(`select ${CUSTOM_DRILL_COLUMNS} from public.custom_drills where user_id = $1 order by created_at, id`, [userId]);
     const recovery = await q(`select ${CHECKIN_COLUMNS} from public.recovery_checkins where user_id = $1 order by week_start desc ${limit(caps.recovery)}`, [userId]);
     const injuries = await q(`select ${INJURY_COLUMNS} from public.injuries where user_id = $1 order by injury_date desc ${limit(caps.injuries)}`, [userId]);
     return {
@@ -187,7 +231,16 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
       sessions: sessions.map((r) => toSession(r, drillsBySession.get(r.id as string) ?? [])),
       recovery: recovery.map(toCheckIn),
       injuries: injuries.map(toInjury),
+      customDrills: customDrills.map(toCustomDrill),
     };
+  }
+
+  /** Throws UNKNOWN_DRILL unless every id is an active (not archived) custom drill of this player. */
+  async function requireActiveCustomDrills(q: Query, ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const rows = await q('select id from public.custom_drills where user_id = $1 and id = any($2::uuid[]) and archived_at is null', [userId, ids]);
+    const active = new Set(rows.map((r) => r.id as string));
+    if (ids.some((id) => !active.has(id))) throw new RepoError('Unknown or archived custom drill', UNKNOWN_DRILL);
   }
 
   return {
@@ -228,12 +281,23 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
 
     deleteAllData: () =>
       run(async (q) => {
-        // Sessions, check-ins and injuries cascade from the profile row
+        // Sessions (and their drills), check-ins, injuries, custom drills and AI usage cascade from the profile row
         await q('delete from public.profiles where user_id = $1', [userId]);
       }),
 
     addSession: (input) =>
       run(async (q) => {
+        const drills = input.drills ?? [];
+        const builtIn = drills.filter((d) => !d.drillId.startsWith(CUSTOM_DRILL_PREFIX));
+        const customKeys = drills.filter((d) => d.drillId.startsWith(CUSTOM_DRILL_PREFIX));
+        const custom = customKeys.flatMap((d) => {
+          const id = customDrillIdFromKey(d.drillId);
+          return id ? [{ id, minutes: d.minutes }] : [];
+        });
+        // Check the custom drills first, in this transaction, so a bad one saves nothing at all
+        if (custom.length < customKeys.length) throw new RepoError('Unknown or archived custom drill', UNKNOWN_DRILL);
+        await requireActiveCustomDrills(q, custom.map((d) => d.id));
+
         const session = one(
           await q(
             `insert into public.training_sessions (session_date, session_type, duration_min, rpe, notes)
@@ -242,12 +306,18 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
           ),
           (r) => r,
         );
-        const drills = input.drills ?? [];
-        if (drills.length > 0) {
+        if (builtIn.length > 0) {
           await q(
             `insert into public.session_drills (session_id, drill_id, minutes)
              select $1::uuid, d.drill_id, d.minutes from unnest($2::text[], $3::int[]) as d(drill_id, minutes)`,
-            [session.id, drills.map((d) => d.drillId), drills.map((d) => d.minutes)],
+            [session.id, builtIn.map((d) => d.drillId), builtIn.map((d) => d.minutes)],
+          );
+        }
+        if (custom.length > 0) {
+          await q(
+            `insert into public.session_drills (session_id, custom_drill_id, minutes)
+             select $1::uuid, d.custom_drill_id, d.minutes from unnest($2::uuid[], $3::int[]) as d(custom_drill_id, minutes)`,
+            [session.id, custom.map((d) => d.id), custom.map((d) => d.minutes)],
           );
         }
         return toSession(session, drills);
@@ -298,5 +368,39 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
       }),
 
     deleteInjury: (id) => run(async (q) => (await q('delete from public.injuries where user_id = $1 and id = $2 returning id', [userId, id])).length > 0),
+
+    addCustomDrill: (input) =>
+      run(async (q) => {
+        const active = await q('select count(*)::int as n from public.custom_drills where user_id = $1 and archived_at is null', [userId]);
+        if (Number(active[0]?.n) >= MAX_CUSTOM_DRILLS) {
+          throw new RepoError(`You can keep ${MAX_CUSTOM_DRILLS} drills. Archive one to add another.`, CUSTOM_DRILL_LIMIT);
+        }
+        const p = input.profile;
+        return one(
+          await q(
+            `insert into public.custom_drills (name, description, category, intensity, sprint, hsr, cod, jump, contact, strength, ai_estimated)
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning ${CUSTOM_DRILL_COLUMNS}`,
+            [input.name, input.description, input.category, p.intensity, p.sprint, p.hsr, p.cod, p.jump, p.contact, p.strength, input.aiEstimated],
+          ),
+          toCustomDrill,
+        );
+      }),
+
+    // Archiving twice is fine: the first time stays, so the answer is "does this drill exist"
+    archiveCustomDrill: (id) =>
+      run(async (q) => (await q('update public.custom_drills set archived_at = coalesce(archived_at, now()) where user_id = $1 and id = $2 returning id', [userId, id])).length > 0),
+
+    countEstimate: (day) =>
+      run(async (q) =>
+        one(
+          await q(
+            `insert into public.ai_usage (day, estimates) values ($1, 1)
+             on conflict (user_id, day) do update set estimates = public.ai_usage.estimates + 1
+             returning estimates`,
+            [day],
+          ),
+          (r) => Number(r.estimates),
+        ),
+      ),
   };
 }
