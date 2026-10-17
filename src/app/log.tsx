@@ -3,8 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { sessionLoad } from '@shared/calculations';
-import { drillById } from '@shared/drills';
-import type { SessionDrill, SessionType } from '@shared/types';
+import type { CustomDrill, SessionDrill, SessionType } from '@shared/types';
 import { ValidationError, validateSession } from '@shared/validation';
 import { ConfirmDelete } from '@/components/confirm-delete';
 import { Field, inputClass } from '@/components/field';
@@ -14,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ApiError, errorMessage } from '@/lib/api';
 import { SESSION_LABEL, fmtDate, fmtWeekday } from '@/lib/labels';
-import { useOverview, usePlayerData } from '@/lib/player-data';
+import { useDrillLookup, useOverview, usePlayerData } from '@/lib/player-data';
 import { useLocalToday } from '@/lib/use-local-today';
 import { cn } from '@/lib/utils';
 import { DrillPicker } from './drill-picker';
@@ -29,12 +28,14 @@ const TYPES: { value: SessionType; label: string }[] = [
 ];
 
 const LOG_FIELDS = new Set(['date', 'duration', 'notes', 'drills']);
+const NO_CUSTOM_DRILLS: readonly CustomDrill[] = [];
 
 type Errors = Partial<Record<'date' | 'duration' | 'rpe' | 'notes' | 'drills' | 'form', string>>;
 
 export default function LogSession() {
-  const { sessions } = useOverview();
+  const { sessions, customDrills = NO_CUSTOM_DRILLS } = useOverview();
   const { actions } = usePlayerData();
+  const drillInfo = useDrillLookup();
   const today = useLocalToday();
 
   // The date follows today (also past midnight) until the player picks one
@@ -166,6 +167,7 @@ export default function LogSession() {
 
           <DrillPicker
             value={drills}
+            customDrills={customDrills}
             onChange={(next) => {
               setDrills(next);
               if (errors.drills) setErrors((x) => ({ ...x, drills: undefined }));
@@ -237,7 +239,7 @@ export default function LogSession() {
                         {s.notes ? `, ${s.notes}` : ''}
                       </p>
                       {s.drills && s.drills.length > 0 && (
-                        <p className="tnum text-label text-ink-3">{s.drills.map((d) => `${drillById(d.drillId)?.name ?? 'Removed drill'} ${d.minutes} min`).join('; ')}</p>
+                        <p className="tnum text-label text-ink-3 wrap-anywhere">{s.drills.map((d) => `${drillInfo(d.drillId)?.name ?? 'Removed drill'} ${d.minutes} min`).join('; ')}</p>
                       )}
                     </div>
                     <span className="tnum text-body font-semibold text-ink">{s.load}</span>
