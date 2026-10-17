@@ -4,7 +4,7 @@ import { createApp, requirePlus, type Deps } from '../worker/app';
 import { CUSTOM_DRILL_LIMIT, NO_ROWS, RepoError, UNKNOWN_DRILL, type Overview, type PlayerRepo } from '../worker/repo';
 import { recoveryScore } from '../shared/calculations';
 import { MAX_CUSTOM_DRILLS, MAX_DAILY_ESTIMATES, customDrillIdFromKey, type DrillEstimate } from '../shared/custom-drills';
-import { DrillEstimateError } from '../worker/drill-estimator';
+import { DrillEstimateError } from '../worker/drill-estimate-error';
 import type { CustomDrill, Injury, Profile, RecoveryLog, TrainingSession } from '../shared/types';
 
 const TODAY = '2026-10-12';
@@ -586,11 +586,14 @@ describe('drill estimates', () => {
 
   it('counts each player separately', async () => {
     TOKENS['token-other-plus'] = { userId: 'user_other_plus', plus: true };
-    withEstimator(vi.fn(async () => estimate));
-    for (let i = 0; i < MAX_DAILY_ESTIMATES; i++) await estimateCall();
-    expect((await estimateCall()).status).toBe(429);
-    expect((await estimateCall('token-other-plus')).status).toBe(200);
-    delete TOKENS['token-other-plus'];
+    try {
+      withEstimator(vi.fn(async () => estimate));
+      for (let i = 0; i < MAX_DAILY_ESTIMATES; i++) await estimateCall();
+      expect((await estimateCall()).status).toBe(429);
+      expect((await estimateCall('token-other-plus')).status).toBe(200);
+    } finally {
+      delete TOKENS['token-other-plus'];
+    }
   });
 
   it('answers 502 with a friendly message when the estimator fails', async () => {

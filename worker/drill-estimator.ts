@@ -5,28 +5,28 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { DrillEstimate } from '../shared/custom-drills';
 import { DRILLS, DRILL_CATEGORIES, DRILL_CATEGORY_LABEL, type DrillCategory } from '../shared/drills';
 import { clampMovementProfile, type EstimateRequest } from '../shared/validation';
+import { DrillEstimateError } from './drill-estimate-error';
 
 export const ESTIMATE_MODEL = 'claude-haiku-5-5';
 
 // Haiku 5.5 thinks adaptively and thinking counts toward this cap, so leave room for it
 const MAX_OUTPUT_TOKENS = 2048;
 const DEFAULT_RETRY_DELAY_MS = 1000;
+const REQUEST_TIMEOUT_MS = 15_000;
 const REASON_MAX_CHARS = 200;
 const SHARE_FIELDS = ['sprint', 'hsr', 'cod', 'jump', 'contact', 'strength'] as const;
 
-/** Anything that stops an estimate: a failed call, a refusal, or an answer that cannot be used. */
-export class DrillEstimateError extends Error {
-  /** A short machine label for logs. It never holds any text from the player or the model. */
-  readonly kind: string;
-
-  constructor(message: string, kind = 'invalid_response') {
-    super(message);
-    this.name = 'DrillEstimateError';
-    this.kind = kind;
-  }
-}
-
 type EstimatorClient = Pick<Anthropic, 'messages'>;
+type SdkFetch = NonNullable<ConstructorParameters<typeof Anthropic>[0]>['fetch'];
+
+/**
+ * The client as production uses it. The SDK's own retries are off (`maxRetries: 0`) so the one
+ * rate-limit retry below is the only retry, and a call cannot hang the request for long.
+ * `fetchImpl` is for tests; the Worker leaves it out.
+ */
+export function createAnthropicClient(apiKey: string, fetchImpl?: SdkFetch): Anthropic {
+  return new Anthropic({ apiKey, maxRetries: 0, timeout: REQUEST_TIMEOUT_MS, ...(fetchImpl && { fetch: fetchImpl }) });
+}
 
 function calibrationLines(): string {
   return DRILLS.map((d) => {

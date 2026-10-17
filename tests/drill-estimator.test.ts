@@ -1,14 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DRILL_CATEGORIES, DRILLS } from '../shared/drills';
+import { DrillEstimateError } from '../worker/drill-estimate-error';
 import {
-  DrillEstimateError,
   ESTIMATE_MODEL,
   buildEstimateRequest,
   buildSystemPrompt,
+  createAnthropicClient,
   createDrillEstimator,
   parseEstimate,
 } from '../worker/drill-estimator';
+import { lazyDrillEstimator } from '../worker/lazy-estimator';
 
 type Create = ReturnType<typeof vi.fn>;
 const fake = (create: Create) => ({ messages: { create } }) as unknown as Parameters<typeof createDrillEstimator>[0];
@@ -213,5 +215,97 @@ describe('createDrillEstimator', () => {
     expect(err).toBeInstanceOf(DrillEstimateError);
     expect((err as Error).message).not.toContain('SECRET');
     expect((err as Error).message).not.toContain('boom');
+  });
+});
+
+// The real SDK client, built the way the Worker builds it, with only the network faked
+describe('production wiring (real SDK client, fake fetch)', () => {
+  const message = {
+    id: 'msg_1',
+    type: 'message',
+    role: 'assistant',
+    model: ESTIMATE_MODEL,
+    content: [{ type: 'text', text: JSON.stringify(valid) }],
+    stop_reason: 'end_turn',
+    stop_sequence: null,
+    usage: { input_tokens: 10, output_tokens: 10 },
+  };
+  const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+  const rateLimit = () => reply(429, { type: 'error', error: { type: 'rate_limit_error', message: 'slow down' } });
+  const sentBodies = (fetchFake: ReturnType<typeof fakeFetch>) => fetchFake.mock.calls.map(([, init]) => String(init?.body));
+  const fakeFetch = () => vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => reply(200, message));
+
+  afterEach(() => vi.useRealTimers());
+
+  it('retries a 429 exactly once after the default 1000 ms, with a clean request body', async () => {
+    vi.useFakeTimers();
+    const fetchFake = fakeFetch().mockResolvedValueOnce(rateLimit()).mockResolvedValueOnce(reply(200, message));
+    const estimate = createDrillEstimator(createAnthropicClient('sk-ant-test-key', fetchFake));
+
+    const pending = estimate({ name: 'Grid', description: '4v4' });
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fetchFake).toHaveBeenCalledTimes(1); // still waiting out the default delay
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(pending).resolves.toMatchObject({ category: 'small_sided', profile: { intensity: 7 } });
+
+    // Two calls in total: the SDK did not retry on its own (maxRetries: 0)
+    expect(fetchFake).toHaveBeenCalledTimes(2);
+    for (const [url] of fetchFake.mock.calls) expect(String(url)).toContain('/v1/messages');
+    const bodies = sentBodies(fetchFake);
+    expect(bodies[1]).toBe(bodies[0]);
+    for (const body of bodies) {
+      const sent = JSON.parse(body);
+      expect(sent.model).toBe('claude-haiku-5-5');
+      expect(sent).toHaveProperty('output_config');
+      for (const key of ['thinking', 'temperature', 'top_p', 'top_k', 'fallbacks']) expect(sent).not.toHaveProperty(key);
+      expect(body).not.toContain('sk-ant-test-key'); // the key travels in a header, never the body
+    }
+  });
+
+  it('gives up after a second 429', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fetchFake = fakeFetch().mockImplementation(async () => rateLimit());
+    const pending = createDrillEstimator(createAnthropicClient('sk-ant-test-key', fetchFake))(input);
+    const outcome = expect(pending).rejects.toBeInstanceOf(DrillEstimateError);
+    await vi.advanceTimersByTimeAsync(1000);
+    await outcome;
+    expect(fetchFake).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not let the SDK retry a server error', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fetchFake = fakeFetch().mockImplementation(async () => reply(500, { type: 'error', error: { type: 'api_error', message: 'boom' } }));
+    await expect(createDrillEstimator(createAnthropicClient('sk-ant-test-key', fetchFake))(input)).rejects.toBeInstanceOf(DrillEstimateError);
+    expect(fetchFake).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('lazyDrillEstimator', () => {
+  const fakeModule = () => {
+    const client = { messages: { create: vi.fn() } };
+    const estimator = vi.fn(async () => ({ category: 'small_sided', profile: { intensity: 7, sprint: 0, hsr: 0, cod: 0, jump: 0, contact: 0, strength: 0 }, reason: 'ok' }));
+    const createAnthropicClient = vi.fn(() => client);
+    const createDrillEstimator = vi.fn(() => estimator);
+    const load = vi.fn(async () => ({ createAnthropicClient, createDrillEstimator }) as unknown as typeof import('../worker/drill-estimator'));
+    return { client, estimator, createAnthropicClient, createDrillEstimator, load };
+  };
+
+  it('loads the estimator and builds the client only when an estimate runs', async () => {
+    const { client, estimator, createAnthropicClient, createDrillEstimator, load } = fakeModule();
+    const estimate = lazyDrillEstimator('sk-ant-test-key', load);
+    expect(load).not.toHaveBeenCalled();
+    expect(createAnthropicClient).not.toHaveBeenCalled();
+
+    expect(await estimate(input)).toMatchObject({ category: 'small_sided' });
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(createAnthropicClient).toHaveBeenCalledExactlyOnceWith('sk-ant-test-key');
+    expect(createDrillEstimator).toHaveBeenCalledExactlyOnceWith(client);
+    expect(estimator).toHaveBeenCalledExactlyOnceWith(input);
+  });
+
+  it('passes a load failure on to the caller', async () => {
+    const estimate = lazyDrillEstimator('sk-ant-test-key', async () => { throw new Error('chunk missing'); });
+    await expect(estimate(input)).rejects.toThrow('chunk missing');
   });
 });

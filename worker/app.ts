@@ -17,7 +17,7 @@ import {
   validateRecovery,
   validateSession,
 } from '../shared/validation';
-import { DrillEstimateError } from './drill-estimator';
+import { DrillEstimateError } from './drill-estimate-error';
 import { CUSTOM_DRILL_LIMIT, NO_ROWS, RepoError, UNKNOWN_DRILL, type PlayerRepo } from './repo';
 
 export interface Deps {
