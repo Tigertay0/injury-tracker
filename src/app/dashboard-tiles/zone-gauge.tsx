@@ -1,6 +1,6 @@
 // The four risk zones as a bar, with a marker where the score sits. The number and the zone chip already say
-// the same in words, so the gauge is hidden from screen readers. It takes the free height of its tile: the bar
-// grows (up to a limit) and the zone names above it and the scores below it stay with it, centred in what is left.
+// the same in words, so the gauge is hidden from screen readers. It sits centred in the free height of its tile,
+// with the zone names above the bar and the scores below it. The bar stays slim: a fat bar reads as a toy.
 import { COMPOSITE_LABEL, COMPOSITE_TONE, TONE_FILL } from '@/lib/labels';
 import { cn } from '@/lib/utils';
 import { gaugeSegments, gaugeTicks, markerPosition } from './zones';
@@ -23,7 +23,7 @@ export function ZoneGauge({ score, className }: { score: number; className?: str
           </span>
         ))}
       </div>
-      <div className="grid max-h-16 min-h-2.5 flex-1 gap-1" style={{ gridTemplateColumns: COLUMNS }}>
+      <div className="grid h-3 gap-1" style={{ gridTemplateColumns: COLUMNS }}>
         {SEGMENTS.map((segment, i) => (
           <div
             key={segment.zone}

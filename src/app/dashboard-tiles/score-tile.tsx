@@ -50,9 +50,9 @@ function Assumptions({ model }: { model: RiskModel }) {
   );
 }
 
-/** The middle of the tile takes the free height for its picture (see ZoneGauge and SessionStrip). Under 340px there is no room for it, and the text sits at the bottom instead. */
-const MIDDLE = 'hidden @[340px]:flex';
-const BOTTOM = 'mt-auto flex flex-col gap-3 @[340px]:mt-0';
+/** The middle of the tile takes the free height for its picture (see ZoneGauge and SessionStrip). Under 240px there is no room for it, and the text sits at the bottom instead. */
+const MIDDLE = 'hidden @[240px]:flex';
+const BOTTOM = 'mt-auto flex flex-col gap-3 @[240px]:mt-0';
 const BODY = 'flex flex-1 flex-col gap-3';
 
 function Score({ model, composite }: { model: RiskModel; composite: NonNullable<RiskModel['composite']> }) {
