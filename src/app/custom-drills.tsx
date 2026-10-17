@@ -202,12 +202,13 @@ interface FormActionsProps {
 
 /** The buttons, the estimate's progress for screen readers, and its failure message. */
 function FormActions({ stage, estimating, saving, estimateNote, estimateError, onEstimate, onEnterValues, actionsRef }: FormActionsProps) {
+  const disclosureId = useId();
   return (
     <>
       <div ref={actionsRef} aria-busy={estimating} className="flex flex-col gap-3 sm:flex-row">
         {stage === 'describe' ? (
           <>
-            <Button key="estimate" type="submit" size="lg" aria-disabled={estimating} className={cn('w-full sm:w-auto', PENDING_BUTTON)}>
+            <Button key="estimate" type="submit" size="lg" aria-disabled={estimating} aria-describedby={disclosureId} className={cn('w-full sm:w-auto', PENDING_BUTTON)}>
               {estimating ? 'Estimating…' : 'Estimate with AI'}
             </Button>
             <Button key="manual" type="button" size="lg" variant="secondary" onClick={onEnterValues} className="w-full sm:w-auto">
@@ -220,12 +221,19 @@ function FormActions({ stage, estimating, saving, estimateNote, estimateError, o
             <Button key="save" type="submit" size="lg" aria-disabled={saving || estimating} className={cn('w-full sm:w-auto', PENDING_BUTTON)}>
               {saving ? 'Saving…' : 'Save drill'}
             </Button>
-            <Button key="estimate-again" type="button" size="lg" variant="secondary" aria-disabled={estimating || saving} onClick={onEstimate} className={cn('w-full sm:w-auto', PENDING_BUTTON)}>
+            <Button key="estimate-again" type="button" size="lg" variant="secondary" aria-disabled={estimating || saving} aria-describedby={disclosureId} onClick={onEstimate} className={cn('w-full sm:w-auto', PENDING_BUTTON)}>
               {estimating ? 'Estimating…' : stage === 'review' ? 'Estimate again' : 'Estimate with AI'}
             </Button>
           </>
         )}
       </div>
+
+      <p id={disclosureId} className="-mt-1 text-label text-ink-2">
+        Estimating sends the drill's name and description to Anthropic.{' '}
+        <Link to="/privacy" className="font-semibold text-accent-ink underline underline-offset-2">
+          How we use it
+        </Link>
+      </p>
 
       {/* Outside the busy region, which would hold back announcements made inside it */}
       <p role="status" className={cn('-mt-2 text-label text-ink-2', !estimating && estimateNote !== 'stale' && 'sr-only')}>

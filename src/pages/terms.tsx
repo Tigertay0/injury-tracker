@@ -7,7 +7,7 @@ export default function Terms() {
       <section>
         <h2>What PitchSafe is</h2>
         <p className="mt-3">
-          PitchSafe is an educational tool, free to use with an optional paid plan, that estimates training-related injury risk from the information you enter. It is <strong>not a medical device</strong> and does not diagnose, treat or prevent any condition. Its scores are indicators, not guarantees.
+          PitchSafe is an educational tool that estimates training-related injury risk from the information you enter. It is <strong>not a medical device</strong> and does not diagnose, treat or prevent any condition. Its scores are indicators, not guarantees. The core app is free; PitchSafe Plus is an optional paid plan.
         </p>
       </section>
 
@@ -66,7 +66,7 @@ export default function Terms() {
 
       <section>
         <h2>Ending your account</h2>
-        <p className="mt-3">You can delete your account and all your data at any time from Settings.</p>
+        <p className="mt-3">You can delete your account and your PitchSafe data at any time from Settings. If you have PitchSafe Plus, cancel it in Settings before you delete your account.</p>
       </section>
 
       <section>
