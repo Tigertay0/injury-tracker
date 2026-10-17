@@ -15,7 +15,7 @@ const QUIET_OPACITY = 0.35;
 export function ZoneGauge({ score, className }: { score: number; className?: string }) {
   const { index, fraction } = markerPosition(score);
   return (
-    <div aria-hidden className={cn('flex min-h-0 w-full flex-1 flex-col justify-center gap-2 px-1', className)}>
+    <div aria-hidden className={cn('flex min-h-14 w-full flex-1 flex-col justify-center gap-2 px-1', className)}>
       <div className="grid gap-1" style={{ gridTemplateColumns: COLUMNS }}>
         {SEGMENTS.map((segment, i) => (
           <span key={segment.zone} className={cn('whitespace-nowrap text-center text-caption leading-none', i === index ? 'font-semibold text-ink' : 'text-ink-3')}>

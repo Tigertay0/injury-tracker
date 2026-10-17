@@ -4,6 +4,7 @@
 // everything; at every other size it fits.
 import { Link } from 'react-router';
 import { Plus } from '@phosphor-icons/react';
+import { COMPOSITE_SCORE_MAX } from '@shared/calculations';
 import type { RiskModel } from '@shared/risk-model';
 import { RiskChip } from '@/components/risk-chip';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,8 @@ function Assumptions({ model }: { model: RiskModel }) {
 /** The middle of the tile takes the free height for its picture (see ZoneGauge and SessionStrip). Under 240px there is no room for it, and the text sits at the bottom instead. */
 const MIDDLE = 'hidden @[240px]:flex';
 const BOTTOM = 'mt-auto flex flex-col gap-3 @[240px]:mt-0';
+/** The baseline's strip needs 340px, so below that its text keeps to the bottom of the tile. */
+const BASELINE_BOTTOM = 'mt-auto flex flex-col gap-3 @[340px]:mt-0';
 const BODY = 'flex flex-1 flex-col gap-3';
 
 function Score({ model, composite }: { model: RiskModel; composite: NonNullable<RiskModel['composite']> }) {
@@ -64,7 +67,7 @@ function Score({ model, composite }: { model: RiskModel; composite: NonNullable<
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <p className="flex items-baseline gap-2">
             <span className={cn('tnum font-display text-display-s font-bold @[340px]:text-display-m @[400px]:text-score', TONE_TEXT[COMPOSITE_TONE[zone]])}>{score}</span>
-            <span className="tnum text-lead font-semibold text-ink-3">/ 100</span>
+            <span className="tnum text-lead font-semibold text-ink-3">/ {COMPOSITE_SCORE_MAX}</span>
           </p>
           <RiskChip tone={COMPOSITE_TONE[zone]}>{COMPOSITE_LABEL[zone]}</RiskChip>
         </div>
@@ -95,7 +98,7 @@ function Baseline({ model }: { model: RiskModel }) {
           <span className="tnum text-lead font-semibold text-ink-3">of 28</span>
         </p>
         <SessionStrip days={model.days.map((d) => d.load > 0)} className="my-auto hidden @[340px]:grid" />
-        <div className={BOTTOM}>
+        <div className={BASELINE_BOTTOM}>
           <div
             className="h-2.5 w-full overflow-hidden rounded-[var(--radius-chip)] bg-accent-soft"
             role="progressbar"
