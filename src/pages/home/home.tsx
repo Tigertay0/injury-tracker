@@ -6,6 +6,7 @@ import { Link } from 'react-router';
 import { ArrowRight, Bed, FirstAidKit, Pause, Play, Prohibit, SneakerMove, Timer, type Icon } from '@phosphor-icons/react';
 import { GlassFold } from '@/components/fx/glass-fold';
 import { ContainerScroll } from '@/components/fx/container-scroll';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ACWR, CLOSE, HERO, INPUTS, LIMITS } from './content';
 import { Faq } from './faq';
@@ -16,19 +17,17 @@ import './home.css';
 const NIGHT = '#05070f';
 const ICONS: Record<(typeof INPUTS)[number]['key'], Icon> = { load: Timer, recovery: Bed, cleats: SneakerMove, injuries: FirstAidKit };
 
+// The hero and close-band calls to action. Solid is the white pill (inverse: it floods to the night
+// surface with a white ring); ghost keeps the glass look over the shader and floods to ink.
 function PillLink({ to, children, variant = 'solid', className }: { to: string; children: ReactNode; variant?: 'solid' | 'ghost'; className?: string }) {
   return (
-    <Link
-      to={to}
-      className={cn(
-        'group inline-flex h-12 items-center justify-center gap-2 rounded-[var(--radius-control)] px-6 text-body font-semibold transition-[background-color,transform] duration-200 ease-out active:scale-[0.98]',
-        'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#9fd2ff]',
-        variant === 'solid' ? 'bg-white text-[#060a1a] hover:bg-[#dfe9ff]' : 'border border-white/20 bg-white/[0.04] text-white backdrop-blur-md hover:bg-white/10',
-        className,
-      )}
+    <Button
+      asChild
+      variant={variant === 'solid' ? 'inverse' : 'secondary'}
+      className={cn('group h-12 px-6', variant === 'ghost' && 'border-white/20 bg-white/[0.04] backdrop-blur-md', className)}
     >
-      {children}
-    </Link>
+      <Link to={to}>{children}</Link>
+    </Button>
   );
 }
 
@@ -111,14 +110,10 @@ function PhoneReveal() {
         </div>
       </div>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="dash-toggle inline-flex h-10 items-center gap-2 rounded-[var(--radius-control)] border border-white/15 px-4 text-small font-semibold text-white/80 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]"
-        >
-          {paused ? <Play aria-hidden weight="fill" className="size-4" /> : <Pause aria-hidden weight="fill" className="size-4" />}
+        <Button type="button" variant="secondary" size="sm" onClick={() => setPaused((p) => !p)} className="dash-toggle h-10 px-4">
+          {paused ? <Play aria-hidden weight="fill" /> : <Pause aria-hidden weight="fill" />}
           {paused ? 'Play' : 'Pause'}
-        </button>
+        </Button>
         <Link to="/demo" className="group inline-flex items-center gap-1.5 text-body font-semibold text-[#a6d8ff]">
           Open the sample dashboard
           <ArrowRight aria-hidden weight="bold" className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />

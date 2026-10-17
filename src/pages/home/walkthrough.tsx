@@ -6,6 +6,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type FocusEvent } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Pause, Play } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 type Target = { label: string; x: number; y: number };
@@ -313,14 +314,10 @@ export function Walkthrough() {
               </ol>
             ) : (
               <div className="mt-4 flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setPaused((p) => !p)}
-                  className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-control)] border border-white/15 px-4 text-small font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]"
-                >
-                  {paused ? <Play aria-hidden weight="fill" className="size-4" /> : <Pause aria-hidden weight="fill" className="size-4" />}
+                <Button type="button" variant="secondary" size="sm" onClick={() => setPaused((p) => !p)} className="h-10 px-4">
+                  {paused ? <Play aria-hidden weight="fill" /> : <Pause aria-hidden weight="fill" />}
                   {paused ? 'Play the walkthrough' : 'Pause the walkthrough'}
-                </button>
+                </Button>
               </div>
             )}
           </div>

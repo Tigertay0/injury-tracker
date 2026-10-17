@@ -49,8 +49,10 @@ export function MarketingHeader() {
             <Link to={primary.to}>{primary.label}</Link>
           </Button>
           <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger className="grid size-10 place-items-center rounded-[var(--radius-control)] text-white/80 hover:bg-white/10 hover:text-white md:hidden" aria-label="Open menu">
-              <List aria-hidden className="size-5" />
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-10 md:hidden" aria-label="Open menu">
+                <List aria-hidden />
+              </Button>
             </SheetTrigger>
             <SheetContent side="right" className="site-night p-6">
               <SheetTitle className="mb-6">
@@ -65,9 +67,11 @@ export function MarketingHeader() {
                 ))}
               </nav>
               {!isSignedIn && (
-                <Link to="/sign-in" onClick={() => setOpen(false)} className="mt-auto inline-flex h-12 items-center justify-center rounded-[var(--radius-control)] border border-line-strong text-body font-semibold text-ink">
-                  Sign in
-                </Link>
+                <Button asChild variant="secondary" className="mt-auto h-12">
+                  <Link to="/sign-in" onClick={() => setOpen(false)}>
+                    Sign in
+                  </Link>
+                </Button>
               )}
             </SheetContent>
           </Sheet>

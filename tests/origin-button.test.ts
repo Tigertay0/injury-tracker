@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
-import { getCoverDiameter, hasTextContent, isAriaDisabled, toLocalPoint } from '@/lib/origin-button-helpers';
+import { getCoverDiameter, hasAccessibleName, hasTextContent, isAriaDisabled, toLocalPoint } from '@/lib/origin-button-helpers';
 
 const W = 160;
 const H = 44;
@@ -124,6 +124,36 @@ describe('hasTextContent', () => {
     expect(hasTextContent(false)).toBe(false);
     expect(hasTextContent('   ')).toBe(false);
     expect(hasTextContent([createElement('svg', { 'aria-hidden': true })])).toBe(false);
+  });
+});
+
+describe('hasAccessibleName', () => {
+  const icon = createElement('svg', { 'aria-hidden': true });
+
+  it('accepts visible text, aria-label and aria-labelledby on the button itself', () => {
+    expect(hasAccessibleName({ children: 'Save', asChild: false })).toBe(true);
+    expect(hasAccessibleName({ children: icon, asChild: false, ariaLabel: 'Delete' })).toBe(true);
+    expect(hasAccessibleName({ children: icon, asChild: false, ariaLabelledBy: 'heading' })).toBe(true);
+  });
+
+  it('rejects an icon-only button with no name, and blank names', () => {
+    expect(hasAccessibleName({ children: icon, asChild: false })).toBe(false);
+    expect(hasAccessibleName({ children: icon, asChild: false, ariaLabel: '  ', ariaLabelledBy: '' })).toBe(false);
+  });
+
+  it('with asChild, accepts a name given on the child element', () => {
+    const labelled = createElement('a', { href: '/', 'aria-label': 'Home' }, icon);
+    const labelledBy = createElement('a', { href: '/', 'aria-labelledby': 'title' }, icon);
+    const texted = createElement('a', { href: '/' }, 'Home');
+    expect(hasAccessibleName({ children: labelled, asChild: true })).toBe(true);
+    expect(hasAccessibleName({ children: labelledBy, asChild: true })).toBe(true);
+    expect(hasAccessibleName({ children: texted, asChild: true })).toBe(true);
+  });
+
+  it('with asChild, still rejects an unnamed child, and ignores the child label without asChild', () => {
+    expect(hasAccessibleName({ children: createElement('a', { href: '/' }, icon), asChild: true })).toBe(false);
+    expect(hasAccessibleName({ children: createElement('a', { 'aria-label': 'Home' }, icon), asChild: false })).toBe(false);
+    expect(hasAccessibleName({ children: undefined, asChild: true })).toBe(false);
   });
 });
 

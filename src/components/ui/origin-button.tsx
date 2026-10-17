@@ -5,17 +5,19 @@
 // Differences from the 21st source, on purpose:
 // - tokens only (no --ic-* theme class); the global :focus-visible outline replaces its focus ring;
 // - hover fills only where the device can hover (touch fills on press);
-// - Motion's reduced-motion setting: the fill fades in 120ms instead of growing, and no press scale;
+// - prefers-reduced-motion, read live (a mounted button follows an OS change): the fill fades in 120ms
+//   instead of growing, and no press scale;
 // - aria-disabled counts as disabled (no fill, no press scale), because the My drills page uses it;
 // - asChild (Radix Slot) so a Link can be the button; and `type` is not defaulted, because the old
 //   Button never set one and forms with an untyped submit button must keep submitting;
 // - Space is not cancelled on keydown (the native button activates on keyup and needs it);
 // - sizes use layout pixels, not the on-screen rect, which shrinks while the button is pressed.
 import * as React from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import { motion } from 'motion/react';
 import { Slot } from 'radix-ui';
 import { cn } from '@/lib/utils';
-import { getCoverDiameter, hasTextContent, isAriaDisabled, toLocalPoint } from '@/lib/origin-button-helpers';
+import { getCoverDiameter, hasAccessibleName, isAriaDisabled, toLocalPoint } from '@/lib/origin-button-helpers';
+import { usePrefersReducedMotion } from '@/lib/use-prefers-reduced-motion';
 
 const FILL_TRANSITION = { duration: 0.5, ease: [0.16, 1, 0.3, 1] } as const;
 const REDUCED_FILL_TRANSITION = { duration: 0.12, ease: 'linear' } as const;
@@ -95,7 +97,7 @@ function OriginButton({
   ...props
 }: OriginButtonProps) {
   const nodeRef = React.useRef<HTMLElement | null>(null);
-  const reduceMotion = Boolean(useReducedMotion());
+  const reduceMotion = usePrefersReducedMotion();
   const isInert = Boolean(disabled || loading);
   const isDisabled = isInert || isAriaDisabled(props['aria-disabled']);
   const [hovered, setHovered] = React.useState(false);
@@ -109,10 +111,10 @@ function OriginButton({
 
   React.useEffect(() => {
     if (!import.meta.env.DEV || warned.current) return;
-    if (hasTextContent(children) || ariaLabel?.trim() || ariaLabelledBy?.trim()) return;
+    if (hasAccessibleName({ children, asChild, ariaLabel, ariaLabelledBy })) return;
     warned.current = true;
     console.warn('OriginButton: provide visible label text or aria-label / aria-labelledby so the control has an accessible name.');
-  }, [ariaLabel, ariaLabelledBy, children]);
+  }, [asChild, ariaLabel, ariaLabelledBy, children]);
 
   // A button that turns disabled or busy while the pointer is over it never gets its leave event
   React.useEffect(() => {

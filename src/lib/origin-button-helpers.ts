@@ -44,6 +44,26 @@ export function hasTextContent(node: ReactNode): boolean {
   return false;
 }
 
+interface NameSources {
+  children: ReactNode;
+  /** The button renders its single child element (a link) as the control. */
+  asChild: boolean;
+  ariaLabel?: string;
+  ariaLabelledBy?: string;
+}
+
+const isFilled = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
+
+/**
+ * Whether the control will have an accessible name: visible text, or aria-label or aria-labelledby.
+ * With asChild the control is the child element, so a name given on that child counts too.
+ */
+export function hasAccessibleName({ children, asChild, ariaLabel, ariaLabelledBy }: NameSources): boolean {
+  if (isFilled(ariaLabel) || isFilled(ariaLabelledBy) || hasTextContent(children)) return true;
+  if (!asChild || !isValidElement<Record<string, unknown>>(children)) return false;
+  return isFilled(children.props['aria-label']) || isFilled(children.props['aria-labelledby']);
+}
+
 /** aria-disabled arrives as true, 'true', false, 'false' or undefined; only the first two disable. */
 export function isAriaDisabled(value: unknown): boolean {
   return value === true || value === 'true';
