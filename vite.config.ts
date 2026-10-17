@@ -13,7 +13,8 @@ function clerkFrontendHost(publishableKey: string | undefined): string | null {
 }
 
 /** Writes Workers static-asset headers (CSP and friends) into the client build.
- * Clerk hosts follow https://clerk.com/docs/guides/secure/best-practices/csp-headers */
+ * Clerk hosts follow https://clerk.com/docs/guides/secure/best-practices/csp-headers, which also lists the
+ * Stripe hosts that Clerk Billing's checkout (Stripe Elements) loads */
 function securityHeaders(publishableKey: string | undefined): Plugin {
   return {
     name: 'pitchsafe-security-headers',
@@ -24,12 +25,12 @@ function securityHeaders(publishableKey: string | undefined): Plugin {
       const clerkSrc = clerk ? ` https://${clerk}` : '';
       const csp = [
         "default-src 'self'",
-        `script-src 'self'${clerkSrc} https://challenges.cloudflare.com https://*.protect.clerk.com`,
-        `connect-src 'self'${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com https://*.clerk-telemetry.com https://challenges.cloudflare.com`,
+        `script-src 'self'${clerkSrc} https://challenges.cloudflare.com https://*.protect.clerk.com https://js.stripe.com https://*.js.stripe.com`,
+        `connect-src 'self'${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com https://*.clerk-telemetry.com https://challenges.cloudflare.com https://api.stripe.com`,
         "img-src 'self' data: blob: https://img.clerk.com",
         "style-src 'self' 'unsafe-inline'", // Clerk injects component styles at runtime
         "font-src 'self' data:",
-        "frame-src 'self' https://challenges.cloudflare.com https://*.protect.clerk.com",
+        "frame-src 'self' https://challenges.cloudflare.com https://*.protect.clerk.com https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com",
         "worker-src 'self' blob:",
         "manifest-src 'self'",
         "object-src 'none'",
@@ -43,7 +44,7 @@ function securityHeaders(publishableKey: string | undefined): Plugin {
         '  Strict-Transport-Security: max-age=86400',
         '  X-Content-Type-Options: nosniff',
         '  Referrer-Policy: strict-origin-when-cross-origin',
-        '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()',
+        '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")',
         '  Cross-Origin-Opener-Policy: same-origin-allow-popups',
         '/assets/*',
         '  Cache-Control: public, max-age=31536000, immutable',

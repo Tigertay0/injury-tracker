@@ -5,8 +5,9 @@ import { ClerkProvider, useAuth } from '@clerk/react';
 import { CLERK_PUBLISHABLE_KEY } from '@/config';
 import { AppAuthContext } from './auth';
 
-// Clerk's prebuilt screens read the same CSS tokens as the rest of the app
-const appearance = {
+// Clerk's prebuilt screens read the same CSS tokens as the rest of the app. Shared with the
+// Plus card in Settings, whose pricing table and checkout need the same look.
+export const clerkAppearance = {
   variables: {
     colorPrimary: 'var(--accent)',
     colorPrimaryForeground: 'var(--on-accent)',
@@ -51,7 +52,7 @@ export default function ClerkRoot() {
       signInFallbackRedirectUrl="/app"
       signUpFallbackRedirectUrl="/app"
       afterSignOutUrl="/"
-      appearance={appearance}
+      appearance={clerkAppearance}
     >
       <Bridge />
     </ClerkProvider>
