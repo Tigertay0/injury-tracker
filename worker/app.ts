@@ -9,6 +9,7 @@ import {
   type EstimateRequest,
   requireId,
   validateCustomDrill,
+  validateDashboardOrder,
   validateEquipment,
   validateEstimateRequest,
   validateInjury,
@@ -129,6 +130,12 @@ export function createApp(deps: Deps) {
   app.patch('/me/equipment', async (c) => {
     const input = validateEquipment(await readJson(c));
     return c.json(await c.var.repo.updateProfile(input));
+  });
+
+  // The player's dashboard tile order. Replaces the whole list; an empty list means the default
+  app.put('/me/dashboard', async (c) => {
+    const order = validateDashboardOrder(await readJson(c));
+    return c.json({ dashboardOrder: await c.var.repo.updateDashboardOrder(order) });
   });
 
   app.get('/me/export', async (c) => {

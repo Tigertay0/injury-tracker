@@ -53,7 +53,7 @@ export function sampleOverview(today: string): Overview {
   ];
 
   return {
-    profile: { position: 'MID', displayName: 'Sam', cleatType: 'FG_BLADED', surfaceType: '3G_TURF', createdAt: `${addDays(today, -60)}T00:00:00Z` },
+    profile: { position: 'MID', displayName: 'Sam', cleatType: 'FG_BLADED', surfaceType: '3G_TURF', dashboardOrder: [], createdAt: `${addDays(today, -60)}T00:00:00Z` },
     sessions,
     recovery,
     injuries,

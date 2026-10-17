@@ -22,6 +22,8 @@ export interface PlayerRepo {
   getProfile(): Promise<Profile | null>;
   createProfile(input: ProfileInput): Promise<Profile>;
   updateProfile(input: ProfileInput | EquipmentInput): Promise<Profile>;
+  /** Stores the dashboard tile order and returns it. Throws NO_ROWS when the player has no profile yet. */
+  updateDashboardOrder(order: string[]): Promise<string[]>;
   deleteAllData(): Promise<void>;
   addSession(input: SessionInput): Promise<TrainingSession>;
   deleteSession(id: string): Promise<boolean>;
@@ -60,7 +62,7 @@ export const UNKNOWN_DRILL = 'UNKNOWN_DRILL';
 
 type Row = Record<string, unknown>;
 
-const PROFILE_COLUMNS = 'position, display_name, cleat_type, surface_type, created_at';
+const PROFILE_COLUMNS = 'position, display_name, cleat_type, surface_type, dashboard_order, created_at';
 const SESSION_COLUMNS = 'id, session_date, session_type, duration_min, rpe, load, notes';
 const CHECKIN_COLUMNS = 'id, week_start, sleep_hours, soreness, stress, nutrition, score';
 const INJURY_COLUMNS = 'id, body_part, injury_type, severity, injury_date, return_date';
@@ -71,6 +73,7 @@ const toProfile = (r: Row): Profile => ({
   displayName: (r.display_name as string) ?? '',
   cleatType: (r.cleat_type as Profile['cleatType']) ?? null,
   surfaceType: (r.surface_type as Profile['surfaceType']) ?? null,
+  dashboardOrder: Array.isArray(r.dashboard_order) ? (r.dashboard_order as string[]) : [],
   createdAt: new Date(r.created_at as string).toISOString(),
 });
 
@@ -165,8 +168,8 @@ export async function asPlayer<T>(connectionString: string, userId: string, fn: 
 /**
  * Connects as the worker role and checks that the schema this release needs is there. It only
  * looks the tables up in the catalog, so it reads no player data. `session_drills` comes from
- * migration 0002 and `custom_drills` and `ai_usage` from 0003: if one has not run, the health
- * check fails instead of the drills feature.
+ * migration 0002, `custom_drills` and `ai_usage` from 0003 and `profiles.dashboard_order` from
+ * 0004: if one has not run, the health check fails instead of the feature.
  */
 export async function pingDatabase(connectionString: string): Promise<boolean> {
   const client = new pg.Client({ connectionString, ...TIMEOUTS });
@@ -175,7 +178,9 @@ export async function pingDatabase(connectionString: string): Promise<boolean> {
     const { rows } = await client.query(
       `select to_regclass('public.session_drills') is not null
           and to_regclass('public.custom_drills') is not null
-          and to_regclass('public.ai_usage') is not null as ok`,
+          and to_regclass('public.ai_usage') is not null
+          and exists (select 1 from pg_attribute
+                       where attrelid = to_regclass('public.profiles') and attname = 'dashboard_order' and not attisdropped) as ok`,
     );
     return rows[0]?.ok === true;
   } finally {
@@ -278,6 +283,11 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
         if (!sql) throw new RepoError('Nothing to update', NO_ROWS);
         return one(await q(`update public.profiles set ${sql} where user_id = $1 returning ${PROFILE_COLUMNS}`, [userId, ...values]), toProfile);
       }),
+
+    updateDashboardOrder: (order) =>
+      run(async (q) =>
+        one(await q('update public.profiles set dashboard_order = $2::text[] where user_id = $1 returning dashboard_order', [userId, order]), (r) => r.dashboard_order as string[]),
+      ),
 
     deleteAllData: () =>
       run(async (q) => {

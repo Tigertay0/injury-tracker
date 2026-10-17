@@ -8,7 +8,7 @@ import type { CustomDrill, Profile, RecoveryLog, TrainingSession } from '../shar
 
 const TODAY = '2026-10-12'; // a Monday
 
-const profile: Profile = { position: 'MID', displayName: '', cleatType: 'AG', surfaceType: '3G_TURF', createdAt: '2026-09-01T00:00:00Z' };
+const profile: Profile = { position: 'MID', displayName: '', cleatType: 'AG', surfaceType: '3G_TURF', dashboardOrder: [], createdAt: '2026-09-01T00:00:00Z' };
 
 function evenWeeks(): TrainingSession[] {
   // One 60-minute RPE-5 session in each of the last four weeks, oldest 27 days ago

@@ -8,6 +8,7 @@ import { recoveryScore } from '@shared/calculations';
 import { MAX_CUSTOM_DRILLS, makeDrillLookup, type DrillEstimate, type DrillInfoLookup } from '@shared/custom-drills';
 import { drillById } from '@shared/drills';
 import { ApiError, useApi, errorMessage } from './api';
+import { createOrderSaver } from './order-saver';
 
 // Overview lives in shared/types.ts; re-exported so screens keep importing it from here
 export type { Overview } from '@shared/types';
@@ -16,9 +17,14 @@ type State = { status: 'loading' } | { status: 'error'; message: string; code: n
 
 const byDateDesc = <T,>(key: (x: T) => string) => (a: T, b: T) => (key(a) < key(b) ? 1 : key(a) > key(b) ? -1 : 0);
 
+const withDashboardOrder = (d: Overview, dashboardOrder: string[]): Overview => ({ ...d, profile: d.profile && { ...d.profile, dashboardOrder } });
+
 function usePlayerDataState() {
   const api = useApi();
   const [state, setState] = useState<State>({ status: 'loading' });
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const [orderSaver] = useState(createOrderSaver);
 
   const load = useCallback(async () => {
     setState({ status: 'loading' });
@@ -70,6 +76,14 @@ function usePlayerDataState() {
           },
         }));
       },
+      // Shows the new tile order at once. If the server refuses, the last saved order comes back and the error
+      // is thrown for the caller to report. Saves overlap safely: they are sent one at a time, in order.
+      saveDashboardOrder: (order: string[]) =>
+        orderSaver.save(order, {
+          read: () => (stateRef.current.status === 'ready' ? stateRef.current.data.profile?.dashboardOrder : undefined) ?? [],
+          show: (next) => update((d) => withDashboardOrder(d, next)),
+          send: async (next) => (await api.put<{ dashboardOrder: string[] }>('/me/dashboard', { order: next })).dashboardOrder,
+        }),
       async addSession(input: SessionInput) {
         const session = await api.post<TrainingSession>('/sessions', input);
         update((d) => ({ ...d, sessions: [session, ...d.sessions].sort(byDateDesc((s) => s.date)) }));
@@ -117,7 +131,7 @@ function usePlayerDataState() {
       exportData: () => api.download('/me/export', 'pitchsafe-export.json'),
       deleteAccount: () => api.del('/me'),
     }),
-    [api, load, update],
+    [api, load, update, orderSaver],
   );
 
   return { state, actions };
@@ -183,6 +197,9 @@ function useDemoState(initial: () => Overview): PlayerData {
       },
       async updateEquipment(input) {
         update((d) => ({ ...d, profile: d.profile && { ...d.profile, ...input } }));
+      },
+      async saveDashboardOrder(order) {
+        update((d) => withDashboardOrder(d, [...order]));
       },
       async addSession(input) {
         const session: TrainingSession = { id: crypto.randomUUID(), ...input, load: input.duration * input.rpe };

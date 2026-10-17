@@ -90,6 +90,25 @@ run('Player journey through the API on Neon', () => {
     expect(await res.json()).toMatchObject({ cleatType: 'FG_BLADED', surfaceType: '3G_TURF' });
   });
 
+  it('saves the tile order and reads it back on the overview and in the export', async () => {
+    const order = ['movement', 'score', 'load_chart'];
+    expect((await (await call(A, 'GET', '/overview')).json()).profile.dashboardOrder).toEqual([]);
+
+    const res = await call(A, 'PUT', '/me/dashboard', { order });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ dashboardOrder: order });
+
+    const overview = await (await call(A, 'GET', '/overview')).json();
+    expect(overview.profile).toMatchObject({ cleatType: 'FG_BLADED', dashboardOrder: order });
+    expect((await (await call(A, 'GET', '/me/export')).json()).profile.dashboardOrder).toEqual(order);
+
+    // A bad list changes nothing, and a player with no profile cannot save one
+    expect((await call(A, 'PUT', '/me/dashboard', { order: ['score', 'score'] })).status).toBe(400);
+    expect((await call(A, 'PUT', '/me/dashboard', { order: Array.from({ length: 31 }, (_, i) => `tile_${i}`) })).status).toBe(400);
+    expect((await call(B, 'PUT', '/me/dashboard', { order: ['score'] })).status).toBe(404);
+    expect((await (await call(A, 'GET', '/overview')).json()).profile.dashboardOrder).toEqual(order);
+  });
+
   it('logs sessions with the load worked out by the database', async () => {
     const res = await call(A, 'POST', '/sessions', { date: today, type: 'training', duration: 60, rpe: 7, notes: '', drills: [{ drillId: 'ssg_5v5', minutes: 25 }] });
     expect(res.status).toBe(201);
