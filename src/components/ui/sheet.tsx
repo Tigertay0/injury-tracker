@@ -25,7 +25,7 @@ function SheetContent({
         data-side={side}
         className={cn(
           'sheet-panel fixed z-50 flex flex-col bg-surface text-ink outline-none shadow-overlay',
-          side === 'right' ? 'top-[env(safe-area-inset-top)] bottom-0 right-0 w-[min(20rem,86vw)] rounded-l-[var(--radius-panel)] border-l border-line' : 'inset-x-0 bottom-0 max-h-[85dvh] rounded-t-[var(--radius-panel)] border-t border-line pb-[env(safe-area-inset-bottom)]',
+          side === 'right' ? 'top-[env(safe-area-inset-top)] bottom-0 right-0 w-[min(20rem,86vw)] rounded-l-[var(--radius-panel)] border-l border-line' : 'inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-[var(--radius-panel)] border-t border-line pb-[env(safe-area-inset-bottom)]',
           className,
         )}
         {...props}

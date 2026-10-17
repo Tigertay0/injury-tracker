@@ -27,6 +27,8 @@ export function ZoneGauge({ score, className }: { score: number; className?: str
         {SEGMENTS.map((segment, i) => (
           <div
             key={segment.zone}
+            data-meter-track
+            data-meter-fill={i === index ? '' : undefined}
             className="relative rounded-[var(--radius-chip)]"
             style={{ background: TONE_FILL[COMPOSITE_TONE[segment.zone]], opacity: i === index ? 1 : QUIET_OPACITY }}
           >

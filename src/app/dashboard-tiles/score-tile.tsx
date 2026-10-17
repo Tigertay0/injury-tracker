@@ -4,7 +4,7 @@
 // everything; at every other size it fits.
 import { Link } from 'react-router';
 import { Plus } from '@phosphor-icons/react';
-import { COMPOSITE_SCORE_MAX } from '@shared/calculations';
+import { CHRONIC_DAYS, COMPOSITE_SCORE_MAX } from '@shared/calculations';
 import type { RiskModel } from '@shared/risk-model';
 import { RiskChip } from '@/components/risk-chip';
 import { Button } from '@/components/ui/button';
@@ -56,7 +56,8 @@ const MIDDLE = 'hidden @[240px]:flex';
 const BOTTOM = 'mt-auto flex flex-col gap-3 @[240px]:mt-0';
 /** The baseline's strip needs 340px, so below that its text keeps to the bottom of the tile. */
 const BASELINE_BOTTOM = 'mt-auto flex flex-col gap-3 @[340px]:mt-0';
-const BODY = 'flex flex-1 flex-col gap-3';
+/** The 6px of padding, taken back with a negative margin, gives the focus ring of a control at the edge room inside the scroll box's clip (4px at least). */
+const BODY = '-m-1.5 flex flex-1 flex-col gap-3 p-1.5';
 
 function Score({ model, composite }: { model: RiskModel; composite: NonNullable<RiskModel['composite']> }) {
   const { score, zone } = composite;
@@ -89,25 +90,26 @@ function Score({ model, composite }: { model: RiskModel; composite: NonNullable<
 
 function Baseline({ model }: { model: RiskModel }) {
   const { daysCovered } = model.baseline;
-  const pct = Math.round((daysCovered / 28) * 100);
+  const pct = Math.round((daysCovered / CHRONIC_DAYS) * 100);
   return (
     <TileShell title="Building your baseline" titleId="baseline-title">
       <ScrollRegion label="Baseline details, scrollable" className={BODY}>
         <p className="flex items-baseline gap-2">
           <span className={cn(BIG_NUMBER, 'text-display-s @[340px]:text-display-m')}>Day {daysCovered}</span>
-          <span className="tnum text-lead font-semibold text-ink-3">of 28</span>
+          <span className="tnum text-lead font-semibold text-ink-3">of {CHRONIC_DAYS}</span>
         </p>
         <SessionStrip days={model.days.map((d) => d.load > 0)} className="my-auto hidden @[340px]:grid" />
         <div className={BASELINE_BOTTOM}>
           <div
+            data-meter-track
             className="h-2.5 w-full overflow-hidden rounded-[var(--radius-chip)] bg-accent-soft"
             role="progressbar"
             aria-valuemin={0}
-            aria-valuemax={28}
+            aria-valuemax={CHRONIC_DAYS}
             aria-valuenow={daysCovered}
             aria-label="Days of training history"
           >
-            <div className="h-full rounded-[var(--radius-chip)] bg-accent" style={{ width: `${pct}%` }} />
+            <div data-meter-fill className="h-full rounded-[var(--radius-chip)] bg-accent" style={{ width: `${pct}%` }} />
           </div>
           <p className="text-small text-ink-2">
             Your risk score needs four weeks of history to know what normal looks like for you. Keep logging every session. Your cleat and recovery checks already count.

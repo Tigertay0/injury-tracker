@@ -24,7 +24,7 @@ function PillLink({ to, children, variant = 'solid', className }: { to: string; 
     <Button
       asChild
       variant={variant === 'solid' ? 'inverse' : 'secondary'}
-      className={cn('group h-12 px-6', variant === 'ghost' && 'border-white/20 bg-white/[0.04] backdrop-blur-md', className)}
+      className={cn('group h-12 px-6', variant === 'ghost' && 'border-white/40 bg-white/[0.04] backdrop-blur-md', className)}
     >
       <Link to={to}>{children}</Link>
     </Button>

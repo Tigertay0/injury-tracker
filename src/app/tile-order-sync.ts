@@ -1,5 +1,7 @@
-// Sends the dashboard's tile order to the server a moment after the player stops moving tiles.
-// Keyboard moves come in bursts and writes are rate limited, so one save carries the last order.
+// Sends the dashboard's tile order to the server. Outside the arrange mode a move is saved a moment after
+// the player stops moving tiles. While arranging nothing is saved on a timer: keyboard moves come in long
+// runs and writes are rate limited (30 a minute), so the whole arrangement is saved once, when the player
+// presses Done or leaves the page.
 // It knows nothing about React or the screen: the screen shows each move at once, and this decides
 // when to save and what to put back if the server refuses.
 
@@ -21,8 +23,11 @@ export interface TileOrderSyncOptions {
 }
 
 export interface TileOrderSync {
-  /** A new order is on screen. Saved after the delay unless another move comes first. */
-  change: (order: readonly string[]) => void;
+  /**
+   * A new order is on screen. Saved after the delay unless another move comes first. With `hold` it is
+   * not saved on a timer at all, only when `flush` runs (Done, the page being hidden, the screen going away).
+   */
+  change: (order: readonly string[], options?: { hold?: boolean }) => void;
   /** Save a pending order now. */
   flush: () => void;
   /** The screen is going away: save anything pending. */
@@ -60,12 +65,12 @@ export function createTileOrderSync({ initial, save, onFailed, delayMs = SAVE_DE
   };
 
   return {
-    change(order) {
+    change(order, options) {
       latest = [...order];
       version += 1;
       pending = true;
       clearTimeout(timer);
-      timer = setTimeout(flush, delayMs);
+      timer = options?.hold ? undefined : setTimeout(flush, delayMs);
     },
     flush,
     dispose: flush,

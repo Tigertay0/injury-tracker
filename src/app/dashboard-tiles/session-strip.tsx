@@ -12,7 +12,13 @@ export function SessionStrip({ days, className }: { days: readonly boolean[]; cl
       className={cn('grid max-h-56 min-h-[4.25rem] flex-1 auto-rows-fr grid-cols-7 gap-1', className)}
     >
       {days.map((on, i) => (
-        <div key={i} className={cn('rounded-[var(--radius-chip)]', on ? 'bg-accent' : 'bg-sunken ring-1 ring-inset ring-line')} />
+        <div
+          key={i}
+          // Forced-colours hooks (styles.css): a logged day is a fill, an empty day a bordered track
+          data-meter-fill={on ? '' : undefined}
+          data-meter-track={on ? undefined : ''}
+          className={cn('rounded-[var(--radius-chip)]', on ? 'bg-accent' : 'bg-sunken ring-1 ring-inset ring-line')}
+        />
       ))}
     </div>
   );

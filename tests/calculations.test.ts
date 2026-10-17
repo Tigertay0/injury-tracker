@@ -14,6 +14,9 @@ import {
   injuryMultiplier,
   compositeScore,
   compositeZone,
+  compositeZoneRange,
+  COMPOSITE_ZONES,
+  COMPOSITE_SCORE_MAX,
   baselineProgress,
   dailyLoads,
 } from '../shared/calculations';
@@ -214,6 +217,24 @@ describe('composite score', () => {
     expect(compositeZone(60)).toBe('HIGH');
     expect(compositeZone(79)).toBe('HIGH');
     expect(compositeZone(80)).toBe('VERY_HIGH');
+  });
+
+  it('lists each band as a range that compositeZone agrees with, with no gap from 0 to the cap', () => {
+    expect(COMPOSITE_ZONES.map((zone) => compositeZoneRange(zone))).toEqual([
+      { from: 0, to: 30 },
+      { from: 31, to: 59 },
+      { from: 60, to: 79 },
+      { from: 80, to: 100 },
+    ]);
+    let next = 0;
+    for (const zone of COMPOSITE_ZONES) {
+      const { from, to } = compositeZoneRange(zone);
+      expect(from).toBe(next);
+      expect(compositeZone(from)).toBe(zone);
+      expect(compositeZone(to)).toBe(zone);
+      next = to + 1;
+    }
+    expect(next).toBe(COMPOSITE_SCORE_MAX + 1);
   });
 });
 

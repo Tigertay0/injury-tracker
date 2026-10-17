@@ -221,6 +221,22 @@ export function moveTo(items: WidgetItem[], id: string, index: number): WidgetIt
   return next;
 }
 
+/**
+ * Moves the widget `id` one place earlier (`delta` -1) or later (+1) in the sequence, going on past any
+ * place where the layout would not change (two widgets that swap without anything visibly moving).
+ * Returns the new order, or null when the widget cannot move any further that way. This is what the
+ * Alt and arrow keys and the move buttons both run.
+ */
+export function stepMove(items: WidgetItem[], id: string, delta: -1 | 1, columns: number): WidgetItem[] | null {
+  const from = items.findIndex((item) => item.id === id);
+  if (from < 0) return null;
+  for (let to = from + delta; to >= 0 && to < items.length; to += delta) {
+    const next = canonical(moveTo(items, id, to), columns);
+    if (!sameOrder(next, items)) return next;
+  }
+  return null;
+}
+
 /** True when both lists hold the same ids in the same order. */
 export const sameOrder = (a: WidgetItem[], b: WidgetItem[]): boolean =>
   a.length === b.length && a.every((item, i) => item.id === b[i].id);

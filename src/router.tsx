@@ -17,7 +17,10 @@ function Root() {
         className="app-scope"
         toastOptions={{
           classNames: {
-            toast: '!rounded-[var(--radius-control)] !border !border-line !bg-surface !text-ink !shadow-overlay !font-sans',
+            // Sonner's own stylesheet sets outline: none on the toast and a 20% black halo on focus, and it is unlayered, so it beats
+            // the global ring. The ! classes put the app's 2px --focus ring back (the same trap Clerk's controls had, see styles.css).
+            toast:
+              '!rounded-[var(--radius-control)] !border !border-line !bg-surface !text-ink !shadow-overlay !font-sans focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-solid focus-visible:!outline-focus',
             description: '!text-ink-2',
           },
         }}

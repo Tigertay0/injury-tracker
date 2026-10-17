@@ -61,8 +61,10 @@ function usePlayerDataState() {
         }
       },
       async updateProfile(input: ProfileInput) {
-        const profile = await api.patch<Profile>('/me', input);
-        update((d) => ({ ...d, profile }));
+        const saved = await api.patch<Profile>('/me', input);
+        // Settings never edits the tile order, so the response's copy of it can only be older than the one on screen
+        // (a tile-order save may still be on its way). Keep the current one.
+        update((d) => ({ ...d, profile: { ...saved, dashboardOrder: d.profile?.dashboardOrder ?? saved.dashboardOrder } }));
       },
       async updateEquipment(input: EquipmentInput) {
         const saved = await api.patch<Profile>('/me/equipment', input);

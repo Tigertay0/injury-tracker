@@ -8,6 +8,7 @@
 // - prefers-reduced-motion, read live (a mounted button follows an OS change): the fill fades in 120ms
 //   instead of growing, and no press scale;
 // - aria-disabled counts as disabled (no fill, no press scale), because the My drills page uses it;
+//   a busy button that must keep keyboard focus uses aria-disabled with aria-busy (both pass through), not `loading`, which disables it;
 // - asChild (Radix Slot) so a Link can be the button; and `type` is not defaulted, because the old
 //   Button never set one and forms with an untyped submit button must keep submitting;
 // - Space is not cancelled on keydown (the native button activates on keyup and needs it);
@@ -198,11 +199,12 @@ function OriginButton({
   return (
     <Root
       {...props}
-      aria-busy={loading || undefined}
+      aria-busy={loading || props['aria-busy'] || undefined}
       aria-disabled={asChild && isInert ? true : props['aria-disabled']}
       className={cn(
         'relative isolate cursor-pointer touch-manipulation select-none overflow-hidden',
-        'transition-[color,border-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:duration-100',
+        // The label colour changes over the same 500ms and curve as the fill (FILL_TRANSITION), so it never flips before the fill arrives
+        'transition-[color,border-color] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:duration-100',
         asChild && isInert && 'pointer-events-none',
         className,
         showFill && filledClassName,

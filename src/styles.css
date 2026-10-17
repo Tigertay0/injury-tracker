@@ -47,8 +47,9 @@
   --risk-very-high: oklch(0.5 0.18 27);
   --risk-very-high-soft: oklch(0.94 0.035 27);
 
-  /* Chart: older weeks a lighter step of the accent, this week the accent (validated) */
-  --chart-past: oklch(0.7 0.1 262);
+  /* Chart: older weeks a lighter step of the accent, this week the accent. Past is 3.3:1 on the tile surface and
+     3.1:1 on the page ground (the non-text minimum is 3:1), and 1.85:1 against the accent beside it. */
+  --chart-past: oklch(0.64 0.1 262);
   --chart-now: oklch(0.5 0.19 263);
   --chart-grid: oklch(0.91 0.005 250);
   --focus: oklch(0.55 0.2 263);
@@ -243,8 +244,10 @@
     text-rendering: optimizeLegibility;
     /* Keeps what scrolls into view (a focused control, an anchor target) clear of the bars on the screen
        edges: the floating header and the phone top bar above, the phone tab bar below, and room for the
-       focus ring either way. Replaces a scroll-margin on each anchor target. */
-    scroll-padding-block: 6rem;
+       focus ring either way. The bars grow by the notch and home-indicator insets, so the padding does too.
+       Replaces a scroll-margin on each anchor target. */
+    scroll-padding-top: calc(6rem + env(safe-area-inset-top));
+    scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom));
   }
   body {
     background: var(--ground);
@@ -338,4 +341,19 @@
 .cl-rootBox :is(a, button, input, select, textarea):focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* Windows high contrast (forced colours) drops box-shadow rings and tinted fills, and repaints backgrounds in the
+   Canvas colour. So tile edges and bar tracks get a real border, and the fills that carry information (meters, the
+   session strip's logged days, the baseline progress bar, the current zone of the risk gauge) take the Highlight
+   colour. The fills set their colour inline, so the override needs !important. The hooks are data attributes. */
+@media (forced-colors: active) {
+  [data-widget-surface],
+  [data-meter-track] {
+    border: 1px solid CanvasText;
+  }
+  [data-meter-fill] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+  }
 }

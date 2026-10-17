@@ -171,6 +171,16 @@ export const COMPOSITE_ZONES: readonly CompositeZone[] = ['LOW', 'MODERATE', 'HI
 /** The highest score in each zone but the last: anything above HIGH is VERY_HIGH. `compositeZone` and the dashboard gauge both read these. */
 export const COMPOSITE_ZONE_MAX = { LOW: 30, MODERATE: 59, HIGH: 79 } as const;
 
+/** The lowest and highest score of a zone, each included (LOW is 0 to 30). Tables of the bands read this. */
+export function compositeZoneRange(zone: CompositeZone): { from: number; to: number } {
+  const at = COMPOSITE_ZONES.indexOf(zone);
+  const before = COMPOSITE_ZONES[at - 1];
+  return {
+    from: before === undefined ? 0 : COMPOSITE_ZONE_MAX[before as keyof typeof COMPOSITE_ZONE_MAX] + 1,
+    to: zone === 'VERY_HIGH' ? COMPOSITE_SCORE_MAX : COMPOSITE_ZONE_MAX[zone],
+  };
+}
+
 export function compositeZone(score: number): CompositeZone {
   if (score <= COMPOSITE_ZONE_MAX.LOW) return 'LOW';
   if (score <= COMPOSITE_ZONE_MAX.MODERATE) return 'MODERATE';

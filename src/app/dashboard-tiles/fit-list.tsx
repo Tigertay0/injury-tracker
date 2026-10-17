@@ -21,7 +21,11 @@ interface FitListProps<T> {
   noun: string;
   /** Names the list for screen readers while it scrolls: "All actions, scrollable". */
   scrollLabel: string;
-  /** Hide the list from screen readers, when the tile offers the same information another way. */
+  /**
+   * Hide the list from screen readers, when the tile offers the same information another way. The "See all" button and the
+   * scrolling box are hidden with it, and neither takes keyboard focus: they would only expose a control, or a focus stop,
+   * with nothing behind it. A mouse or touch still opens the list.
+   */
   listHidden?: boolean;
   /** Classes for the list itself, which set the space between items. */
   listClassName?: string;
@@ -106,14 +110,25 @@ export function FitList<T>({ items, keyOf, renderItem, noun, scrollLabel, listHi
     <div ref={box} className={cn('relative flex min-h-0 flex-1 flex-col gap-2', className)}>
       {/* The padding gives a row that bleeds past the text edge (a hover fill) room inside the clip */}
       {showAll ? (
-        <ScrollRegion label={scrollLabel} className="-mx-2.5 px-2.5">
+        <ScrollRegion label={scrollLabel} hidden={listHidden} className="-mx-2.5 px-2.5">
           {list}
         </ScrollRegion>
       ) : (
         <div className="-mx-2.5 min-h-0 overflow-hidden px-2.5">{list}</div>
       )}
       {hidden > 0 && (
-        <Button type="button" variant="secondary" size="sm" className="self-start" data-fit-toggle aria-expanded={open} aria-controls={listId} onClick={() => setOpen((was) => !was)}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="self-start"
+          data-fit-toggle
+          aria-expanded={listHidden ? undefined : open}
+          aria-controls={listHidden ? undefined : listId}
+          aria-hidden={listHidden || undefined}
+          tabIndex={listHidden ? -1 : undefined}
+          onClick={() => setOpen((was) => !was)}
+        >
           {open ? 'Show fewer' : `See all ${items.length} ${noun}`}
         </Button>
       )}

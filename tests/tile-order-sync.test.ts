@@ -51,6 +51,57 @@ describe('createTileOrderSync', () => {
     expect(save).toHaveBeenCalledWith(C);
   });
 
+  describe('while arranging (changes made with hold)', () => {
+    const FORTY = Array.from({ length: 40 }, (_, i) => (i % 2 === 0 ? B : A));
+
+    it('sends nothing on a timer for a burst of 40 moves, then exactly one request on flush (Done)', async () => {
+      const { save } = fakeSave();
+      const sync = createTileOrderSync({ initial: A, save, onFailed: vi.fn() });
+      for (const order of FORTY) {
+        sync.change(order, { hold: true });
+        await vi.advanceTimersByTimeAsync(1000); // one Alt and arrow press a second, well past the 600ms debounce
+      }
+      await vi.advanceTimersByTimeAsync(5 * 60_000);
+      expect(save).toHaveBeenCalledTimes(0);
+      sync.change(C, { hold: true });
+      sync.flush();
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(save).toHaveBeenCalledWith(C);
+      await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS * 5);
+      expect(save).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not let an earlier change made outside arranging save on its timer once the arrangement has started', async () => {
+      const { save } = fakeSave();
+      const sync = createTileOrderSync({ initial: A, save, onFailed: vi.fn() });
+      sync.change(B);
+      await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS - 100);
+      sync.change(C, { hold: true });
+      await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS * 3);
+      expect(save).not.toHaveBeenCalled();
+      sync.flush();
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(save).toHaveBeenCalledWith(C);
+    });
+
+    it('saves held moves when the screen goes away, so leaving mid-arrangement keeps them', () => {
+      const { save } = fakeSave();
+      const sync = createTileOrderSync({ initial: A, save, onFailed: vi.fn() });
+      sync.change(B, { hold: true });
+      sync.dispose();
+      expect(save).toHaveBeenCalledWith(B);
+    });
+
+    it('keeps the debounce for moves made outside the arrange mode', async () => {
+      const { save } = fakeSave();
+      const sync = createTileOrderSync({ initial: A, save, onFailed: vi.fn() });
+      sync.change(B, { hold: false });
+      await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS);
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(save).toHaveBeenCalledWith(B);
+    });
+  });
+
   it('flush saves at once and nothing is saved twice', async () => {
     const { save } = fakeSave();
     const sync = createTileOrderSync({ initial: A, save, onFailed: vi.fn() });

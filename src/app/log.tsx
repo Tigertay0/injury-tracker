@@ -131,6 +131,7 @@ export default function LogSession() {
                     type="button"
                     onClick={() => changeDuration(String(m))}
                     aria-label={`${m} minutes`}
+                    aria-pressed={Number(duration) === m}
                     className={cn(
                       'press tnum h-11 min-w-12 rounded-[var(--radius-control)] border px-3 text-small font-semibold',
                       Number(duration) === m ? 'border-accent bg-accent-soft text-accent-ink' : 'border-line bg-surface text-ink-2 hover:border-line-strong hover:text-ink',

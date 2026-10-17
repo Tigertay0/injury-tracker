@@ -1,6 +1,7 @@
 // PitchSafe button on the 21st.dev OriginButton (origin-button.tsx): 12px corners (--radius-control),
 // 44px default height (touch target), and a circle that grows from the pointer on hover or press.
-// `buttonVariants` is the static look (rest state, no fill) for class-only uses; <Button> adds the fill.
+// `buttonVariants` (kept private until a class-only use turns up) is the static look, rest state with no fill;
+// <Button> adds the fill.
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { OriginButton, type OriginButtonProps } from './origin-button';
@@ -10,10 +11,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-accent text-on-accent',
+        // The transparent borders on primary, danger and ghost are for forced colours (Windows high contrast), which
+        // paints a transparent border in the border colour and so gives these buttons an edge. Everywhere else it is invisible.
+        primary: 'border border-transparent bg-accent text-on-accent',
         secondary: 'border border-line-strong bg-surface text-ink',
-        ghost: 'text-ink',
-        danger: 'bg-risk-very-high text-ink-inverse',
+        ghost: 'border border-transparent text-ink',
+        danger: 'border border-transparent bg-risk-very-high text-ink-inverse',
         // The opposite of the ground: light on the night marketing pages, dark on a light screen
         inverse: 'border border-ink bg-ink text-ink-inverse',
       },
@@ -24,6 +27,12 @@ const buttonVariants = cva(
         icon: 'size-11 [&_svg]:size-5',
       },
     },
+    compoundVariants: [
+      // The border would make those three variants 2px wider than they were, so it comes off their padding
+      { variant: ['primary', 'ghost', 'danger'], size: 'sm', class: 'px-[calc(0.875rem_-_1px)]' },
+      { variant: ['primary', 'ghost', 'danger'], size: 'md', class: 'px-[calc(1.25rem_-_1px)]' },
+      { variant: ['primary', 'ghost', 'danger'], size: 'lg', class: 'px-[calc(1.5rem_-_1px)]' },
+    ],
     defaultVariants: { variant: 'primary', size: 'md' },
   },
 );
@@ -34,13 +43,14 @@ type Variant = NonNullable<VariantProps<typeof buttonVariants>['variant']>;
  * What floods the button, and the text and border colour that read over it. A darker fill is a
  * mix of the base colour with --ink, done in oklab: oklch would swing the red toward magenta along the hue
  * circle, because --ink is a blue-grey. In the dark theme --ink is light, so the mix lifts instead of darkening.
- * The rest-state text of primary and danger already reads over their fill, so they add nothing.
+ * The rest-state text of primary and danger already reads over their fill; they only add a border in the fill colour, so the
+ * transparent border does not leave a lighter rim around the darker fill.
  */
 const FILL: Record<Variant, { fill: string; filled?: string }> = {
-  primary: { fill: 'bg-[color-mix(in_oklab,var(--accent),var(--ink)_35%)]' },
+  primary: { fill: 'bg-[color-mix(in_oklab,var(--accent),var(--ink)_35%)]', filled: 'border-[color-mix(in_oklab,var(--accent),var(--ink)_35%)]' },
   secondary: { fill: 'bg-ink', filled: 'border-ink text-surface' },
   ghost: { fill: 'bg-sunken', filled: 'text-ink' },
-  danger: { fill: 'bg-[color-mix(in_oklab,var(--risk-very-high),var(--ink)_35%)]' },
+  danger: { fill: 'bg-[color-mix(in_oklab,var(--risk-very-high),var(--ink)_35%)]', filled: 'border-[color-mix(in_oklab,var(--risk-very-high),var(--ink)_35%)]' },
   inverse: { fill: 'bg-surface', filled: 'text-ink' },
 };
 
@@ -69,4 +79,4 @@ function Button({ className, variant, size, fillClassName, ...props }: ButtonPro
   );
 }
 
-export { Button, buttonVariants, GHOST_WASH };
+export { Button, GHOST_WASH };

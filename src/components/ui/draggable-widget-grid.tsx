@@ -7,7 +7,9 @@
 //
 // - Mouse and pen drag immediately. Touch uses a long press, so the page can still be scrolled.
 // - Keyboard: focus a widget, hold Alt and use the arrow keys.
-// - With `editable` off there is no drag, no keyboard moves, and links inside widgets work.
+// - Every widget also has two buttons, "Move earlier" and "Move later", for anyone who cannot drag
+//   (WCAG 2.5.7), and who may have no Alt key either (a screen reader on a phone).
+// - With `editable` off there is no drag, no moves, and links inside widgets work.
 // - Styling uses PitchSafe tokens, so it follows the light and dark themes.
 import {
   memo,
@@ -24,6 +26,8 @@ import {
   type ReactNode,
 } from 'react';
 import { MotionConfig, motion, useDragControls } from 'motion/react';
+import { ArrowLeft, ArrowRight } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 import { usePrefersReducedMotion } from '@/lib/use-prefers-reduced-motion';
 import { cn } from '@/lib/utils';
 import {
@@ -31,10 +35,10 @@ import {
   canonical,
   choose,
   layout,
-  moveTo,
   reconcileItems,
   sameOrder,
   sizeOf,
+  stepMove,
   type Box,
   type Slot,
   type WidgetItem,
@@ -53,10 +57,12 @@ export interface DraggableWidgetGridProps {
    * `onChange` result passed straight back, changes nothing.
    */
   items: WidgetItem[];
-  /** Called after a drop or a keyboard move that changed the order. */
-  onChange?: (items: WidgetItem[]) => void;
+  /** Called after a drop or a move that changed the order, with the id of the widget that was moved. */
+  onChange?: (items: WidgetItem[], movedId: string) => void;
+  /** Called when a move could not happen because the widget is already first or last (for a status message). */
+  onMoveBlocked?: (edge: 'first' | 'last') => void;
   renderItem?: (item: WidgetItem, size: WidgetSize) => ReactNode;
-  /** When false there is no drag, links work, and keyboard moves are off. */
+  /** When false there is no drag, links work, and moves are off. */
   editable?: boolean;
   maxColumns?: number;
   cellSize?: number;
@@ -126,6 +132,8 @@ interface WidgetHandlers {
   drag: () => void;
   end: (id: string) => void;
   key: (e: ReactKeyboardEvent, id: string) => void;
+  /** A move button was pressed: move the widget, or report that it is already first or last. */
+  press: (id: string, delta: -1 | 1) => void;
   /** True while the click that follows a drop should be ignored. */
   swallow: () => boolean;
   /** Ignore the next click (called when a pointer is released after a drag). */
@@ -254,6 +262,7 @@ const Widget = memo(function Widget({
 
   const delay = (col / Math.max(columns, 1) + row / Math.max(rows, 1)) * 0.26;
   const isLifted = held || phase === 'lifted';
+  const name = item.label ?? `${SIZE_LABELS[item.size]} widget`;
 
   return (
     <motion.div
@@ -263,7 +272,8 @@ const Widget = memo(function Widget({
       data-widget-id={item.id}
       data-lifted={isLifted}
       tabIndex={editable ? 0 : undefined}
-      aria-label={item.label ?? `${SIZE_LABELS[item.size]} widget`}
+      aria-label={name}
+      aria-roledescription={editable ? 'draggable tile' : undefined}
       aria-describedby={editable ? hintId : undefined}
       aria-posinset={position}
       aria-setsize={count}
@@ -306,6 +316,7 @@ const Widget = memo(function Widget({
       }}
     >
       <motion.div
+        data-widget-surface
         // No entrance animation under prefers-reduced-motion; MotionConfig does not cover opacity.
         initial={reduceMotion || !animateEntrance ? false : { opacity: 0, y: 18, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -317,6 +328,34 @@ const Widget = memo(function Widget({
       >
         {renderItem?.(item, sizeOf(w, h))}
       </motion.div>
+      {editable && (
+        // Outside the clipped, inert surface so the buttons stay reachable. A press here must not start a drag
+        // or the touch long-press, which both begin on the widget's own pointer-down. Pinned to the bottom right,
+        // the one corner that holds no tile title or figure, on a translucent scrim (outer radius = button + 4px padding)
+        // so the chips and notes it covers fade out behind it instead of being cut by a button edge.
+        <div data-widget-moves className="absolute right-1 bottom-1 z-20 flex gap-1 rounded-[calc(var(--radius-control)+4px)] bg-surface/80 p-1" onPointerDown={(e) => e.stopPropagation()}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            aria-label={`Move ${name} earlier`}
+            aria-disabled={position === 1 || undefined}
+            onClick={() => handlers.press(item.id, -1)}
+          >
+            <ArrowLeft aria-hidden weight="bold" />
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            aria-label={`Move ${name} later`}
+            aria-disabled={position === count || undefined}
+            onClick={() => handlers.press(item.id, 1)}
+          >
+            <ArrowRight aria-hidden weight="bold" />
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 });
@@ -326,6 +365,7 @@ const Widget = memo(function Widget({
 export function DraggableWidgetGrid({
   items: propItems,
   onChange,
+  onMoveBlocked,
   renderItem,
   editable = true,
   maxColumns = 4,
@@ -362,9 +402,10 @@ export function DraggableWidgetGrid({
   const rows = placements.reduce((n, p) => Math.max(n, p.row + p.h), 0);
 
   // Latest values for event handlers that outlive a render.
-  const latest = useRef({ items, metrics, onChange });
+  const latest = useRef({ items, metrics, onChange, onMoveBlocked });
   latest.current.metrics = metrics;
   latest.current.onChange = onChange;
+  latest.current.onMoveBlocked = onMoveBlocked;
   useIsoLayoutEffect(() => {
     latest.current.items = items;
   }, [items]);
@@ -422,7 +463,7 @@ export function DraggableWidgetGrid({
     cancelAnimationFrame(frame.current);
     frame.current = 0;
     window.clearTimeout(ring.current);
-    const wasDragging = dragging.current !== null;
+    const draggedId = dragging.current;
     const before = startOrder.current;
     dragging.current = null;
     startOrder.current = null;
@@ -430,7 +471,7 @@ export function DraggableWidgetGrid({
     setRaised(null);
     setLanded(null);
     const after = latest.current.items;
-    if (wasDragging && before && !sameOrder(before, after)) latest.current.onChange?.(after);
+    if (draggedId && before && !sameOrder(before, after)) latest.current.onChange?.(after, draggedId);
   }, [editable]);
 
   const step = useCallback(
@@ -481,6 +522,20 @@ export function DraggableWidgetGrid({
     el?.focus();
   }, [items]);
 
+  /** Moves a widget one place earlier or later. False when it is already at that end. */
+  const move = useCallback(
+    (id: string, delta: -1 | 1): boolean => {
+      const { items: current, metrics: m } = latest.current;
+      const next = stepMove(current, id, delta, m.columns || maxColumns);
+      if (!next) return false;
+      commit(next);
+      latest.current.onChange?.(next, id);
+      return true;
+    },
+    [commit, maxColumns],
+  );
+  const blocked = useCallback((delta: -1 | 1) => latest.current.onMoveBlocked?.(delta < 0 ? 'first' : 'last'), []);
+
   const handlers: WidgetHandlers = useMemo(
     () => ({
       start: (id) => {
@@ -516,7 +571,7 @@ export function DraggableWidgetGrid({
         const before = startOrder.current;
         startOrder.current = null;
         const after = latest.current.items;
-        if (before && !sameOrder(before, after)) latest.current.onChange?.(after);
+        if (before && !sameOrder(before, after)) latest.current.onChange?.(after, id);
       },
       key: (e, id) => {
         if (!editable || !e.altKey) return;
@@ -525,25 +580,20 @@ export function DraggableWidgetGrid({
           e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
         if (!delta) return;
         e.preventDefault();
-        const { items: current, metrics: m } = latest.current;
-        const cols = m.columns || maxColumns;
-        const from = current.findIndex((item) => item.id === id);
-        // Step until the layout actually changes.
-        for (let to = from + delta; to >= 0 && to < current.length; to += delta) {
-          const next = canonical(moveTo(current, id, to), cols);
-          if (sameOrder(next, current)) continue;
-          refocus.current = id;
-          commit(next);
-          latest.current.onChange?.(next);
-          return;
-        }
+        // After a keyboard move, focus goes back to the tile
+        if (move(id, delta)) refocus.current = id;
+        else blocked(delta);
+      },
+      press: (id, delta) => {
+        // A button keeps focus where it is: the tile does not move in the DOM, so there is nothing to refocus
+        if (!move(id, delta)) blocked(delta);
       },
       swallow: () => performance.now() < swallowUntil.current,
       suppressClick: () => {
         swallowUntil.current = performance.now() + SWALLOW_MS;
       },
     }),
-    [step, commit, editable, maxColumns],
+    [step, commit, move, blocked, editable],
   );
 
   const byId = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
@@ -569,8 +619,8 @@ export function DraggableWidgetGrid({
       >
         {editable && (
           <p id={hintId} className="sr-only">
-            Drag to rearrange. On touch screens, press and hold first. With a keyboard, hold Alt and press the arrow
-            keys.
+            Drag to rearrange, or use the move buttons. On touch screens, press and hold first. With a keyboard, hold
+            Alt and press the arrow keys.
           </p>
         )}
         <div

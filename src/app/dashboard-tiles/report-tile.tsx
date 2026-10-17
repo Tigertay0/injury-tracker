@@ -16,6 +16,8 @@ export function ReportTile({ model }: { model: RiskModel }) {
   const [failed, setFailed] = useState(false);
 
   const download = async () => {
+    // The button stays focusable while it builds (aria-disabled, not disabled), so a second press has to be ignored here
+    if (busy) return;
     setBusy(true);
     setFailed(false);
     try {
@@ -59,7 +61,7 @@ export function ReportTile({ model }: { model: RiskModel }) {
             A one-page PDF with your score, load trend, recovery, cleats and top actions. It is made on your device.
           </p>
         )}
-        <Button variant="secondary" disabled={busy} onClick={() => void download()} className="self-start">
+        <Button variant="secondary" aria-disabled={busy || undefined} aria-busy={busy || undefined} onClick={() => void download()} className="self-start">
           <FilePdf aria-hidden />
           {busy ? 'Building PDF…' : 'Download coach report'}
         </Button>

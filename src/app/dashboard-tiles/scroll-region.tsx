@@ -15,9 +15,11 @@ interface ScrollRegionProps {
   label: string;
   children: ReactNode;
   className?: string;
+  /** The content is hidden from assistive technology because the tile offers it another way. The box is hidden too, and never takes focus. */
+  hidden?: boolean;
 }
 
-export function ScrollRegion({ label, children, className }: ScrollRegionProps) {
+export function ScrollRegion({ label, children, className, hidden = false }: ScrollRegionProps) {
   const box = useRef<HTMLDivElement>(null);
   const [scrolls, setScrolls] = useState(false);
 
@@ -54,9 +56,10 @@ export function ScrollRegion({ label, children, className }: ScrollRegionProps) 
     <div
       ref={box}
       className={cn('min-h-0 overflow-x-hidden overflow-y-auto', className)}
-      tabIndex={scrolls ? 0 : undefined}
-      role={scrolls ? 'group' : undefined}
-      aria-label={scrolls ? label : undefined}
+      tabIndex={scrolls && !hidden ? 0 : undefined}
+      role={scrolls && !hidden ? 'group' : undefined}
+      aria-label={scrolls && !hidden ? label : undefined}
+      aria-hidden={hidden || undefined}
     >
       {children}
     </div>
