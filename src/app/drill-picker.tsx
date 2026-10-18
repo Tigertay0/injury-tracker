@@ -133,8 +133,15 @@ export function DrillPicker({ value, onChange, customDrills, sessionMinutes, err
       </div>
 
       {plusAvailable && (
-        <Link to={`${base}/drills`} className="inline-flex min-h-11 items-center self-start text-label font-semibold text-accent-ink underline underline-offset-2">
+        // A new tab, so the session being filled in is not lost
+        <Link
+          to={`${base}/drills`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center self-start text-label font-semibold text-accent-ink underline underline-offset-2"
+        >
           {plus ? 'Create a custom drill' : 'Create a custom drill (Plus)'}
+          <span className="sr-only"> (opens in a new tab)</span>
         </Link>
       )}
 

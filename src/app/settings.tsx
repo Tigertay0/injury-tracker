@@ -239,7 +239,7 @@ function PlusCard({ plus }: { plus: boolean }) {
           <p className="text-small text-ink-2">Under 18? Ask a parent or guardian to pay.</p>
           <p className="text-small text-ink-2">Cancel any time here. When Plus ends, your saved drills stay, but you can't add new ones.</p>
           {/* Clerk gives no signal when its checkout is closed with the X, so this covers that case */}
-          <button type="button" className={TEXT_BUTTON} disabled={checking} onClick={checkAgain}>
+          <button type="button" className={TEXT_BUTTON} aria-disabled={checking} onClick={checking ? undefined : checkAgain}>
             {checking ? 'Checking…' : 'Already subscribed? Check again'}
           </button>
         </div>
