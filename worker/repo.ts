@@ -395,7 +395,7 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
         one(
           await q(
             `insert into public.ai_usage (day, estimates) values ($1, 1)
-             on conflict (user_id, day) do update set estimates = public.ai_usage.estimates + 1
+             on conflict (user_id, day) do update set estimates = least(public.ai_usage.estimates + 1, 1000)
              returning estimates`,
             [day],
           ),
