@@ -215,7 +215,7 @@ function PlusCard({ plus }: { plus: boolean }) {
   }, [hash]);
 
   return (
-    <Card id="plus" title="PitchSafe Plus" description={plus ? 'You have PitchSafe Plus.' : '$60 a year. Create your own drills and personal workouts, and AI works out how each one loads your body.'}>
+    <Card id="plus" title="PitchSafe Plus" description={plus ? 'You have PitchSafe Plus.' : '$60 a year, or $9.99 a month. Create your own drills and personal workouts, and AI works out how each one loads your body.'}>
       {plus ? (
         <div className="flex flex-col items-start gap-4">
           <SubscriptionDetailsButton onSubscriptionCancel={() => void refreshNow()} subscriptionDetailsProps={{ appearance: clerkAppearance }}>

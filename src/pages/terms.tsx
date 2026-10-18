@@ -36,9 +36,9 @@ export default function Terms() {
         <h2>PitchSafe Plus</h2>
         <p className="mt-3">PitchSafe Plus is a paid plan that lets you create your own drills.</p>
         <ul>
-          <li>Plus costs $60 a year, in US dollars. You are charged when you subscribe, and it renews every year until you cancel.</li>
+          <li>Plus costs $60 a year or $9.99 a month, in US dollars. You are charged when you subscribe, and it renews every year or month, matching what you chose, until you cancel.</li>
           <li>Payments are run by Clerk (Clerk Billing) and Stripe. PitchSafe never sees your full card number.</li>
-          <li>You can cancel any time in Settings. Plus stays active until the end of the year you paid for.</li>
+          <li>You can cancel any time in Settings. Plus stays active until the end of the period you paid for.</li>
           <li>
             Refunds are available on request and are issued through Stripe.
             {CONTACT_EMAIL ? (

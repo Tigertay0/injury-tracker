@@ -583,7 +583,7 @@ function UpgradeToPlus({ base }: { base: string }) {
       <PageHeader title="My drills" />
       <div className={cn(drills.length > 0 && TWO_COLUMNS)}>
         <section className={cn(CARD, 'flex max-w-xl flex-col items-start gap-5 self-start p-5 md:p-6')}>
-          <p className="text-body text-ink">Create your own drills and personal workouts, and AI works out how each one loads your body. Part of PitchSafe Plus, $60 a year.</p>
+          <p className="text-body text-ink">Create your own drills and personal workouts, and AI works out how each one loads your body. Part of PitchSafe Plus, $60 a year or $9.99 a month.</p>
           <Button asChild size="lg">
             <Link ref={linkRef} to={`${base}/settings#plus`}>
               See PitchSafe Plus
