@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countThatFit, fitState, focusWouldBeLost, footerMode, trailingFits } from '@/app/dashboard-tiles/fit';
+import { contentOverflows, countThatFit, fitState, focusWouldBeLost, footerMode, trailingFits } from '@/app/dashboard-tiles/fit';
 
 describe('countThatFit', () => {
   const reserve = 44; // the "See all" button and the gap above it
@@ -128,5 +128,31 @@ describe('focusWouldBeLost', () => {
 
   it('never loses anything else', () => {
     expect(focusWouldBeLost('other', { open: true, cramped: true }, next(0))).toBe(false);
+  });
+});
+
+describe('contentOverflows', () => {
+  const never = () => {
+    throw new Error('the end of the content should not have been looked up');
+  };
+
+  it('is false, without looking at the content, when everything fits with a pixel of rounding to spare', () => {
+    expect(contentOverflows(300, 300, 20, never)).toBe(false);
+    expect(contentOverflows(301, 300, 20, never)).toBe(false);
+  });
+
+  it('is true, without looking at the content, when it is past the box even without its padding', () => {
+    expect(contentOverflows(381, 358, 20, never)).toBe(true);
+    expect(contentOverflows(500, 358, 0, never)).toBe(true);
+  });
+
+  it('does not count the padding at the bottom: a tile whose content ends just inside it stays a plain box', () => {
+    // 369 = the content, ending at 349, plus 20px of bottom padding, in a 358px box
+    expect(contentOverflows(369, 358, 20, () => 349)).toBe(false);
+  });
+
+  it('still finds content that overflows by less than the padding, when it ends past the box', () => {
+    // A list that is taller than the box around it reaches 563 in a 530px box with 40px of padding: 33px is out of reach
+    expect(contentOverflows(563, 530, 40, () => 563)).toBe(true);
   });
 });

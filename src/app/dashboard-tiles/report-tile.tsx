@@ -61,7 +61,14 @@ export function ReportTile({ model }: { model: RiskModel }) {
             A one-page PDF with your score, load trend, recovery, cleats and top actions. It is made on your device.
           </p>
         )}
-        <Button variant="secondary" aria-disabled={busy || undefined} aria-busy={busy || undefined} onClick={() => void download()} className="self-start">
+        {/* The label wraps and the button grows when enlarged text leaves it narrower than the tile; at the normal size it is one line, 44px tall */}
+        <Button
+          variant="secondary"
+          aria-disabled={busy || undefined}
+          aria-busy={busy || undefined}
+          onClick={() => void download()}
+          className="h-auto min-h-11 max-w-full self-start whitespace-normal py-2 wrap-anywhere"
+        >
           <FilePdf aria-hidden />
           {busy ? 'Building PDF…' : 'Download coach report'}
         </Button>

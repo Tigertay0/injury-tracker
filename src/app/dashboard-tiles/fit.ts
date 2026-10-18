@@ -57,6 +57,26 @@ export function trailingFits(room: number, listHeight: number, trailingHeight: n
   return listHeight + gap + trailingHeight <= room;
 }
 
+/**
+ * Whether the content of a box is taller than the box, so part of it is out of reach without scrolling.
+ *
+ * `scrollHeight` is the browser's figure, and it counts the padding after the last child. A box whose content ends just
+ * inside it (a tight tile, at the normal text size) therefore reads as taller than it is by up to that padding, and
+ * must not turn into a scroller. So only when the figure is within the padding of fitting is the real end of the
+ * content looked up, which costs a walk through the box.
+ *
+ * @param scrollHeight  the height of everything in the box (`scrollHeight`)
+ * @param clientHeight  the height of the box (`clientHeight`)
+ * @param paddingBottom the padding at the bottom of the box
+ * @param contentEnd    the bottom of the content itself, measured from the top of the box
+ */
+export function contentOverflows(scrollHeight: number, clientHeight: number, paddingBottom: number, contentEnd: () => number): boolean {
+  if (scrollHeight <= clientHeight + 1) return false;
+  // The content ends at least this far down, whether or not the padding was counted
+  if (scrollHeight - paddingBottom > clientHeight + 1) return true;
+  return contentEnd() > clientHeight + 1;
+}
+
 export type FocusTarget = 'toggle' | 'scroller' | 'other';
 
 /**
