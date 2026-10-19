@@ -371,6 +371,9 @@ export function postgresRepo(connectionString: string, userId: string): PlayerRe
 
     addCustomDrill: (input) =>
       run(async (q) => {
+        // Serialize concurrent adds for this player so the count below can't be stale. The lock is
+        // transaction-scoped (released at commit/rollback), so it is safe through pooled connections
+        await q("select pg_advisory_xact_lock(hashtext('custom_drills'), hashtext($1))", [userId]);
         const active = await q('select count(*)::int as n from public.custom_drills where user_id = $1 and archived_at is null', [userId]);
         if (Number(active[0]?.n) >= MAX_CUSTOM_DRILLS) {
           throw new RepoError(`You can keep ${MAX_CUSTOM_DRILLS} drills. Archive one to add another.`, CUSTOM_DRILL_LIMIT);

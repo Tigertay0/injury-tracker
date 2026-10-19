@@ -42,6 +42,7 @@ run('Neon schema and row-level security', () => {
     await a.deleteAllData().catch(() => undefined);
     await b.deleteAllData().catch(() => undefined);
     await c.deleteAllData().catch(() => undefined);
+    await postgresRepo(url!, `user_test_d_race_${stamp}`).deleteAllData().catch(() => undefined);
   });
 
   it('returns generated values and keeps dates as calendar strings', async () => {
@@ -173,6 +174,25 @@ run('Neon schema and row-level security', () => {
     expect(await c.archiveCustomDrill(first.id)).toBe(true);
     await expect(c.addCustomDrill(gridDrill)).resolves.toMatchObject({ name: gridDrill.name });
     await expect(c.addCustomDrill(gridDrill)).rejects.toMatchObject({ code: CUSTOM_DRILL_LIMIT });
+  });
+
+  it('keeps concurrent adds at the active limit', async () => {
+    const d = `user_test_d_race_${stamp}`;
+    const racer = postgresRepo(url!, d);
+    await racer.createProfile({ position: 'GK' });
+    await asPlayer(url!, d, (q) =>
+      q(
+        `insert into public.custom_drills (name, category, intensity, sprint, hsr, cod, jump, contact, strength)
+         select 'Drill ' || g, 'technical', 5, 0, 0, 0, 0, 0, 0 from generate_series(1, ${MAX_CUSTOM_DRILLS - 1}) as g`,
+      ),
+    );
+    const results = await Promise.allSettled(Array.from({ length: 5 }, () => racer.addCustomDrill(gridDrill)));
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    for (const r of results.filter((r) => r.status === 'rejected')) {
+      expect((r as PromiseRejectedResult).reason).toMatchObject({ code: CUSTOM_DRILL_LIMIT });
+    }
+    const [{ n }] = await asPlayer(url!, d, (q) => q('select count(*)::int as n from public.custom_drills where archived_at is null'));
+    expect(n).toBe(MAX_CUSTOM_DRILLS);
   });
 
   it("blocks direct SQL attaching another player's custom drill", async () => {
