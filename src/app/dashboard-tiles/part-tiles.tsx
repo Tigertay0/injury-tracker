@@ -25,6 +25,7 @@ import { TILE_TITLES } from '../dashboard-order';
 import { LEVEL_CHIP } from '../movement-panel';
 import { FillMeter, RatioMeter, SegmentMeter } from './meters';
 import { equipmentNote, injuryNote, recoveryNote } from './part-notes';
+import { ScrollRegion } from './scroll-region';
 import { BIG_NUMBER, TILE_LABEL, TILE_PADDING } from './tile-shell';
 
 interface PartTileProps {
@@ -54,36 +55,45 @@ function PartTile({ to, label, value, tone, status, meter, note, size }: PartTil
     </div>
   );
   return (
-    <Link
-      to={to}
-      aria-label={`${label} ${value} ${status}`}
-      aria-describedby={describedBy}
-      className="group @container flex h-full min-h-0 flex-1 flex-col transition-colors duration-150 ease-out hover:bg-sunken/60"
-    >
-      <div className={cn('flex min-h-0 flex-1 flex-col gap-2', TILE_PADDING)}>
-        <div className="flex items-start justify-between gap-2">
-          {/* Below 200px a label can wrap, so two lines are kept for it and the figures line up across a row */}
-          <span className={cn(TILE_LABEL, !stretched && '@max-[199px]:min-h-[2.7em]')}>{label}</span>
-          <ArrowUpRight aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-3 transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-        </div>
-        {stretched ? (
-          <div className="mt-auto flex items-end justify-between gap-4">
-            {figure}
-            {summary}
-          </div>
-        ) : (
-          <>
-            {figure}
-            {note && (
-              <span id={noteId} className="hidden text-label text-ink-2 @[236px]:block">
-                {note}
-              </span>
+    // The cell is a fixed square, so enlarged text or text spacing can make the link taller than the tile. It scrolls
+    // then instead of being cut off (WCAG 1.4.4, 1.4.12). The link is a child of the box, not the box itself, so no
+    // control sits inside another. At the normal size nothing overflows and the box is plain.
+    // The container is the box around the scroller, not the link inside it: a scrollbar that takes layout width must not change
+    // the width that the tile's size queries see.
+    <div className="@container flex min-h-0 flex-1 flex-col">
+      <ScrollRegion label={`${label}, scrollable`} className="flex flex-1 flex-col">
+        <Link
+          to={to}
+          aria-label={`${label} ${value} ${status}`}
+          aria-describedby={describedBy}
+          className="group flex flex-1 shrink-0 flex-col transition-colors duration-150 ease-out hover:bg-sunken/60"
+        >
+          <div className={cn('flex flex-1 flex-col gap-2', TILE_PADDING)}>
+            <div className="flex items-start justify-between gap-2">
+              {/* Below 200px a label can wrap, so two lines are kept for it and the figures line up across a row. The arrow, which only decorates, goes when the tile is under 9rem wide (144px at the normal size), so enlarged text keeps the room for the label */}
+              <span className={cn(TILE_LABEL, !stretched && '@max-[199px]:min-h-[2.7em]')}>{label}</span>
+              <ArrowUpRight aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-3 @max-[9rem]:hidden transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </div>
+            {stretched ? (
+              <div className="mt-auto flex items-end justify-between gap-4">
+                {figure}
+                {summary}
+              </div>
+            ) : (
+              <>
+                {figure}
+                {note && (
+                  <span id={noteId} className="hidden text-label text-ink-2 @[236px]:block">
+                    {note}
+                  </span>
+                )}
+                <div className="mt-auto">{summary}</div>
+              </>
             )}
-            <div className="mt-auto">{summary}</div>
-          </>
-        )}
-      </div>
-    </Link>
+          </div>
+        </Link>
+      </ScrollRegion>
+    </div>
   );
 }
 

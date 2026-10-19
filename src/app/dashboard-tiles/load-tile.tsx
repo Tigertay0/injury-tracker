@@ -24,7 +24,7 @@ export function LoadTile({ model, size, compact }: LoadTileProps) {
   return (
     <TileShell title={TILE_TITLES.load} titleId="load-title">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="flex items-baseline gap-2">
+        <p className="flex flex-wrap items-baseline gap-x-2">
           <span className={BIG_NUMBER}>{thisWeek.toLocaleString('en-US')}</span>
           <span className="text-label text-ink-2">this week</span>
         </p>

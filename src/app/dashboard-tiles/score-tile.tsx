@@ -51,9 +51,12 @@ function Assumptions({ model }: { model: RiskModel }) {
   );
 }
 
-/** The middle of the tile takes the free height for its picture (see ZoneGauge and SessionStrip). Under 240px there is no room for it, and the text sits at the bottom instead. */
-const MIDDLE = 'hidden @[240px]:flex';
-const BOTTOM = 'mt-auto flex flex-col gap-3 @[240px]:mt-0';
+/**
+ * The middle of the tile takes the free height for its picture (see ZoneGauge and SessionStrip). Under 240px there is no room for it, and the text sits at the bottom instead.
+ * The width is in rem (240px at the normal size), so enlarged text gives the picture up before its labels are cut off.
+ */
+const MIDDLE = 'hidden @[15rem]:flex';
+const BOTTOM = 'mt-auto flex flex-col gap-3 @[15rem]:mt-0';
 /** The baseline's strip needs 340px, so below that its text keeps to the bottom of the tile. */
 const BASELINE_BOTTOM = 'mt-auto flex flex-col gap-3 @[340px]:mt-0';
 /** The 6px of padding, taken back with a negative margin, gives the focus ring of a control at the edge room inside the scroll box's clip (4px at least). */
@@ -66,7 +69,7 @@ function Score({ model, composite }: { model: RiskModel; composite: NonNullable<
     <TileShell title="Injury risk score" titleId="verdict-title">
       <ScrollRegion label="Score details, scrollable" className={BODY}>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <p className="flex items-baseline gap-2">
+          <p className="flex flex-wrap items-baseline gap-x-2">
             <span className={cn('tnum font-display text-display-s font-bold @[340px]:text-display-m @[400px]:text-score', TONE_TEXT[COMPOSITE_TONE[zone]])}>{score}</span>
             <span className="tnum text-lead font-semibold text-ink-3">/ {COMPOSITE_SCORE_MAX}</span>
           </p>
