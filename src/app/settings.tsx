@@ -177,7 +177,7 @@ function ManageLogin() {
 }
 
 // A text-style button with a full 44px touch target, lined up with the text above it
-const TEXT_BUTTON = '-mx-2 inline-flex h-11 items-center self-start px-2 text-small font-semibold text-accent-ink underline underline-offset-2 hover:text-ink disabled:opacity-55';
+const TEXT_BUTTON = '-mx-2 inline-flex h-11 items-center self-start px-2 text-small font-semibold text-accent-ink underline underline-offset-2 hover:text-ink disabled:opacity-55 aria-disabled:opacity-55';
 
 // The pricing table throws in development when billing is off in Clerk. That must not take the
 // rest of Settings down with it, because export and delete live on the same page.
