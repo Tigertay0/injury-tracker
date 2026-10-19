@@ -6,6 +6,7 @@ import { Link } from 'react-router';
 import { ArrowRight, Bed, FirstAidKit, Pause, Play, Prohibit, SneakerMove, Timer, type Icon } from '@phosphor-icons/react';
 import { GlassFold } from '@/components/fx/glass-fold';
 import { ContainerScroll } from '@/components/fx/container-scroll';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ACWR, CLOSE, HERO, INPUTS, LIMITS } from './content';
 import { Faq } from './faq';
@@ -16,19 +17,17 @@ import './home.css';
 const NIGHT = '#05070f';
 const ICONS: Record<(typeof INPUTS)[number]['key'], Icon> = { load: Timer, recovery: Bed, cleats: SneakerMove, injuries: FirstAidKit };
 
+// The hero and close-band calls to action. Solid is the white pill (inverse: it floods to the night
+// surface with a white ring); ghost keeps the glass look over the shader and floods to ink.
 function PillLink({ to, children, variant = 'solid', className }: { to: string; children: ReactNode; variant?: 'solid' | 'ghost'; className?: string }) {
   return (
-    <Link
-      to={to}
-      className={cn(
-        'group inline-flex h-12 items-center justify-center gap-2 px-6 text-body font-semibold transition-[background-color,transform] duration-200 ease-out active:scale-[0.98]',
-        'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#9fd2ff]',
-        variant === 'solid' ? 'bg-white text-[#060a1a] hover:bg-[#dfe9ff]' : 'border border-white/20 bg-white/[0.04] text-white backdrop-blur-md hover:bg-white/10',
-        className,
-      )}
+    <Button
+      asChild
+      variant={variant === 'solid' ? 'inverse' : 'secondary'}
+      className={cn('group h-12 px-6', variant === 'ghost' && 'border-white/40 bg-white/[0.04] backdrop-blur-md', className)}
     >
-      {children}
-    </Link>
+      <Link to={to}>{children}</Link>
+    </Button>
   );
 }
 
@@ -90,19 +89,19 @@ function ProductReveal() {
 function PhoneReveal() {
   const [paused, setPaused] = useState(false);
   return (
-    <section id="score" className="scroll-mt-24 px-5 pt-20 pb-16" aria-labelledby="score-title">
+    <section id="score" className="px-5 pt-20 pb-16" aria-labelledby="score-title">
       <h2 id="score-title" className="mx-auto max-w-[16ch] text-center font-display text-[2.25rem] leading-[1] font-bold tracking-[-0.04em] text-balance text-white">
         {SCORE_TITLE}
       </h2>
       <p className="mx-auto mt-4 max-w-md text-center text-body text-white/65">{SCORE_LEAD}</p>
-      <div className={cn('dash-frame mx-auto mt-10 h-[34rem] w-full max-w-[20rem] overflow-hidden border border-white/15 bg-[#0b1020] p-1.5 shadow-[0_30px_60px_-20px_rgb(29_63_214/0.5)]', paused && 'is-paused')}>
+      <div className={cn('dash-frame mx-auto mt-10 h-[34rem] w-full max-w-[20rem] overflow-hidden rounded-[var(--radius-panel)] border border-white/15 bg-[#0b1020] p-1.5 shadow-[0_30px_60px_-20px_rgb(29_63_214/0.5)]', paused && 'is-paused')}>
         {/* Scrollable by hand when reduced motion stops the drift */}
-        <div className="h-full overflow-hidden" tabIndex={-1}>
+        <div className="h-full overflow-hidden rounded-[calc(var(--radius-panel)-7px)]" tabIndex={-1}>
           <img
             src="/screens/dashboard-mobile-full.webp"
             width={780}
-            height={6868}
-            alt="The full PitchSafe dashboard for a sample player on a phone: risk score 66 out of 100, the top action, workload ratio, recovery, cleats, injury history, the 28-day load chart, movement this week with sprinting rising, five actions and the coach report"
+            height={5862}
+            alt="The full PitchSafe dashboard for a sample player on a phone: risk score 66 out of 100 with its zone gauge, workload ratio, recovery, cleats, injury history, the 28-day load chart, movement this week with sprinting rising, what to do now, fuel and recovery notes and the coach report"
             loading="lazy"
             decoding="async"
             className="dash-scroll block w-full"
@@ -111,14 +110,10 @@ function PhoneReveal() {
         </div>
       </div>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="dash-toggle inline-flex h-10 items-center gap-2 border border-white/15 px-4 text-small font-semibold text-white/80 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]"
-        >
-          {paused ? <Play aria-hidden weight="fill" className="size-4" /> : <Pause aria-hidden weight="fill" className="size-4" />}
+        <Button type="button" variant="secondary" size="sm" onClick={() => setPaused((p) => !p)} className="h-10 px-4">
+          {paused ? <Play aria-hidden weight="fill" /> : <Pause aria-hidden weight="fill" />}
           {paused ? 'Play' : 'Pause'}
-        </button>
+        </Button>
         <Link to="/demo" className="group inline-flex items-center gap-1.5 text-body font-semibold text-[#a6d8ff]">
           Open the sample dashboard
           <ArrowRight aria-hidden weight="bold" className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
@@ -130,7 +125,7 @@ function PhoneReveal() {
 
 function DesktopReveal() {
   return (
-    <section id="score" className="scroll-mt-24 overflow-hidden" aria-labelledby="score-title">
+    <section id="score" className="overflow-hidden" aria-labelledby="score-title">
       <ContainerScroll
         frameClassName="border-white/15 bg-[#0b1020]"
         titleComponent={
@@ -174,7 +169,7 @@ function SpotlightCard({ children, className }: { children: ReactNode; className
       ref={ref}
       onPointerMove={onMove}
       className={cn(
-        'group/spot relative overflow-hidden border border-white/10 bg-white/[0.035] p-6 sm:p-8',
+        'group/spot relative overflow-hidden rounded-[var(--radius-panel)] border border-white/10 bg-white/[0.035] p-6 sm:p-8',
         'before:pointer-events-none before:absolute before:inset-0 before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100',
         'before:bg-[radial-gradient(420px_circle_at_var(--x,50%)_var(--y,50%),rgb(120_170_255/0.13),transparent_65%)]',
         className,
@@ -190,10 +185,10 @@ function InputCard({ input, className, children }: { input: (typeof INPUTS)[numb
   return (
     <SpotlightCard className={cn('flex flex-col', className)}>
       <div className="flex items-start justify-between gap-4">
-        <span className="grid size-11 place-items-center border border-white/10 bg-white/[0.06] text-[#a6d8ff]">
+        <span className="grid size-11 place-items-center rounded-[var(--radius-control)] border border-white/10 bg-white/[0.06] text-[#a6d8ff]">
           <IconCmp aria-hidden weight="duotone" className="size-5" />
         </span>
-        <span className="border border-white/10 px-3 py-1 text-label font-semibold text-white/75">
+        <span className="rounded-[var(--radius-chip)] border border-white/10 px-3 py-1 text-label font-semibold text-white/75">
           <span className="tnum">{input.weight}</span>
           {input.key === 'injuries' ? '' : ' of the score'}
         </span>
@@ -216,7 +211,7 @@ function InputCard({ input, className, children }: { input: (typeof INPUTS)[numb
 function Inputs() {
   const [load, recovery, cleats, injuries] = INPUTS;
   return (
-    <section id="how" className="scroll-mt-24 px-5 pt-8 pb-24 sm:px-8 lg:pb-32">
+    <section id="how" className="px-5 pt-8 pb-24 sm:px-8 lg:pb-32">
       <div className="mx-auto max-w-[1200px]">
         <div className="grid grid-cols-[minmax(0,1fr)] items-end gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
           <h2 className="max-w-[14ch] font-display text-[clamp(2.4rem,5.5vw,4.5rem)] leading-[1] font-bold tracking-[-0.04em] text-balance text-white">
@@ -228,11 +223,11 @@ function Inputs() {
         <div className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-3">
           <InputCard input={load} className="lg:col-span-2">
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="border border-white/10 bg-black/20 p-4">
+              <div className="rounded-[var(--radius-control)] border border-white/10 bg-black/20 p-4">
                 <p className="text-label text-white/55">Session load</p>
                 <p className="tnum mt-1 text-lead font-semibold text-white">{ACWR.formula}</p>
               </div>
-              <div className="border border-white/10 bg-black/20 p-4">
+              <div className="rounded-[var(--radius-control)] border border-white/10 bg-black/20 p-4">
                 <p className="text-label text-white/55">Workload ratio, sample player</p>
                 <p className="tnum mt-1 text-lead font-semibold text-white">1.08 · sweet spot</p>
                 <ZoneBar value={1.08} tone="dark" className="mt-2" />
@@ -284,7 +279,7 @@ function Limits() {
           <h2 className="font-display text-[clamp(2.2rem,5vw,3.75rem)] leading-[1] font-bold tracking-[-0.04em] text-white">Honest about its limits.</h2>
           <p className="mt-4 max-w-md text-lead text-white/65">PitchSafe is an early-warning tool, not a doctor.</p>
         </div>
-        <ul className="grid gap-px overflow-hidden border border-white/10 bg-white/10">
+        <ul className="grid gap-px overflow-hidden rounded-[var(--radius-panel)] border border-white/10 bg-white/10">
           {LIMITS.map((l) => (
             <li key={l} className="flex gap-3 bg-ground px-5 py-5 text-body text-white/85">
               <Prohibit aria-hidden weight="bold" className="mt-1 size-5 shrink-0 text-white/40" />
@@ -300,7 +295,7 @@ function Limits() {
 function Close() {
   return (
     <section className="px-3 pb-16 sm:px-5">
-      <div className="relative isolate mx-auto max-w-[1240px] overflow-hidden border border-white/10">
+      <div className="relative isolate mx-auto max-w-[1240px] overflow-hidden rounded-[var(--radius-panel)] border border-white/10">
         <div className="absolute inset-0 -z-10" style={{ background: NIGHT }}>
           <GlassFold color1="#2a4fe8" color2="#050816" color3="#b9e2ff" speed={0.35} scale={1.6} noise={0.1} />
         </div>

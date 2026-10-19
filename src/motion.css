@@ -74,10 +74,14 @@
 }
 
 /* ---------- Tabs sliding (segmented control) ---------- */
-/* A joined, bordered button group: 1px line-strong outer border, hairline dividers, square.
-   The selected segment is a solid accent block that slides between options. Colors are
+/* A joined, bordered button group: 1px line-strong outer border at the control radius, short
+   hairline dividers. The selected segment is a solid accent fill that slides between options.
+   The fill and every segment use the inner radius (control radius minus the 1px border), so
+   they sit flush against the rounded border and no segment shows a square corner. Colors are
    declared here (not on :root) so they resolve against the themed .app-scope. */
 .t-tabs {
+  --tabs-radius: var(--radius-control);
+  --tabs-inner-radius: calc(var(--tabs-radius) - 1px);
   --tabs-line: var(--line-strong);
   --tabs-bar-bg: var(--surface);
   --tabs-hover-bg: var(--sunken);
@@ -89,7 +93,7 @@
   display: inline-flex;
   align-items: stretch;
   border: 1px solid var(--tabs-line);
-  border-radius: 0;
+  border-radius: var(--tabs-radius);
   background: var(--tabs-bar-bg);
 }
 .t-tab {
@@ -99,22 +103,31 @@
   background: transparent;
   color: var(--tabs-text-muted);
   cursor: pointer;
-  border-radius: 0;
+  border-radius: var(--tabs-inner-radius);
   z-index: 1;
   transition:
     color            var(--tabs-dur) var(--tabs-ease),
-    background-color 120ms ease,
-    border-color     var(--tabs-dur) var(--tabs-ease);
+    background-color 120ms ease;
 }
-.t-tab + .t-tab {
-  border-left: 1px solid var(--tabs-line);
+/* Dividers are short hairlines on the seam, not borders: a border on a rounded segment would
+   curve round its corners. */
+.t-tab + .t-tab::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 1px;
+  background: var(--tabs-line);
+  transition: opacity var(--tabs-dur) var(--tabs-ease);
+  pointer-events: none;
 }
 /* The fill is the edge of the selected segment, so the hairlines beside it fade out as it slides in */
-.t-tab[aria-selected="true"],
-.t-tab[aria-checked="true"],
-.t-tab[aria-selected="true"] + .t-tab,
-.t-tab[aria-checked="true"] + .t-tab {
-  border-left-color: transparent;
+.t-tab[aria-selected="true"]::before,
+.t-tab[aria-checked="true"]::before,
+.t-tab[aria-selected="true"] + .t-tab::before,
+.t-tab[aria-checked="true"] + .t-tab::before {
+  opacity: 0;
 }
 .t-tab[aria-selected="true"],
 .t-tab[aria-checked="true"] {
@@ -137,7 +150,7 @@
   left: 0;
   width: 0;
   background: var(--tabs-pill-bg);
-  border-radius: 0;
+  border-radius: var(--tabs-inner-radius);
   transform: translateX(0);
   transition:
     transform var(--tabs-dur) var(--tabs-ease),
@@ -147,7 +160,17 @@
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .t-tabs-pill, .t-tab { transition: none !important; }
+  .t-tabs-pill, .t-tab, .t-tab::before { transition: none !important; }
+}
+/* Windows high contrast: the browser repaints every background in the Canvas colour, which erases the
+   hairlines and the selected fill, and puts a Canvas backplate behind the text of the selected segment.
+   The hairlines use CanvasText, and the selected segment opts out of the forced repaint and paints its own
+   Highlight background (the sliding fill is hidden, since it cannot show through). */
+@media (forced-colors: active) {
+  .t-tab + .t-tab::before { background: CanvasText; }
+  .t-tabs-pill { display: none; }
+  .t-tab[aria-selected="true"],
+  .t-tab[aria-checked="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }
 
 /* ---------- Error state shake ---------- */

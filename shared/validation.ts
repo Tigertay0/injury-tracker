@@ -286,6 +286,28 @@ export function validateEquipment(raw: unknown): EquipmentInput {
   return out;
 }
 
+/** The most tiles a saved dashboard order can hold. The database enforces the same cap. */
+export const MAX_DASHBOARD_TILES = 30;
+const DASHBOARD_TILE_ID = /^[a-z][a-z0-9_]{1,29}$/;
+
+/**
+ * Checks the body of PUT /me/dashboard, `{ order: string[] }`, and returns the tile ids. Only
+ * their shape is checked here: the app drops ids it does not know and adds new tiles when it
+ * reads the order, so a later release can change the tile set without a migration.
+ */
+export function validateDashboardOrder(raw: unknown): string[] {
+  const r = asObject(raw);
+  if (!Array.isArray(r.order)) throw new ValidationError('The tile order must be a list.', 'order');
+  if (r.order.length > MAX_DASHBOARD_TILES) throw new ValidationError(`Arrange up to ${MAX_DASHBOARD_TILES} tiles.`, 'order');
+  const seen = new Set<string>();
+  for (const id of r.order) {
+    if (typeof id !== 'string' || !DASHBOARD_TILE_ID.test(id)) throw new ValidationError('Each tile needs a valid id.', 'order');
+    if (seen.has(id)) throw new ValidationError('List each tile once.', 'order');
+    seen.add(id);
+  }
+  return [...seen];
+}
+
 export function requireId(value: unknown): string {
   if (typeof value !== 'string' || !UUID.test(value)) throw new ValidationError('Invalid record id.');
   return value.toLowerCase();

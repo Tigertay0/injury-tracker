@@ -11,11 +11,16 @@ function Root() {
       {/* Installed app: a night strip behind the status bar so its white text always reads */}
       <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[env(safe-area-inset-top)] bg-[#050810]" />
       <Outlet />
+      {/* app-scope puts the toasts on the app's theme tokens: the Toaster sits outside the app shell, so without it they stay light in dark mode */}
       <Toaster
         position="top-center"
+        className="app-scope"
         toastOptions={{
           classNames: {
-            toast: '!rounded-[var(--radius-control)] !border !border-line !bg-surface !text-ink !shadow-overlay !font-sans',
+            // Sonner's own stylesheet sets outline: none on the toast and a 20% black halo on focus, and it is unlayered, so it beats
+            // the global ring. The ! classes put the app's 2px --focus ring back (the same trap Clerk's controls had, see styles.css).
+            toast:
+              '!rounded-[var(--radius-control)] !border !border-line !bg-surface !text-ink !shadow-overlay !font-sans focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-solid focus-visible:!outline-focus',
             description: '!text-ink-2',
           },
         }}

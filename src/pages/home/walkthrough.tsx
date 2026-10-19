@@ -4,8 +4,10 @@
 // screen, on keyboard focus and with the Pause button; reduced motion
 // shows a still, numbered version instead.
 import { useEffect, useId, useRef, useState, type CSSProperties, type FocusEvent } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import { motion } from 'motion/react';
 import { Pause, Play } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
+import { usePrefersReducedMotion } from '@/lib/use-prefers-reduced-motion';
 import { cn } from '@/lib/utils';
 
 type Target = { label: string; x: number; y: number };
@@ -76,7 +78,7 @@ function useInView<T extends Element>(ref: React.RefObject<T | null>) {
 }
 
 export function Walkthrough() {
-  const reduce = useReducedMotion();
+  const reduce = usePrefersReducedMotion();
   const uid = useId();
   const phoneRef = useRef<HTMLDivElement>(null);
   const inView = useInView(phoneRef);
@@ -149,7 +151,7 @@ export function Walkthrough() {
     <section
       id="walkthrough"
       aria-labelledby="walkthrough-title"
-      className="scroll-mt-24 px-5 py-24 sm:px-8 lg:py-32"
+      className="px-5 py-24 sm:px-8 lg:py-32"
       onFocus={onFocus}
       onBlur={onBlur}
     >
@@ -206,7 +208,7 @@ export function Walkthrough() {
                     aria-labelledby={`${uid}-${s.id}-title`}
                     aria-describedby={`${uid}-${s.id}-text`}
                     className={cn(
-                      'group relative w-full overflow-hidden border px-5 py-5 text-left transition-colors duration-200 ease-out sm:px-6',
+                      'group relative w-full overflow-hidden rounded-[var(--radius-panel)] border px-5 py-5 text-left transition-colors duration-200 ease-out sm:px-6',
                       'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]',
                       active ? 'border-white/20 bg-white/[0.06]' : 'border-white/10 bg-transparent hover:bg-white/[0.03]',
                     )}
@@ -229,7 +231,7 @@ export function Walkthrough() {
                         </span>
                       </span>
                     </span>
-                    <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-white/10">
+                    <span aria-hidden className="absolute inset-x-5 bottom-2.5 h-0.5 overflow-hidden rounded-[var(--radius-chip)] bg-white/10 sm:inset-x-6">
                       {active && bar(s)}
                     </span>
                   </button>
@@ -240,7 +242,7 @@ export function Walkthrough() {
 
           {/* The phone */}
           <div className="order-1 mx-auto w-full max-w-[16.5rem] sm:max-w-[20rem] lg:order-2">
-            <div ref={phoneRef} className="relative aspect-[390/844] w-full overflow-hidden border border-white/15 bg-[#0b1020] shadow-[0_40px_80px_-24px_rgb(29_63_214/0.55)]">
+            <div ref={phoneRef} className="relative aspect-[390/844] w-full overflow-hidden rounded-[var(--radius-panel)] border border-white/15 bg-[#0b1020] shadow-[0_40px_80px_-24px_rgb(29_63_214/0.55)]">
               {/* All screens stay mounted (so they load ahead of time); the new one fades in
                   over the previous one, which stays opaque underneath to avoid a dark dip */}
               {STEPS.map((s, i) => {
@@ -271,7 +273,7 @@ export function Walkthrough() {
                   <span
                     key={t.label}
                     aria-hidden
-                    className="absolute z-10 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center border-2 border-white bg-[#2346e0] text-label font-bold text-white"
+                    className="absolute z-10 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[var(--radius-chip)] border-2 border-white bg-[#2346e0] text-label font-bold text-white"
                     style={{ left: `${t.x}%`, top: `${t.y}%` }}
                   >
                     {i + 1}
@@ -285,12 +287,12 @@ export function Walkthrough() {
                   animate={{ left: `${target.x}%`, top: `${target.y}%` }}
                   transition={{ type: 'spring', stiffness: 170, damping: 24 }}
                 >
-                  <span key={`${step.id}-${tapIndex}-${runId}`} className="walk-ripple absolute size-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#a6d8ff]" />
-                  <span className="absolute size-9 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-white/25 shadow-[0_0_24px_rgb(166_216_255/0.8)] backdrop-blur-[1px]" />
+                  <span key={`${step.id}-${tapIndex}-${runId}`} className="walk-ripple absolute size-14 -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-chip)] border-2 border-[#a6d8ff]" />
+                  <span className="absolute size-9 -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-chip)] border-2 border-white bg-white/25 shadow-[0_0_24px_rgb(166_216_255/0.8)] backdrop-blur-[1px]" />
                   <span
                     key={`label-${step.id}-${tapIndex}-${runId}`}
                     className={cn(
-                      'walk-label absolute whitespace-nowrap bg-white px-2.5 py-1 text-label font-semibold text-[#060a1a] shadow-[0_6px_20px_rgb(0_0_0/0.4)]',
+                      'walk-label absolute whitespace-nowrap rounded-[var(--radius-control)] bg-white px-2.5 py-1 text-label font-semibold text-[#060a1a] shadow-[0_6px_20px_rgb(0_0_0/0.4)]',
                       target.y > 70 ? 'bottom-7' : 'top-7',
                       target.x > 60 ? 'right-0' : target.x < 35 ? 'left-[-0.5rem]' : '-translate-x-1/2',
                     )}
@@ -313,14 +315,10 @@ export function Walkthrough() {
               </ol>
             ) : (
               <div className="mt-4 flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setPaused((p) => !p)}
-                  className="inline-flex h-10 items-center gap-2 border border-white/15 px-4 text-small font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6d8ff]"
-                >
-                  {paused ? <Play aria-hidden weight="fill" className="size-4" /> : <Pause aria-hidden weight="fill" className="size-4" />}
+                <Button type="button" variant="secondary" size="sm" onClick={() => setPaused((p) => !p)} className="h-10 px-4">
+                  {paused ? <Play aria-hidden weight="fill" /> : <Pause aria-hidden weight="fill" />}
                   {paused ? 'Play the walkthrough' : 'Pause the walkthrough'}
-                </button>
+                </Button>
               </div>
             )}
           </div>

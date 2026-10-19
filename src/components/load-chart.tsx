@@ -20,12 +20,16 @@ interface LoadChartProps {
   title: string;
   className?: string;
   height?: number;
+  /** Show the first and last date under the columns. On by default; a small tile leaves it out. */
+  showDates?: boolean;
+  /** Extra classes for the date row, for example to hide it in a narrow container. */
+  datesClassName?: string;
 }
 
 const VIEW_W = 560;
 const BAR_MAX = 24;
 const GAP = 2;
-const RADIUS = 0;
+const RADIUS = 4;
 
 function niceMax(value: number): number {
   if (value <= 0) return 100;
@@ -34,13 +38,13 @@ function niceMax(value: number): number {
   return (steps.find((s) => s * pow >= value) ?? 10) * pow;
 }
 
-/** Column path with a square top and base. */
+/** Column path with rounded top corners and a flat base. */
 function columnPath(x: number, y: number, w: number, h: number): string {
   const r = Math.min(RADIUS, w / 2, h);
   return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;
 }
 
-export function LoadChart({ days, highlightFrom, referenceDaily, title, className, height = 200 }: LoadChartProps) {
+export function LoadChart({ days, highlightFrom, referenceDaily, title, className, height = 200, showDates = true, datesClassName }: LoadChartProps) {
   const id = useId();
   const [active, setActive] = useState<number | null>(null);
 
@@ -152,18 +156,20 @@ export function LoadChart({ days, highlightFrom, referenceDaily, title, classNam
         )}
       </div>
 
-      <div className="mt-2 flex justify-between text-caption text-ink-3">
-        <span>{fmtDate(days[0].date)}</span>
-        <span>{fmtDate(days[days.length - 1].date)}</span>
-      </div>
+      {showDates && (
+        <div className={cn('mt-2 flex justify-between text-caption text-ink-3', datesClassName)}>
+          <span>{fmtDate(days[0].date)}</span>
+          <span>{fmtDate(days[days.length - 1].date)}</span>
+        </div>
+      )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-label text-ink-2">
+      <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 text-label text-ink-2', showDates ? 'mt-3' : 'mt-2')}>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-2.5 w-3 bg-chart-past" />
+          <span aria-hidden className="h-2.5 w-3 rounded-[var(--radius-chip)] bg-chart-past" />
           Earlier weeks
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-2.5 w-3 bg-chart-now" />
+          <span aria-hidden className="h-2.5 w-3 rounded-[var(--radius-chip)] bg-chart-now" />
           Last 7 days
         </span>
         {referenceDaily !== undefined && referenceDaily > 0 && (

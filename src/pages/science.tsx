@@ -1,6 +1,8 @@
 // Public methodology page (PRD 7 and 8): every formula, threshold, weight and source.
 import { Link } from 'react-router';
+import { COMPOSITE_ZONES, compositeZoneRange } from '@shared/calculations';
 import { EquipmentMatrix } from '@/components/equipment-matrix';
+import { COMPOSITE_LABEL } from '@/lib/labels';
 
 const SECTIONS = [
   { id: 'load', title: 'Training load' },
@@ -24,6 +26,12 @@ const SOURCES = [
   'Drew, M.K. & Finch, C.F. (2016). The relationship between training load and injury, illness and soreness: a systematic and literature review. Sports Medicine, 46(6), 861-883.',
   'Thomas, D.T., Erdman, K.A. & Burke, L.M. (2016). Position of the Academy of Nutrition and Dietetics, Dietitians of Canada, and the American College of Sports Medicine: Nutrition and Athletic Performance. Journal of the Academy of Nutrition and Dietetics, 116(3), 501-528.',
 ];
+
+/** The score bands, read from the same bounds the score and the dashboard gauge use. */
+const SCORE_BANDS = COMPOSITE_ZONES.map((zone) => {
+  const { from, to } = compositeZoneRange(zone);
+  return [`${from} to ${to}`, COMPOSITE_LABEL[zone]];
+});
 
 function Table({ caption, head, rows }: { caption: string; head: string[]; rows: (string | number)[][] }) {
   return (
@@ -61,7 +69,7 @@ function Formula({ children }: { children: React.ReactNode }) {
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-24 border-t border-line pt-10 pb-12 first:border-t-0 first:pt-0">
+    <section id={id} aria-labelledby={`${id}-h`} className="border-t border-line pt-10 pb-12 first:border-t-0 first:pt-0">
       <h2 id={`${id}-h`} className="font-display text-h2 font-bold text-ink">
         {title}
       </h2>
@@ -186,12 +194,7 @@ export default function Science() {
             <Table
               caption="Risk score bands"
               head={['Score', 'Band']}
-              rows={[
-                ['0 to 30', 'Low risk'],
-                ['31 to 59', 'Moderate risk'],
-                ['60 to 79', 'High risk'],
-                ['80 to 100', 'Very high risk'],
-              ]}
+              rows={SCORE_BANDS}
             />
             <p>Each band is shown with a word and an icon as well as a colour.</p>
           </Section>

@@ -4,13 +4,14 @@
 // instead of framer-motion, typed props, the frame colors as props, and a flat
 // card when the visitor prefers reduced motion.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
+import { motion, useScroll, useTransform, type MotionValue } from 'motion/react';
+import { usePrefersReducedMotion } from '@/lib/use-prefers-reduced-motion';
 import { cn } from '@/lib/utils';
 
 export function ContainerScroll({ titleComponent, children, frameClassName }: { titleComponent: ReactNode; children: ReactNode; frameClassName?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: containerRef });
-  const reduce = useReducedMotion();
+  const reduce = usePrefersReducedMotion();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -46,9 +47,9 @@ function ScrollCard({ rotate, scale, children, className }: { rotate: MotionValu
         scale,
         boxShadow: '0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003',
       }}
-      className={cn('mx-auto -mt-12 h-[30rem] w-full max-w-5xl border-4 border-[#6C6C6C] bg-[#222222] p-2 md:h-[40rem] md:p-6', className)}
+      className={cn('mx-auto -mt-12 h-[30rem] w-full max-w-5xl rounded-[var(--radius-panel)] border-4 border-[#6C6C6C] bg-[#222222] p-2 md:h-[40rem] md:p-6', className)}
     >
-      <div className="h-full w-full overflow-hidden bg-zinc-900">{children}</div>
+      <div className="h-full w-full overflow-hidden rounded-[var(--radius-control)] bg-zinc-900">{children}</div>
     </motion.div>
   );
 }

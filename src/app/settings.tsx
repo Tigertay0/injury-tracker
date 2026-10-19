@@ -55,7 +55,7 @@ function applyTheme(t: Theme) {
 
 function Card({ id, title, description, children }: { id?: string; title: string; description?: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-20 rounded-[var(--radius-panel)] border border-line bg-surface p-5 md:p-6">
+    <section id={id} className="rounded-[var(--radius-panel)] border border-line bg-surface p-5 md:p-6">
       <h2 className="text-lead font-semibold text-ink">{title}</h2>
       {description && <p className="mt-1 max-w-xl text-body text-ink-2">{description}</p>}
       <div className="mt-5">{children}</div>

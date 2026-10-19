@@ -9,6 +9,8 @@ import {
   validateInjuryReturn,
   validateProfile,
   validateEquipment,
+  validateDashboardOrder,
+  MAX_DASHBOARD_TILES,
   validateCustomDrill,
   validateEstimateRequest,
   validateMovementProfile,
@@ -280,6 +282,64 @@ describe('validateEquipment', () => {
   it('rejects empty or unknown updates', () => {
     expect(() => validateEquipment({})).toThrow(ValidationError);
     expect(() => validateEquipment({ cleatType: 'SPIKES' })).toThrow(ValidationError);
+  });
+});
+
+describe('validateDashboardOrder', () => {
+  it('accepts a list of tile ids and returns it as sent', () => {
+    expect(validateDashboardOrder({ order: ['score', 'load_chart', 'tile_3'] })).toEqual(['score', 'load_chart', 'tile_3']);
+  });
+
+  it('accepts an empty list, which means the default order', () => {
+    expect(validateDashboardOrder({ order: [] })).toEqual([]);
+  });
+
+  it('accepts exactly the most tiles allowed, and no more', () => {
+    const ids = Array.from({ length: MAX_DASHBOARD_TILES }, (_, i) => `tile_${i}`);
+    expect(MAX_DASHBOARD_TILES).toBe(30);
+    expect(validateDashboardOrder({ order: ids })).toEqual(ids);
+    expect(() => validateDashboardOrder({ order: [...ids, 'one_more'] })).toThrow(ValidationError);
+  });
+
+  it('names the order field in its errors', () => {
+    expect(thrown(() => validateDashboardOrder({ order: ['Score'] })).field).toBe('order');
+    expect(thrown(() => validateDashboardOrder({ order: ['score', 'score'] })).field).toBe('order');
+    expect(thrown(() => validateDashboardOrder({})).field).toBe('order');
+  });
+
+  it('rejects a body that is not an object holding a list', () => {
+    for (const body of [null, undefined, 'score', 7, ['score']]) {
+      expect(() => validateDashboardOrder(body)).toThrow(/JSON object/);
+    }
+    for (const order of [undefined, null, 'score', 7, true, { 0: 'score' }]) {
+      expect(() => validateDashboardOrder({ order })).toThrow(/list/i);
+    }
+  });
+
+  it('rejects ids that are not lowercase letters, digits and underscores starting with a letter', () => {
+    const bad = ['', 'a', 'Score', '1score', '_score', 'two words', 'with-dash', 'café', 'x'.repeat(31), '__proto__', 'a.b', 'a/b', 'a;b', 'ab\n'];
+    for (const id of bad) expect(() => validateDashboardOrder({ order: [id] }), id).toThrow(ValidationError);
+  });
+
+  it('accepts the shortest and longest ids', () => {
+    expect(validateDashboardOrder({ order: ['ab', 'a'.repeat(30)] })).toEqual(['ab', 'a'.repeat(30)]);
+  });
+
+  it('rejects entries that are not text', () => {
+    for (const id of [null, undefined, 5, true, {}, ['score']]) {
+      expect(() => validateDashboardOrder({ order: [id] })).toThrow(ValidationError);
+    }
+  });
+
+  it('rejects a tile listed twice', () => {
+    expect(() => validateDashboardOrder({ order: ['score', 'load_chart', 'score'] })).toThrow(/once/i);
+  });
+
+  it('does not change the list it was given', () => {
+    const order = ['score', 'load_chart'];
+    const result = validateDashboardOrder({ order });
+    expect(result).not.toBe(order);
+    expect(order).toEqual(['score', 'load_chart']);
   });
 });
 

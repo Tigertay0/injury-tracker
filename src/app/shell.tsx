@@ -78,6 +78,10 @@ const tabs = (base: string): NavItem[] => [
   { to: `${base}/injuries`, label: 'Injuries', icon: FirstAidKit },
 ];
 
+// The bar's items fill its whole height and sit on the screen edge, so the default ring (2px outside) would
+// draw off screen and over the bar's top border. Draw it inside the item instead.
+const BAR_FOCUS = 'focus-visible:-outline-offset-2';
+
 function BottomBar() {
   const [moreOpen, setMoreOpen] = useState(false);
   const base = useAppBase();
@@ -91,9 +95,9 @@ function BottomBar() {
         <div className="mx-auto grid h-16 max-w-md grid-cols-5">
           {tabs(base).map(({ to, label, icon: Icon, end }) =>
             to === `${base}/log` ? (
-              <NavLink key={to} to={to} className="grid place-items-center" aria-label="Log a session">
+              <NavLink key={to} to={to} className={cn('grid place-items-center rounded-[var(--radius-control)]', BAR_FOCUS)} aria-label="Log a session">
                 {({ isActive }) => (
-                  <span className={cn('press grid size-12 place-items-center bg-accent text-on-accent shadow-lift', isActive && 'ring-4 ring-accent-soft')}>
+                  <span className={cn('press grid size-12 place-items-center rounded-[var(--radius-control)] bg-accent text-on-accent shadow-lift', isActive && 'ring-4 ring-accent-soft')}>
                     <Icon aria-hidden weight="bold" className="size-6" />
                   </span>
                 )}
@@ -103,7 +107,7 @@ function BottomBar() {
                 key={to}
                 to={to}
                 end={end}
-                className={({ isActive }) => cn('flex flex-col items-center justify-center gap-0.5 text-caption font-semibold', isActive ? 'text-accent-ink' : 'text-ink-2')}
+                className={({ isActive }) => cn('flex flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] text-caption font-semibold', BAR_FOCUS, isActive ? 'text-accent-ink' : 'text-ink-2')}
               >
                 {({ isActive }) => (
                   <>
@@ -117,7 +121,7 @@ function BottomBar() {
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className={cn('flex flex-col items-center justify-center gap-0.5 text-caption font-semibold', moreActive ? 'text-accent-ink' : 'text-ink-2')}
+            className={cn('flex flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] text-caption font-semibold', BAR_FOCUS, moreActive ? 'text-accent-ink' : 'text-ink-2')}
           >
             <DotsThreeOutline aria-hidden weight={moreActive ? 'fill' : 'regular'} className="size-6" />
             More

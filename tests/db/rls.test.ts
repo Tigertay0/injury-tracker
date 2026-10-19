@@ -2,7 +2,7 @@
 // DATABASE_URL_TEST must point at a database where `npm run db:migrate` has run.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { asPlayer, CUSTOM_DRILL_LIMIT, postgresRepo, RepoError, UNKNOWN_DRILL } from '../../worker/repo';
+import { asPlayer, CUSTOM_DRILL_LIMIT, NO_ROWS, postgresRepo, RepoError, UNKNOWN_DRILL } from '../../worker/repo';
 import { addDays, mondayOf, utcToday } from '../../shared/dates';
 import { MAX_CUSTOM_DRILLS } from '../../shared/custom-drills';
 import type { CustomDrillInput } from '../../shared/validation';
@@ -81,6 +81,43 @@ run('Neon schema and row-level security', () => {
 
   it('cannot set protected columns such as the consent time', async () => {
     await expect(asPlayer(url!, B, (q) => q("update public.profiles set consented_at = now() - interval '5 years' where user_id = $1", [B]))).rejects.toMatchObject({ code: '42501' });
+  });
+
+  it('stores a dashboard order per player and reads it back', async () => {
+    expect((await a.overview()).profile?.dashboardOrder).toEqual([]);
+    expect(await a.updateDashboardOrder(['movement', 'score', 'load_chart'])).toEqual(['movement', 'score', 'load_chart']);
+    expect((await a.overview()).profile?.dashboardOrder).toEqual(['movement', 'score', 'load_chart']);
+    expect((await a.getProfile())?.dashboardOrder).toEqual(['movement', 'score', 'load_chart']);
+    expect((await a.exportAll()).profile?.dashboardOrder).toEqual(['movement', 'score', 'load_chart']);
+    expect((await b.overview()).profile?.dashboardOrder).toEqual([]);
+    expect(await a.updateDashboardOrder(['score'])).toEqual(['score']); // replaces, does not append
+    expect(await a.updateDashboardOrder([])).toEqual([]);
+    expect((await a.overview()).profile?.dashboardOrder).toEqual([]);
+  });
+
+  it("cannot change another player's dashboard order", async () => {
+    await a.updateDashboardOrder(['movement', 'score']);
+    const updated = await asPlayer(url!, B, (q) => q("update public.profiles set dashboard_order = '{hacked}' where user_id = $1 returning user_id", [A]));
+    expect(updated).toHaveLength(0);
+    expect((await a.overview()).profile?.dashboardOrder).toEqual(['movement', 'score']);
+    expect((await b.overview()).profile?.dashboardOrder).toEqual([]);
+    await a.updateDashboardOrder([]);
+  });
+
+  it('refuses a dashboard order for a player with no profile', async () => {
+    const nobody = postgresRepo(url!, `user_test_nobody_${stamp}`);
+    await expect(nobody.updateDashboardOrder(['score'])).rejects.toMatchObject({ code: NO_ROWS });
+  });
+
+  it('caps the dashboard order at 30 tiles in the database', async () => {
+    const tiles = (n: number) => Array.from({ length: n }, (_, i) => `tile_${i}`);
+    expect(await a.updateDashboardOrder(tiles(30))).toHaveLength(30);
+    await expect(a.updateDashboardOrder(tiles(31))).rejects.toMatchObject({ code: '23514' });
+    await expect(
+      asPlayer(url!, A, (q) => q("update public.profiles set dashboard_order = array(select 'tile_' || g from generate_series(1, 31) as g) where user_id = $1", [A])),
+    ).rejects.toMatchObject({ code: '23514' });
+    expect((await a.overview()).profile?.dashboardOrder).toEqual(tiles(30)); // the refused writes changed nothing
+    await a.updateDashboardOrder([]);
   });
 
   it('enforces checks in the database too', async () => {

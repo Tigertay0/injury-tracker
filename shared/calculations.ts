@@ -157,14 +157,33 @@ export interface CompositeInput {
   multiplier: number;
 }
 
+/** The top of the composite score: the score is capped here. */
+export const COMPOSITE_SCORE_MAX = 100;
+
 export function compositeScore({ acwrRisk, recoveryRisk, equipmentRisk, multiplier }: CompositeInput): number {
   const base = acwrRisk * 0.45 + recoveryRisk * 0.3 + equipmentRisk * 0.25;
-  return Math.min(Math.round(base * multiplier), 100);
+  return Math.min(Math.round(base * multiplier), COMPOSITE_SCORE_MAX);
+}
+
+/** Composite zones from the lowest risk to the highest. */
+export const COMPOSITE_ZONES: readonly CompositeZone[] = ['LOW', 'MODERATE', 'HIGH', 'VERY_HIGH'];
+
+/** The highest score in each zone but the last: anything above HIGH is VERY_HIGH. `compositeZone` and the dashboard gauge both read these. */
+export const COMPOSITE_ZONE_MAX = { LOW: 30, MODERATE: 59, HIGH: 79 } as const;
+
+/** The lowest and highest score of a zone, each included (LOW is 0 to 30). Tables of the bands read this. */
+export function compositeZoneRange(zone: CompositeZone): { from: number; to: number } {
+  const at = COMPOSITE_ZONES.indexOf(zone);
+  const before = COMPOSITE_ZONES[at - 1];
+  return {
+    from: before === undefined ? 0 : COMPOSITE_ZONE_MAX[before as keyof typeof COMPOSITE_ZONE_MAX] + 1,
+    to: zone === 'VERY_HIGH' ? COMPOSITE_SCORE_MAX : COMPOSITE_ZONE_MAX[zone],
+  };
 }
 
 export function compositeZone(score: number): CompositeZone {
-  if (score <= 30) return 'LOW';
-  if (score <= 59) return 'MODERATE';
-  if (score <= 79) return 'HIGH';
+  if (score <= COMPOSITE_ZONE_MAX.LOW) return 'LOW';
+  if (score <= COMPOSITE_ZONE_MAX.MODERATE) return 'MODERATE';
+  if (score <= COMPOSITE_ZONE_MAX.HIGH) return 'HIGH';
   return 'VERY_HIGH';
 }

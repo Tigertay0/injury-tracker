@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Dialog as SheetPrimitive } from 'radix-ui';
 import { X } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { Button, GHOST_WASH } from './button';
 
 const Sheet = SheetPrimitive.Root;
 const SheetTrigger = SheetPrimitive.Trigger;
@@ -24,15 +25,17 @@ function SheetContent({
         data-side={side}
         className={cn(
           'sheet-panel fixed z-50 flex flex-col bg-surface text-ink outline-none shadow-overlay',
-          side === 'right' ? 'top-[env(safe-area-inset-top)] bottom-0 right-0 w-[min(20rem,86vw)] border-l border-line' : 'inset-x-0 bottom-0 max-h-[85dvh] border-t border-line pb-[env(safe-area-inset-bottom)]',
+          side === 'right' ? 'top-[env(safe-area-inset-top)] bottom-0 right-0 w-[min(20rem,86vw)] rounded-l-[var(--radius-panel)] border-l border-line' : 'inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-[var(--radius-panel)] border-t border-line pb-[env(safe-area-inset-bottom)]',
           className,
         )}
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="press absolute top-3 right-3 grid size-11 place-items-center rounded-[var(--radius-control)] text-ink-2 hover:bg-sunken hover:text-ink">
-          <X className="size-5" aria-hidden />
-          <span className="sr-only">Close</span>
+        <SheetPrimitive.Close asChild>
+          <Button variant="ghost" size="icon" fillClassName={GHOST_WASH} className="absolute top-3 right-3 text-ink-2">
+            <X aria-hidden />
+            <span className="sr-only">Close</span>
+          </Button>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPrimitive.Portal>

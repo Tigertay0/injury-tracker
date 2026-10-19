@@ -90,7 +90,7 @@ export default function UseApp() {
         <ol className="space-y-6">
           {STEPS.map((s, i) => (
             <li key={s.title} className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-4">
-              <span aria-hidden className="tnum grid size-10 place-items-center bg-accent-soft font-display text-h3 font-bold text-accent-ink">
+              <span aria-hidden className="tnum grid size-10 place-items-center rounded-[var(--radius-control)] bg-accent-soft font-display text-h3 font-bold text-accent-ink">
                 {i + 1}
               </span>
               <div>

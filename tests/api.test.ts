@@ -36,8 +36,13 @@ function memoryStore() {
       exportAll: async () => structuredClone(o),
       getProfile: async () => o.profile,
       createProfile: async (input) => {
-        o.profile = { position: input.position ?? null, displayName: input.displayName ?? '', cleatType: null, surfaceType: null, createdAt: '2026-10-12T00:00:00Z' };
+        o.profile = { position: input.position ?? null, displayName: input.displayName ?? '', cleatType: null, surfaceType: null, dashboardOrder: [], createdAt: '2026-10-12T00:00:00Z' };
         return o.profile;
+      },
+      updateDashboardOrder: async (order) => {
+        if (!o.profile) throw new RepoError('no rows', NO_ROWS);
+        o.profile = { ...o.profile, dashboardOrder: [...order] };
+        return [...order];
       },
       updateProfile: async (input) => {
         if (!o.profile) throw new RepoError('no rows', NO_ROWS);
@@ -278,6 +283,86 @@ describe('profile', () => {
   it('rejects an empty profile update', async () => {
     await onboard();
     expect((await call('PATCH', '/me', { body: {} })).status).toBe(400);
+  });
+});
+
+describe('dashboard order', () => {
+  const ORDER = ['movement', 'score', 'load_chart'];
+  const put = (body: unknown, token = 'token-a') => call('PUT', '/me/dashboard', { token, body });
+
+  it('starts empty, which means the default order', async () => {
+    await onboard();
+    expect((await (await call('GET', '/overview')).json()).profile.dashboardOrder).toEqual([]);
+  });
+
+  it('saves the order and returns it', async () => {
+    await onboard();
+    const res = await put({ order: ORDER });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ dashboardOrder: ORDER });
+  });
+
+  it('shows the saved order on the overview and in the export', async () => {
+    await onboard();
+    await put({ order: ORDER });
+    expect((await (await call('GET', '/overview')).json()).profile.dashboardOrder).toEqual(ORDER);
+    expect((await (await call('GET', '/me/export')).json()).profile.dashboardOrder).toEqual(ORDER);
+  });
+
+  it('replaces the earlier order, and an empty list resets it', async () => {
+    await onboard();
+    await put({ order: ORDER });
+    await put({ order: ['score', 'movement'] });
+    expect((await (await call('GET', '/overview')).json()).profile.dashboardOrder).toEqual(['score', 'movement']);
+    expect(await (await put({ order: [] })).json()).toEqual({ dashboardOrder: [] });
+    expect((await (await call('GET', '/overview')).json()).profile.dashboardOrder).toEqual([]);
+  });
+
+  it('leaves the rest of the profile alone', async () => {
+    await onboard();
+    await call('PATCH', '/me/equipment', { body: { cleatType: 'AG' } });
+    await put({ order: ORDER });
+    expect((await (await call('GET', '/overview')).json()).profile).toMatchObject({ position: 'MID', cleatType: 'AG', dashboardOrder: ORDER });
+  });
+
+  it("keeps one player's order away from another's", async () => {
+    await onboard();
+    await onboard('token-b');
+    await put({ order: ORDER });
+    expect((await (await call('GET', '/overview', { token: 'token-b' })).json()).profile.dashboardOrder).toEqual([]);
+    await put({ order: ['score'] }, 'token-b');
+    expect((await (await call('GET', '/overview')).json()).profile.dashboardOrder).toEqual(ORDER);
+  });
+
+  it('rejects bad orders with the field name and saves nothing', async () => {
+    await onboard();
+    await put({ order: ORDER });
+    const duplicate = await put({ order: ['score', 'score'] });
+    expect(duplicate.status).toBe(400);
+    expect((await duplicate.json()).field).toBe('order');
+    for (const body of [{}, { order: 'score' }, { order: ['Not An Id'] }, { order: Array.from({ length: 31 }, (_, i) => `tile_${i}`) }, []]) {
+      expect((await put(body)).status).toBe(400);
+    }
+    expect((await put('{not json')).status).toBe(400);
+    expect((await (await call('GET', '/overview')).json()).profile.dashboardOrder).toEqual(ORDER);
+  });
+
+  it('asks for onboarding when there is no profile yet', async () => {
+    const res = await put({ order: ORDER });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toMatch(/profile/i);
+  });
+
+  it('needs a login and counts as a write for the rate limiter', async () => {
+    expect((await call('PUT', '/me/dashboard', { token: null, body: { order: ORDER } })).status).toBe(401);
+    await onboard();
+    await put({ order: ORDER });
+    expect(deps.allow).toHaveBeenLastCalledWith('write', 'user_a');
+    deps.allow = vi.fn(async () => false);
+    app = createApp(deps);
+    const limited = await put({ order: ORDER });
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get('retry-after')).toBe('60');
   });
 });
 

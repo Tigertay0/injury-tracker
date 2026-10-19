@@ -18,6 +18,8 @@ export interface Profile {
   displayName: string;
   cleatType: CleatType | null;
   surfaceType: SurfaceType | null;
+  /** Dashboard tile ids in the order the player arranged them; empty means the default order. */
+  dashboardOrder: string[];
   createdAt: string;
 }
 

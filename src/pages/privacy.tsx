@@ -18,7 +18,7 @@ export default function Privacy() {
             <strong>Login details:</strong> your email address, and your password or Google sign-in, handled by our login provider.
           </li>
           <li>
-            <strong>Profile:</strong> your position, an optional display name, your cleat type and usual surface, and when you agreed to these terms.
+            <strong>Profile:</strong> your position, an optional display name, your cleat type and usual surface, the order of your dashboard tiles, and when you agreed to these terms.
           </li>
           <li>
             <strong>Training sessions:</strong> date, type, duration, effort, any notes and any drills you add.
