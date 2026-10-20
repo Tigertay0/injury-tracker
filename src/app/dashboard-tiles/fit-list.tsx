@@ -107,7 +107,8 @@ export function FitList<T>({ items, keyOf, renderItem, noun, scrollLabel, listHi
     const observer = new ResizeObserver(measure);
     for (const el of [box.current, ghost.current, ghostFooter.current, ghostTrailing.current]) if (el) observer.observe(el);
     return () => observer.disconnect();
-  }, [measure, items, footer, trailing]);
+    // footer and trailing are new nodes on every render; the observer already sees their size change
+  }, [measure, items, footer != null, trailing != null]);
 
   const { fit, trailingShown, minHeight } = layout;
   const { cramped, hidden } = fit;

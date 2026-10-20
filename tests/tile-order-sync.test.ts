@@ -146,7 +146,7 @@ describe('createTileOrderSync', () => {
     calls[0].reject(new Error('refused'));
     await settle();
     expect(onFailed).toHaveBeenCalledTimes(1);
-    expect(onFailed).toHaveBeenCalledWith(A);
+    expect(onFailed).toHaveBeenCalledWith(A, expect.anything());
   });
 
   it('after a good save, a later refusal goes back to that saved order', async () => {
@@ -161,7 +161,7 @@ describe('createTileOrderSync', () => {
     sync.flush();
     calls[1].reject(new Error('offline'));
     await settle();
-    expect(onFailed).toHaveBeenCalledWith(B);
+    expect(onFailed).toHaveBeenCalledWith(B, expect.anything());
   });
 
   it('stays quiet about an older refusal when the player has moved on, and never echoes an old order', async () => {
@@ -204,6 +204,6 @@ describe('createTileOrderSync', () => {
     sync.change(B);
     expect(() => sync.flush()).not.toThrow();
     await settle();
-    expect(onFailed).toHaveBeenCalledWith(A);
+    expect(onFailed).toHaveBeenCalledWith(A, expect.anything());
   });
 });

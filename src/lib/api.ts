@@ -30,6 +30,8 @@ async function request<T>(getToken: () => Promise<string | null>, method: Method
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
+      // Lets a save sent as the page closes (the tile order) finish; these bodies are tiny
+      keepalive: method === 'PUT',
     });
   } catch {
     throw new ApiError(OFFLINE_MESSAGE, 0);

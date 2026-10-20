@@ -18,7 +18,7 @@ export interface TileOrderSyncOptions {
    * go back to it. An older save that fails after a newer move is not reported: the newer save sends
    * the full order and answers for it.
    */
-  onFailed: (keptOrder: string[]) => void;
+  onFailed: (keptOrder: string[], cause: unknown) => void;
   delayMs?: number;
 }
 
@@ -58,8 +58,8 @@ export function createTileOrderSync({ initial, save, onFailed, delayMs = SAVE_DE
       () => {
         kept = sent;
       },
-      () => {
-        if (version === sentVersion) onFailed([...kept]);
+      (err: unknown) => {
+        if (version === sentVersion) onFailed([...kept], err);
       },
     );
   };

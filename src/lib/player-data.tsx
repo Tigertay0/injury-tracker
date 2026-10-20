@@ -84,7 +84,12 @@ function usePlayerDataState() {
         orderSaver.save(order, {
           read: () => (stateRef.current.status === 'ready' ? stateRef.current.data.profile?.dashboardOrder : undefined) ?? [],
           show: (next) => update((d) => withDashboardOrder(d, next)),
-          send: async (next) => (await api.put<{ dashboardOrder: string[] }>('/me/dashboard', { order: next })).dashboardOrder,
+          send: async (next) => {
+            const res = await api.put<{ dashboardOrder?: unknown }>('/me/dashboard', { order: next });
+            // A reply without the stored order must count as a failed save, not wipe the layout
+            if (!Array.isArray(res?.dashboardOrder)) throw new ApiError('Unexpected response from the server. Try again.', 502);
+            return res.dashboardOrder as string[];
+          },
         }),
       async addSession(input: SessionInput) {
         const session = await api.post<TrainingSession>('/sessions', input);
