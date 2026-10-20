@@ -2,6 +2,7 @@
 // is never replaced by an older copy; saving to the account happens a moment later (tile-order-sync.ts).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { ApiError } from '../lib/api';
 import { announceMove, movedTile, reconcileOrder } from './dashboard-order';
 import { createTileOrderSync } from './tile-order-sync';
 
@@ -40,12 +41,13 @@ export function useTileOrder({ saved, save, labelOf, onReverted, arranging }: Op
     createTileOrderSync({
       initial: order,
       save: (next) => saveRef.current(next),
-      onFailed: (kept) => {
+      onFailed: (kept, cause) => {
         // The server kept an older order, so show that one rather than a layout that will not survive a reload
         orderRef.current = kept;
         setOrder(kept);
         revertedRef.current?.();
-        toast.error(SAVE_FAILED_MESSAGE, { duration: SAVE_FAILED_DURATION_MS });
+        // The server's own words (session ended, too many requests) say more than a bare "try again"
+        toast.error(cause instanceof ApiError ? cause.message : SAVE_FAILED_MESSAGE, { duration: SAVE_FAILED_DURATION_MS });
       },
     }),
   );

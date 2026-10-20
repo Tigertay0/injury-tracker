@@ -443,6 +443,7 @@ export function DraggableWidgetGrid({
   const frame = useRef(0);
   const lastMove = useRef(0);
   const swallowUntil = useRef(0);
+  const disarmSwallow = useRef<AbortController | null>(null);
   const ring = useRef(0);
   const refocus = useRef<string | null>(null);
 
@@ -460,6 +461,7 @@ export function DraggableWidgetGrid({
   // widget stays where it was dropped, so a changed order is reported as if the drag had ended.
   useIsoLayoutEffect(() => {
     if (editable) return;
+    disarmSwallow.current?.abort();
     cancelAnimationFrame(frame.current);
     frame.current = 0;
     window.clearTimeout(ring.current);
@@ -507,6 +509,7 @@ export function DraggableWidgetGrid({
 
   useEffect(
     () => () => {
+      disarmSwallow.current?.abort();
       cancelAnimationFrame(frame.current);
       window.clearTimeout(ring.current);
     },
@@ -545,13 +548,20 @@ export function DraggableWidgetGrid({
         setHeld(id);
         setRaised(id);
         // The click fired on release must not reach the widget's content.
+        // A drag that ends in pointercancel has no click to swallow, and must not leave the listener armed.
+        disarmSwallow.current?.abort();
+        const armed = new AbortController();
+        disarmSwallow.current = armed;
+        const options = { once: true, capture: true, signal: armed.signal };
         window.addEventListener(
           'pointerup',
           () => {
             swallowUntil.current = performance.now() + SWALLOW_MS;
+            armed.abort();
           },
-          { once: true, capture: true },
+          options,
         );
+        window.addEventListener('pointercancel', () => armed.abort(), options);
       },
       drag: () => {
         if (!frame.current) frame.current = requestAnimationFrame(() => step());
